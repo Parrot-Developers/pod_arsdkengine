@@ -325,6 +325,12 @@ class DroneController: DeviceController {
                     " .course: \(newLocation.course) .courseAccuracy: \(newLocation.courseAccuracy) |\n" +
                     " northSpeed: \(northSpeed) eastSpeed: \(eastSpeed) speedAccuracy: \(speedAccuracy)" +
                     " availableDataBitfield: 0x\(String(format: "%02X", availableDataBitfield))")
+
+            if newLocation.speed > 2 && newLocation.courseAccuracy > 45 {
+                GroundSdkCore.logEvent(message: "EVT:LOCATION;event='warning';" +
+                    "speed='\(newLocation.speed)';" +
+                    "course_accuracy='\(newLocation.courseAccuracy)'")
+            }
         } else {
             ULog.d(.ctrlTag, "newLocation \(newLocation) |\n" +
                     " .speed: \(newLocation.speed) .speedAccuracy: \(newLocation.speedAccuracy)" +

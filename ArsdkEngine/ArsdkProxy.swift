@@ -165,6 +165,16 @@ extension ArsdkProxy {
 extension ArsdkProxy {
 
     func remoteDeviceWillConnect(uid: String, model: DeviceModel, name: String) {
+        // if another device is active and not disconnected or the same device has its transport link connected
+        if let activeDevice = activeDevice,
+            (activeDevice.device.uid != uid && activeDevice.connectionSession.state != .disconnected) ||
+            (activeDevice.device.uid == uid &&
+                (activeDevice.connectionSession.state != .disconnected ||
+                 activeDevice.connectionSession.state != .connecting)) {
+            // force a link disconnection
+            activeDevice.linkDidDisconnect(removing: false)
+        }
+
         let deviceController = engine.getOrCreateDeviceController(uid: uid, model: model, name: name)
         changeActiveDevice(deviceController)
         activeDevice!.linkWillConnect(provider: self)

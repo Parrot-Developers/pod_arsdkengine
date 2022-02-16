@@ -46,7 +46,7 @@ class HttpFirmwareUploader: UpdaterFirmwareUploader {
         updateApi = nil
     }
 
-    func update(toVersion firmwareVersion: FirmwareVersion, deviceController: DeviceController,
+    func update(toVersion firmwareVersion: FirmwareVersion, reboot: Bool, deviceController: DeviceController,
                 store: FirmwareStoreCore,
                 uploadProgress: @escaping (_ progress: Int) -> Void,
                 updateEndStatus: @escaping (_ status: UpdaterUpdateState) -> Void) -> CancelableCore? {
@@ -55,6 +55,7 @@ class HttpFirmwareUploader: UpdaterFirmwareUploader {
 
             return updateApi?.update(
                 withFirmware: localUrl,
+                reboot: reboot,
                 progress: { percent in
                     uploadProgress(percent)
             },

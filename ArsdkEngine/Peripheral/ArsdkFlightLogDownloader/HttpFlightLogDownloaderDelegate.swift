@@ -73,7 +73,11 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
         isCanceled = false
         currentRequest = flightLogApi?.getFlightLogList { flightLogList in
             if let flightLogList = flightLogList {
-                self.pendingDownloads = flightLogList.sorted { $0.date < $1.date }
+                self.pendingDownloads = flightLogList.sorted { $0.date > $1.date }
+
+                let list = self.pendingDownloads.map { $0.name }.joined(separator: ",")
+                GroundSdkCore.logEvent(message: "EVT:LOGS;event='list';source='drone';files='\(list)'")
+
                 self.downloadNextLog(toDirectory: directory, downloader: downloader)
             } else {
                 downloader.flightLogDownloader.update(completionStatus: .interrupted)

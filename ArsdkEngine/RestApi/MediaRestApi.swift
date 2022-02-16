@@ -143,7 +143,7 @@ class MediaRestApi {
         }
     }
 
-    /// Download a resource
+    /// Download a resource.
     ///
     /// - Parameters:
     ///   - resource: the resource to download
@@ -234,7 +234,7 @@ class MediaRestApi {
                               })
     }
 
-    /// Delete a given media on the device
+    /// Deletes a given media on the device.
     ///
     /// - Parameters:
     ///   - media: the media to delete
@@ -252,7 +252,7 @@ class MediaRestApi {
         }
     }
 
-    /// Delete a given media resource on the device
+    /// Deletes a given media resource on the device.
     ///
     /// - Parameters:
     ///   - resource: the resource to delete
@@ -275,7 +275,7 @@ class MediaRestApi {
             }
     }
 
-    /// Delete all medias on the device
+    /// Deletes all medias on the device.
     ///
     /// - Parameters:
     ///   - completion: the completion callback (called on the main thread)
@@ -288,6 +288,31 @@ class MediaRestApi {
                 completion(true)
             default:
                 completion(false)
+            }
+        }
+    }
+
+    /// Deletes resources with a given custom identifier starting from a given resource.
+    ///
+    /// - Parameters:
+    ///   - customId: custom identifer
+    ///   - firstResourceId: first resource to delete
+    ///   - completion: the completion callback (called on the main thread)
+    /// - Returns: the request
+    func deleteResources(customId: String,
+                         firstResourceId: String,
+                         completion: @escaping (_ success: Bool, _ canceled: Bool) -> Void) -> CancelableCore {
+        var query = [String: String]()
+        query["custom_id"] = customId
+        query["resources"] = "\(firstResourceId)-"
+        return server.delete(api: "\(baseApi)/resources", query: query) { result in
+            switch result {
+            case .success:
+                completion(true, false)
+            case .canceled:
+                completion(false, true)
+            default:
+                completion(false, false)
             }
         }
     }

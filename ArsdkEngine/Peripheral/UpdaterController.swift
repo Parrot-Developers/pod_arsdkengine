@@ -44,6 +44,7 @@ protocol UpdaterFirmwareUploader: AnyObject {
     ///
     /// - Parameters:
     ///   - firmwareVersion: version of the firmware to upload
+    ///   - reboot: `true` to make the device reboot automatically at the end of the process
     ///   - deviceController: the device controller that owns the firmware updater peripheral controller
     ///   - store: firmware store providing firmware data to upload
     ///   - uploadProgress: callback that will be called when the update progress changes
@@ -51,7 +52,7 @@ protocol UpdaterFirmwareUploader: AnyObject {
     ///   - updateEndStatus: callback that will be called when the update finishes
     ///   - status: the end status of the update
     /// - Returns:  the update request, nil if it could not start the update.
-    func update(toVersion firmwareVersion: FirmwareVersion, deviceController: DeviceController,
+    func update(toVersion firmwareVersion: FirmwareVersion, reboot: Bool, deviceController: DeviceController,
                 store: FirmwareStoreCore, uploadProgress: @escaping (_ progress: Int) -> Void,
                 updateEndStatus: @escaping (_ status: UpdaterUpdateState) -> Void) -> CancelableCore?
 }
@@ -246,7 +247,7 @@ class UpdaterController: DeviceComponentController {
             } else if updateUnavailabilityReasons.isEmpty {
                 // continue update
                 firmwareUpdater.continueUpdate()
-                updateFirmware(toVersion: updateQueue.first!.firmwareIdentifier.version)
+                updateFirmware(toVersion: updateQueue.first!.firmwareIdentifier.version, reboot: true)
             } else {
                 // cannot continue, fail
                 updateDidEnd(withState: .failed)
@@ -287,10 +288,12 @@ class UpdaterController: DeviceComponentController {
 
     /// Updates the device to the given version
     ///
-    /// - Parameter version: the version to update the device to
-    private func updateFirmware(toVersion version: FirmwareVersion) {
+    /// - Parameters:
+    ///   - version: the version to update the device to
+    ///   - reboot: `true` to make the device reboot automatically at the end of the process
+    private func updateFirmware(toVersion version: FirmwareVersion, reboot: Bool) {
         currentUpdate = uploader.update(
-            toVersion: version,
+            toVersion: version, reboot: reboot,
             deviceController: deviceController, store: firmwareStore,
             uploadProgress: { [weak self] progress in
                 self?.firmwareUpdater.update(uploadProgress: progress)
@@ -300,8 +303,12 @@ class UpdaterController: DeviceComponentController {
                 self?.firmwareUpdater.notifyUpdated()
         }, updateEndStatus: { [weak self] state in
             self?.currentUpdate = nil
-            // if success, nothing to do, just wait for reboot.
-            if state != .success {
+            if state == .success {
+                // in case of automatic reboot, state will be updated to .waitingForReboot on disconnection
+                if !reboot {
+                    self?.firmwareUpdater.update(updateState: .waitingForReboot).notifyUpdated()
+                }
+            } else {
                 self?.updateDidEnd(withState: state)
             }
         })
@@ -343,7 +350,7 @@ extension UpdaterController: UpdaterBackend {
         downloader.download(firmwares: firmwares, observer: observer)
     }
 
-    func update(withFirmwares firmwares: [FirmwareInfoCore]) {
+    func update(withFirmwares firmwares: [FirmwareInfoCore], reboot: Bool) {
         guard currentUpdate == nil && updateQueue.isEmpty else {
             ULog.w(.fwTag, "Trying to start an update while an update is already in progress, ignoring the request.")
             return
@@ -355,7 +362,7 @@ extension UpdaterController: UpdaterBackend {
 
         updateQueue = firmwares
         firmwareUpdater.beginUpdate(withFirmwares: updateQueue)
-        updateFirmware(toVersion: updateQueue.first!.firmwareIdentifier.version)
+        updateFirmware(toVersion: updateQueue.first!.firmwareIdentifier.version, reboot: reboot)
         firmwareUpdater.notifyUpdated()
     }
 

@@ -341,9 +341,6 @@ class DeviceController: NSObject {
     /// Non-acknowledged command loop period, in milliseconds. `0` if disabled.
     private let noAckLoopPeriod: Int32
 
-    /// Timeout waiting either the all states or all settings from the drone. In seconds
-    private let kTimeoutInSec = 20.0
-
     /// Device managed by this drone controller
     private(set) var device: DeviceCore!
 
@@ -830,26 +827,12 @@ class DeviceController: NSObject {
     /// This step is ended when AllSettingsChanged event is received
     private final func sendGetAllSettings() {
         sendCommand(getAllSettingsEncoder)
-        // if all settings ended has not been received within kTimeoutInSec, disconnect from the drone
-        DispatchQueue.main
-            .asyncAfter(deadline: DispatchTime.now() + kTimeoutInSec) { [unowned self, weak connectionSession] in
-            if connectionSession?.state == .gettingAllSettings {
-                _ = self.activeProvider?.disconnect(deviceController: self)
-            }
-        }
     }
 
     /// Ask to the managed drone to get all its states
     /// This step is ended when AllStatesChanged event is received
     private final func sendGetAllStates() {
         sendCommand(getAllStatesEncoder)
-        // if all states ended has not been received within kTimeoutInSec, disconnect from the drone
-        DispatchQueue.main
-            .asyncAfter(deadline: DispatchTime.now() + kTimeoutInSec) { [unowned self, weak connectionSession] in
-            if connectionSession?.state == .gettingAllStates {
-                _ = self.activeProvider?.disconnect(deviceController: self)
-            }
-        }
     }
 
     // MARK: Methods managing connection state that subclass can implements

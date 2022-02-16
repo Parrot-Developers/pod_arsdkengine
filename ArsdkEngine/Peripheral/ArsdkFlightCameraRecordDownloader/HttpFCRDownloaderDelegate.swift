@@ -148,7 +148,11 @@ class HttpFCRDownloaderDelegate: ArsdkFlightCameraRecordDownloaderDelegate {
     private func queryRecordList() {
         currentRequest = flightCameraRecordApi?.getFlightCameraRecordList { flightCameraRecordList in
             if let flightCameraRecordList = flightCameraRecordList {
-                self.pendingDownloads = flightCameraRecordList.sorted { $0.date < $1.date }
+                self.pendingDownloads = flightCameraRecordList.sorted { $0.date > $1.date }
+
+                let list = self.pendingDownloads.map { $0.name }.joined(separator: ",")
+                GroundSdkCore.logEvent(message: "EVT:LOGS;event='list';source='drone';files='\(list)'")
+
                 self.downloadNextCameraRecord()
             } else {
                 self.downloader?.update(completionStatus: .interrupted)

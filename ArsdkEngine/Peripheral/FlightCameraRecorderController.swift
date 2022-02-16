@@ -287,7 +287,8 @@ extension FlightCameraRecorderPipeline: ArsdkMappableEnum {
         .vcamPrecisehome: .vcamPrecisehome,
         .fstcamRightPrecisehovering: .fstcamRightPrecisehovering,
         .fstcamLeftEvent: .fstcamLeftEvent,
-        .fstcamRightEvent: .fstcamRightEvent
+        .fstcamRightEvent: .fstcamRightEvent,
+        .fcamEvent: .fcamEvent
         ])
 }
 
@@ -308,6 +309,7 @@ extension FlightCameraRecorderPipeline: StorableEnum {
         .vcamPrecisehome: "vcamPrecisehome",
         .fstcamRightPrecisehovering: "fstcamRightPrecisehovering",
         .fstcamLeftEvent: "fstcamLeftEvent",
-        .fstcamRightEvent: "fstcamRightEvent"
+        .fstcamRightEvent: "fstcamRightEvent",
+        .fcamEvent: "fcamEvent"
     ])
 }

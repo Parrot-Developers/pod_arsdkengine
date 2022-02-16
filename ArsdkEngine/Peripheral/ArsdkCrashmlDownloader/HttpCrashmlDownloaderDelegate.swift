@@ -69,7 +69,7 @@ class HttpCrashmlDownloaderDelegate: ArsdkCrashmlDownloaderDelegate {
         isCanceled = false
         currentRequest = reportApi?.getReportList { reportList in
             if let reportList = reportList {
-                self.pendingDownloads = reportList
+                self.pendingDownloads = reportList.sorted { $0.date > $1.date }
                 self.downloadNextReport(toDirectory: directory, downloader: downloader)
             } else {
                 downloader.crashReportDownloader.update(completionStatus: .interrupted)

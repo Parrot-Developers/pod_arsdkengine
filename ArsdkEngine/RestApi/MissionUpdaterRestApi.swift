@@ -107,13 +107,17 @@ class MissionUpdaterRestApi {
     /// - Parameters:
     ///   - missionFile: url of the mission file
     ///   - allowOverwrite: allow overwrite of the mission
+    ///   - postpone: postpone the installation until next reboot
     /// - Returns:  the update request, nil if it could not start the update.
-    func upload(missionFile: URL, allowOverwrite: Bool, progress: @escaping (_ progress: Int) -> Void,
+    func upload(missionFile: URL, allowOverwrite: Bool, postpone: Bool, progress: @escaping (_ progress: Int) -> Void,
         completion: @escaping (_ error: MissionUpdaterError?) -> Void) -> CancelableCore? {
 
-        return server.putFile(api: "\(baseApi)/", query: ["allow_overwrite": (allowOverwrite ? "yes" : "no")],
-            fileUrl: missionFile, progress: { progressValue in
-                progress(progressValue)
+        return server.putFile(api: "\(baseApi)/",
+                              query: ["allow_overwrite": (allowOverwrite ? "yes" : "no"),
+                                      "is_delayed": (postpone ? "yes" : "no")],
+                              fileUrl: missionFile,
+                              progress: { progressValue in
+            progress(progressValue)
         }, completion: { result, _ in
             switch result {
             case .success:

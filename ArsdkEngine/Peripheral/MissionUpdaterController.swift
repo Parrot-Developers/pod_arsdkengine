@@ -67,13 +67,13 @@ class MissionUpdaterController: DeviceComponentController {
 
 /// Mission updater backend implementation
 extension MissionUpdaterController: MissionUpdaterBackend {
-    func upload(filePath: URL, overwrite: Bool) -> CancelableCore? {
+    func upload(filePath: URL, overwrite: Bool, postpone: Bool) -> CancelableCore? {
         self.missionUpdater.update(state: .uploading)
             .update(progress: 0)
             .update(filePath: filePath.absoluteString)
             .notifyUpdated()
 
-        return missionUpdaterRestApi.upload(missionFile: filePath, allowOverwrite: overwrite,
+        return missionUpdaterRestApi.upload(missionFile: filePath, allowOverwrite: overwrite, postpone: postpone,
             progress: {currentProgress in
                 self.missionUpdater.update(progress: currentProgress).notifyUpdated()
         }, completion: { error in

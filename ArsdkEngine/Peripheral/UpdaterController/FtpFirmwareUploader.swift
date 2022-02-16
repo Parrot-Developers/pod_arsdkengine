@@ -44,7 +44,7 @@ class FtpFirmwareUploader: UpdaterFirmwareUploader {
         deviceController = nil
     }
 
-    func update(toVersion firmwareVersion: FirmwareVersion, deviceController: DeviceController,
+    func update(toVersion firmwareVersion: FirmwareVersion, reboot: Bool, deviceController: DeviceController,
                 store: FirmwareStoreCore,
                 uploadProgress: @escaping (_ progress: Int) -> Void,
                 updateEndStatus: @escaping (_ status: UpdaterUpdateState) -> Void) -> CancelableCore? {

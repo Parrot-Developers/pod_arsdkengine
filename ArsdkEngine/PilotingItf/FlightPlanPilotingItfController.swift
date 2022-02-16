@@ -90,7 +90,7 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     /// Whether the flight plan should be restarted instead of resumed when the piloting interface can be activated
     private var shouldRestartFlightPlan = false
     /// Mission item where the flight plan should start.
-    private var startAtMissionItem: Int?
+    private var startAtMissionItem: UInt?
     /// Unavailability reasons of the drone.
     private var droneUnavailabilityReasons = Set<FlightPlanUnavailabilityReason>()
     /// Whether the flight plan is currently stopped
@@ -233,7 +233,7 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
 // MARK: - FlightPlanPilotingItfBackend
 /// Extension of FlightPlanPilotingItfController that implements FlightPlanPilotingItfBackend
 extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
-    func activate(restart: Bool, interpreter: FlightPlanInterpreter, missionItem: Int?) -> Bool {
+    func activate(restart: Bool, interpreter: FlightPlanInterpreter, missionItem: UInt?) -> Bool {
         flightPlanInterpreter = interpreter
         shouldRestartFlightPlan = restart
         startAtMissionItem = missionItem
@@ -295,14 +295,37 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
                     self.flightPlanPilotingItf.notifyUpdated()
                 }
             }
-            self.currentUpload = uploadHandle
+            currentUpload = uploadHandle
         }
+    }
+
+    func cancelPendingUpload() {
+        currentUpload?.cancel()
+        currentUpload = nil
+        flightPlanPilotingItf.update(latestUploadState: .none).notifyUpdated()
     }
 
     func clearRecoveryInfo() {
         sendClearRecoveryInfo()
         flightPlanPilotingItf.update(recoveryInfo: nil)
             .notifyUpdated()
+    }
+
+    func cleanBeforeRecovery(customId: String, resourceId: String,
+                             completion: @escaping (CleanBeforeRecoveryResult) -> Void) -> CancelableCore? {
+        guard let droneServer = deviceController.droneServer else {
+            completion(.failed)
+            return nil
+        }
+        let mediaRestApi = MediaRestApi(server: droneServer)
+        return mediaRestApi.deleteResources(customId: customId,
+                                            firstResourceId: resourceId) { success, canceled in
+            if canceled {
+                completion(.canceled)
+            } else {
+                completion(success ? .success : .failed)
+            }
+        }
     }
 }
 
@@ -458,7 +481,7 @@ extension FlightPlanPilotingItfController: ArsdkFeatureCommonMavlinkstateCallbac
 
     func onMissionItemExecuted(idx: UInt) {
         if flightPlanPilotingItf.latestUploadState != .uploading {
-            flightPlanPilotingItf.update(latestMissionItemExecuted: Int(idx)).notifyUpdated()
+            flightPlanPilotingItf.update(latestMissionItemExecuted: idx).notifyUpdated()
         }
     }
 }
@@ -477,7 +500,7 @@ extension FlightPlanPilotingItfController: ArsdkFeatureFlightPlanCallback {
         var flightPlanInfo: RecoveryInfo?
         if !flightplanId.isEmpty {
             flightPlanInfo = RecoveryInfo(id: flightplanId, customId: customId,
-                                          latestMissionItemExecuted: Int(item),
+                                          latestMissionItemExecuted: item,
                                           runningTime: Double(runningTime),
                                           resourceId: resourceId)
         }
@@ -497,7 +520,7 @@ extension FlightPlanPilotingItfController: ArsdkFeatureFlightPlanCallback {
 
     func onWaypointSkipped(item: UInt) {
         if flightPlanPilotingItf.latestUploadState != .uploading {
-            flightPlanPilotingItf.update(latestMissionItemSkipped: Int(item)).notifyUpdated()
+            flightPlanPilotingItf.update(latestMissionItemSkipped: item).notifyUpdated()
         }
     }
 }

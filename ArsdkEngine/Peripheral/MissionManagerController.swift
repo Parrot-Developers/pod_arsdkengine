@@ -142,6 +142,7 @@ class MissionManagerController: DeviceComponentController, MissionManagerBackend
             for mission in missions {
                 let mission = mission.value
                 missionManager.update(uid: mission.uid, state: .unavailable, unavailabilityReason: .none)
+                missionManager.reset(updatingMission: mission.uid)
             }
             missionManager.notifyUpdated()
         }

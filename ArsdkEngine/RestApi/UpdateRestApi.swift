@@ -72,17 +72,21 @@ class UpdateRestApi {
     ///
     /// - Parameters:
     ///   - firmware: the of the firmware to update with
+    ///   - reboot: `true` to make the device reboot automatically at the end of the process
     ///   - progress: the progress callback (called on the main thread)
     ///   - progressValue: the current upload progress
     ///   - completion: the completion callback (called on the main thread)
     ///   - result: the completion result
     /// - Returns: The request.
     func update(
-        withFirmware firmware: URL, progress: @escaping (_ progressValue: Int) -> Void,
+        withFirmware firmware: URL, reboot: Bool, progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ result: Result) -> Void) -> CancelableCore {
 
         return server.putFile(
-            api: "/api/v1/update/upload", fileUrl: firmware, timeoutInterval: 120,
+            api: "/api/v1/update/upload",
+            query: ["reboot": (reboot ? "yes" : "no")],
+            fileUrl: firmware,
+            timeoutInterval: 120,
             progress: progress) { result, _ in
                 switch result {
                 case .success:

@@ -64,8 +64,6 @@ class AnafiFamilyDroneController: DroneController {
 
         componentControllers.append(AutoLookAtPilotingItf(
             activationController: pilotingItfActivationController))
-        componentControllers.append(AutoFollowPilotingItf(
-            activationController: pilotingItfActivationController))
         componentControllers.append(FollowFeatureLookAtPilotingItf(
             activationController: pilotingItfActivationController, trackingSharing: trackingSharing))
         componentControllers.append(FollowFeatureFollowMePilotingItf(
@@ -88,7 +86,7 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(CameraFeatureExposureValues(deviceController: self))
         componentControllers.append(AnafiFlightInfo(deviceController: self))
         if model == .anafi2 {
-            componentControllers.append(Anafi2CellularLogs(deviceController: self))
+            componentControllers.append(CellularLogsController(deviceController: self))
         }
         componentControllers.append(AnafiTakeoffChecklist(deviceController: self))
         // Peripherals

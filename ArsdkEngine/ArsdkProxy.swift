@@ -169,7 +169,7 @@ extension ArsdkProxy {
         if let activeDevice = activeDevice,
             (activeDevice.device.uid != uid && activeDevice.connectionSession.state != .disconnected) ||
             (activeDevice.device.uid == uid &&
-                (activeDevice.connectionSession.state != .disconnected ||
+                (activeDevice.connectionSession.state != .disconnected &&
                  activeDevice.connectionSession.state != .connecting)) {
             // force a link disconnection
             activeDevice.linkDidDisconnect(removing: false)

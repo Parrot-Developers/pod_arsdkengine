@@ -196,6 +196,7 @@ class MissionUpdaterRestApi {
 
         /// Version of the mission.
         let version: String
+
         /// Model id of the supported target.
         let targetModelId: UInt
     }
@@ -207,11 +208,18 @@ fileprivate extension MissionCore {
     /// - Parameter httpMission: the http mission
     /// - Returns: a mission if the http mission is compatible with the MissionDecodable declaration
     static func from(httpMission: MissionUpdaterRestApi.MissionDecodable) -> MissionCore? {
+        let deviceModel = DeviceModel.from(internalId: Int(httpMission.targetModelId))
+        var targetModel: Drone.Model?
+        switch deviceModel {
+        case .drone(let model):
+            targetModel = model
+        default:
+            break
+        }
         return MissionCore(uid: httpMission.uid, description: httpMission.descriptor, name: httpMission.name,
-            version: httpMission.version, recipientId: nil,
-            targetModelId: Drone.Model(rawValue: Int(httpMission.targetModelId)),
-            minTargetVersion: FirmwareVersion.parse(versionStr: httpMission.minTargetVersion),
-            maxTargetVersion: FirmwareVersion.parse(versionStr: httpMission.maxTargetVersion))
-
+                           version: httpMission.version, recipientId: nil,
+                           targetModelId: targetModel,
+                           minTargetVersion: FirmwareVersion.parse(versionStr: httpMission.minTargetVersion),
+                           maxTargetVersion: FirmwareVersion.parse(versionStr: httpMission.maxTargetVersion))
     }
 }

@@ -72,8 +72,8 @@ class LogsQueue {
     }
 }
 
-/// CellularLogs component controller for Anafi2 drones.
-class Anafi2CellularLogs: DeviceComponentController {
+/// CellularLogs component controller.
+class CellularLogsController: DeviceComponentController {
 
     /// Cellular logs component.
     private var cellularLogs: CellularLogsCore!
@@ -96,13 +96,13 @@ class Anafi2CellularLogs: DeviceComponentController {
         arsdkDecoder = ArsdkNetdebuglogEventDecoder(listener: self)
     }
 
-    /// Drone is connected.
+    /// Device is connected.
     override func didConnect() {
         cellularLogs.update(messages: logs.messages)
             .publish()
     }
 
-    /// Drone is disconnected.
+    /// Device is disconnected.
     override func didDisconnect() {
         cellularLogs.unpublish()
         logs.clear()
@@ -119,9 +119,12 @@ class Anafi2CellularLogs: DeviceComponentController {
 }
 
 /// Extension for events processing.
-extension Anafi2CellularLogs: ArsdkNetdebuglogEventDecoderListener {
-    func onLogsMsg(_ logsMsg: String) {
-        logs.append(message: logsMsg)
+extension CellularLogsController: ArsdkNetdebuglogEventDecoderListener {
+    func onLog(_ log: Arsdk_Netdebuglog_Event.Log) {
+        guard log.serial == deviceController.device.uid else {
+            return
+        }
+        logs.append(message: log.msg)
         cellularLogs.update(messages: logs.messages)
             .notifyUpdated()
     }

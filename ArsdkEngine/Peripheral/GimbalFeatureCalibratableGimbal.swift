@@ -60,6 +60,8 @@ class GimbalFeatureCalibratableGimbal: DeviceComponentController, ArsdkFeatureGi
         super.didConnect()
         if supported {
             gimbal.publish()
+        } else {
+            gimbal.unpublish()
         }
     }
 
@@ -72,6 +74,7 @@ class GimbalFeatureCalibratableGimbal: DeviceComponentController, ArsdkFeatureGi
         }
         gimbal.update(calibrationProcessState: .none)
         gimbal.notifyUpdated()
+        supported = false
     }
 
     /// Drone is about to be forgotten
@@ -90,11 +93,19 @@ class GimbalFeatureCalibratableGimbal: DeviceComponentController, ArsdkFeatureGi
 /// Gimbal backend implementation
 extension GimbalFeatureCalibratableGimbal: CalibratableGimbalBackend {
     func startCalibration() {
-        sendCommand(ArsdkFeatureGimbal.calibrateEncoder(gimbalId: gimbalId!))
+        guard let gimbalId = gimbalId else {
+            ULog.e(.gimbalTag, "Can't start calibration: gimbal ID undefined")
+            return
+        }
+        sendCommand(ArsdkFeatureGimbal.calibrateEncoder(gimbalId: gimbalId))
     }
 
     func cancelCalibration() {
-        sendCommand(ArsdkFeatureGimbal.cancelCalibrationEncoder(gimbalId: gimbalId!))
+        guard let gimbalId = gimbalId else {
+            ULog.e(.gimbalTag, "Can't cancel calibration: gimbal ID undefined")
+            return
+        }
+        sendCommand(ArsdkFeatureGimbal.cancelCalibrationEncoder(gimbalId: gimbalId))
     }
 }
 

@@ -437,6 +437,8 @@ extension AnafiAlarms: ArsdkFeatureObstacleAvoidanceCallback {
                isSetIn: alertsBitField)
         update(level: .warning, forAlarm: .obstacleAvoidanceBlindMotionDirection, ifAlert: .blindMotionDirection,
                isSetIn: alertsBitField)
+        update(level: .critical, forAlarm: .obstacleAvoidanceFreeze, ifAlert: .freeze,
+               isSetIn: alertsBitField)
         alarms.notifyUpdated()
     }
 
@@ -451,6 +453,46 @@ extension AnafiAlarms: ArsdkFeatureObstacleAvoidanceCallback {
                         ifAlert alert: ArsdkFeatureObstacleAvoidanceAlert, isSetIn bitField: UInt) {
         let newLevel = ArsdkFeatureObstacleAvoidanceAlertBitField.isSet(alert, inBitField: bitField) ? level : .off
         alarms.update(level: newLevel, forAlarm: kind)
+    }
+
+    func onAlertTimer(alert: ArsdkFeatureObstacleAvoidanceAlert, timer: UInt) {
+        var newAlert: Alarm.Kind?
+
+        switch alert {
+        case .highDeviation:
+            newAlert = .highDeviation
+        case .stuck:
+            newAlert = .droneStuck
+        case .stereoFailure:
+            newAlert = .obstacleAvoidanceDisabledStereoFailure
+        case .stereoLensFailure:
+            newAlert = .obstacleAvoidanceDisabledStereoLensFailure
+        case .gimbalFailure:
+            newAlert = .obstacleAvoidanceDisabledGimbalFailure
+        case .tooDark:
+            newAlert = .obstacleAvoidanceDisabledTooDark
+        case .estimationUnreliable:
+            newAlert = .obstacleAvoidanceDisabledEstimationUnreliable
+        case .calibrationFailure:
+            newAlert = .obstacleAvoidanceDisabledCalibrationFailure
+        case .poorGps:
+            newAlert = .obstacleAvoidancePoorGps
+        case .strongWind:
+            newAlert = .obstacleAvoidanceStrongWind
+        case .computationalError:
+            newAlert = .obstacleAvoidanceComputationalError
+        case .blindMotionDirection:
+            newAlert = .obstacleAvoidanceBlindMotionDirection
+        case .freeze:
+            newAlert = .obstacleAvoidanceFreeze
+        case .sdkCoreUnknown:
+            break
+        @unknown default:
+            break
+        }
+        if let finalAlert = newAlert {
+            alarms.update(timer: TimeInterval(timer), forAlarm: finalAlert).notifyUpdated()
+        }
     }
 }
 
@@ -474,6 +516,10 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
             newKind = .horizontalGeofenceReached
         case .verticalGeofenceReached:
             newKind = .verticalGeofenceReached
+        case .freefallDetected:
+            newKind = .freeFallDetected
+        case .fstcamDecalibrated:
+            newKind = .stereoCameraDecalibrated
         case .sdkCoreUnknown:
             break
         @unknown default:
@@ -520,5 +566,7 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
         alarms.update(level: .notAvailable, forAlarm: .magnetometerLowEarthField)
         alarms.update(level: .notAvailable, forAlarm: .horizontalGeofenceReached)
         alarms.update(level: .notAvailable, forAlarm: .verticalGeofenceReached)
+        alarms.update(level: .notAvailable, forAlarm: .freeFallDetected)
+        alarms.update(level: .notAvailable, forAlarm: .stereoCameraDecalibrated)
     }
 }

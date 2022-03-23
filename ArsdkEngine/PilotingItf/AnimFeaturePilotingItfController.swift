@@ -93,7 +93,7 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
                 availableAnimations: getAvailableAnimations(supportedAnimations[.flightPlan]))
         case is AutoLookAtPilotingItf, is FollowFeatureLookAtPilotingItf:
             animationPilotingItf.update(availableAnimations: getAvailableAnimations(supportedAnimations[.lookAt]))
-        case is AutoFollowPilotingItf, is FollowFeatureFollowMePilotingItf:
+        case is FollowFeatureFollowMePilotingItf:
             animationPilotingItf.update(
                 availableAnimations: getAvailableAnimations(supportedAnimations[.followMe]))
         case is AnafiPoiPilotingItf:

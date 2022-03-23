@@ -89,6 +89,7 @@ extension Storable where ValueType == Self {
 
 // Make basic types that can be written to a plist Storable
 extension UInt: Storable {}
+extension UInt64: Storable {}
 extension Int: Storable {}
 extension Float: Storable {}
 extension Double: Storable {}

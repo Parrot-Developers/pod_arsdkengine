@@ -47,8 +47,8 @@ protocol ArsdkFlightplanUploader: AnyObject {
     ///   - success: true or false if the upload is done with success
     ///   - flightPlanUid: uid of the flightplan returned by the drone
     /// - Returns: a request that can be canceled
-    func uploadFlightPlan(
-        filepath: String, completion: @escaping (_ success: Bool, _ flightPlanUid: String?) -> Void) -> CancelableCore?
+    func uploadFlightPlan(filepath: String,
+                          completion: @escaping (_ success: Bool, _ flightPlanUid: String?) -> Void) -> CancelableCore?
 }
 
 /// Return home piloting interface component controller class - with connexion through http
@@ -91,6 +91,9 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     private var shouldRestartFlightPlan = false
     /// Mission item where the flight plan should start.
     private var startAtMissionItem: UInt?
+    /// The disconnection policy to use.
+    private var disconnectionPolicy: FlightPlanDisconnectionPolicy = .returnToHome
+
     /// Unavailability reasons of the drone.
     private var droneUnavailabilityReasons = Set<FlightPlanUnavailabilityReason>()
     /// Whether the flight plan is currently stopped
@@ -142,13 +145,17 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     override func didDisconnect() {
         uploader.reset()
         pilotingItf.unpublish()
+        flightPlanInterpreter = .legacy
         startAtMissionItem = nil
+        disconnectionPolicy = .returnToHome
 
         // reset values that does not have a meaning while disconnected
         flightPlanPilotingItf.update(isPaused: false).update(flightPlanFileIsKnown: false)
             .update(latestUploadState: .none).update(latestActivationError: .none)
             .update(activateAtMissionItemSupported: false)
-            .update(recoveryInfo: nil).update(flightPlanId: nil).notifyUpdated()
+            .update(activateAtMissionItemV2Supported: false)
+            .update(recoveryInfo: nil).update(flightPlanId: nil)
+            .notifyUpdated()
 
         // super will call notifyUpdated
         super.didDisconnect()
@@ -188,25 +195,25 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     private func updateFileIsKnown(
         playingState: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState, playedFile: String) {
 
-        switch playingState {
-        case .playing, .paused, .stopped:
-            switch uploader {
-            case is FtpFlightPlanUploader:
-                if let remoteFilepath = remoteFlightPlanUid, !playedFile.hasSuffix(remoteFilepath) {
-                    remoteFlightPlanUid = nil
+            switch playingState {
+            case .playing, .paused, .stopped:
+                switch uploader {
+                case is FtpFlightPlanUploader:
+                    if let remoteFilepath = remoteFlightPlanUid, !playedFile.hasSuffix(remoteFilepath) {
+                        remoteFlightPlanUid = nil
+                    }
+                case is HttpFlightPlanUploader :
+                    if playedFile != remoteFlightPlanUid {
+                        remoteFlightPlanUid = nil
+                    }
+                    flightPlanPilotingItf.update(flightPlanFileIsKnown: remoteFlightPlanUid != nil)
+                default:
+                    break
                 }
-            case is HttpFlightPlanUploader :
-                if playedFile != remoteFlightPlanUid {
-                    remoteFlightPlanUid = nil
-                }
-                flightPlanPilotingItf.update(flightPlanFileIsKnown: remoteFlightPlanUid != nil)
             default:
                 break
             }
-        default:
-            break
         }
-    }
 
     /// Update the local availability of the flight plan
     func updateAvailability() {
@@ -233,10 +240,12 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
 // MARK: - FlightPlanPilotingItfBackend
 /// Extension of FlightPlanPilotingItfController that implements FlightPlanPilotingItfBackend
 extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
-    func activate(restart: Bool, interpreter: FlightPlanInterpreter, missionItem: UInt?) -> Bool {
+    func activate(restart: Bool, interpreter: FlightPlanInterpreter, missionItem: UInt?,
+                  disconnectionPolicy: FlightPlanDisconnectionPolicy) -> Bool {
         flightPlanInterpreter = interpreter
         shouldRestartFlightPlan = restart
         startAtMissionItem = missionItem
+        self.disconnectionPolicy = disconnectionPolicy
         flightPlanPilotingItf.update(latestActivationError: .none).notifyUpdated()
         return droneController.pilotingItfActivationController.activate(pilotingItf: self)
     }
@@ -334,15 +343,30 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
 extension FlightPlanPilotingItfController {
     /// Sends command to start flight plan.
     private func sendStartFlightPlan() {
-        if let missionItem = startAtMissionItem {
-            let type: ArsdkFeatureFlightPlanMavlinkType = flightPlanInterpreter == .legacy ? .flightplan : .flightplanv2
+        if flightPlanPilotingItf.activateAtMissionItemV2Supported,
+           let missionItem = startAtMissionItem {
+            let type: ArsdkFeatureFlightPlanMavlinkType = flightPlanInterpreter == .legacy
+            ? .flightplan
+            : .flightplanv2
+            let continueOnDisconnect: UInt = disconnectionPolicy == .returnToHome ? 0 : 1
+            sendCommand(ArsdkFeatureFlightPlan.startAtV2Encoder(flightplanId: remoteFlightPlanUid,
+                                                                customId: customFlightPlanId,
+                                                                type: type,
+                                                                item: missionItem,
+                                                                continueOnDisconnect:
+                                                                    continueOnDisconnect))
+        } else if let missionItem = startAtMissionItem {
+            let type: ArsdkFeatureFlightPlanMavlinkType = flightPlanInterpreter == .legacy
+            ? .flightplan
+            : .flightplanv2
             sendCommand(ArsdkFeatureFlightPlan.startAtEncoder(flightplanId: remoteFlightPlanUid,
-                                                              customId: customFlightPlanId, type: type,
-                        item: UInt(missionItem)))
+                                                              customId: customFlightPlanId,
+                                                              type: type, item: missionItem))
         } else {
             let type: ArsdkFeatureCommonMavlinkStartType =
-                flightPlanInterpreter == .legacy ? .flightplan : .flightplanv2
-            sendCommand(ArsdkFeatureCommonMavlink.startEncoder(filepath: remoteFlightPlanUid, type: type))
+            flightPlanInterpreter == .legacy ? .flightplan : .flightplanv2
+            sendCommand(ArsdkFeatureCommonMavlink.startEncoder(filepath: remoteFlightPlanUid,
+                                                               type: type))
         }
     }
 
@@ -411,73 +435,76 @@ extension FlightPlanPilotingItfController: ArsdkFeatureCommonMavlinkstateCallbac
     func onMavlinkFilePlayingStateChanged(
         state: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState,
         filepath: String!, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
-        isPlaying = state == .playing
-        updateFileIsKnown(playingState: state, playedFile: filepath)
-        updateUnavailabilityReasons()
-        flightPlanPilotingItf.update(flightPlanId: filepath == "" ? nil : filepath)
+            isPlaying = state == .playing
+            updateFileIsKnown(playingState: state, playedFile: filepath)
+            updateUnavailabilityReasons()
+            flightPlanPilotingItf.update(flightPlanId: filepath == "" ? nil : filepath)
 
-        switch state {
-        case .playing:
-            // clear the latest mission items executed and skipped if the previous state was stopped
-            if isStopped {
-                flightPlanPilotingItf.update(latestMissionItemExecuted: nil)
-                    .update(latestMissionItemSkipped: nil)
-                isStopped = false
-            }
-            flightPlanPilotingItf.update(isPaused: false)
-            notifyActive()
-
-            // check if we have a recovery info available
-            if let recoveryInfo = flightPlanPilotingItf.recoveryInfo {
-                // if so try to catch up with the state on the drone
-                catchUpActivePilotingItfIfNeeded(flightplanId: recoveryInfo.id,
-                                                 customId: recoveryInfo.customId)
-            }
-        case .stopped:
-            isStopped = true
-
-            // Only change the isPaused flag if there is no flight plan to upload
-            if flightPlanPathToUpload == nil {
+            switch state {
+            case .playing:
+                // clear the latest mission items executed and skipped if the previous state was
+                // stopped
+                if isStopped {
+                    flightPlanPilotingItf.update(latestMissionItemExecuted: nil)
+                        .update(latestMissionItemSkipped: nil)
+                    isStopped = false
+                }
                 flightPlanPilotingItf.update(isPaused: false)
-            }
-            updateAvailability()
+                notifyActive()
 
-            if shouldRestartFlightPlan {
-                shouldRestartFlightPlan = false
-                sendStartFlightPlan()
-                flightPlanPilotingItf.notifyUpdated()
-            } else {
+                // check if we have a recovery info available
+                if let recoveryInfo = flightPlanPilotingItf.recoveryInfo {
+                    // if so try to catch up with the state on the drone
+                    catchUpActivePilotingItfIfNeeded(flightplanId: recoveryInfo.id,
+                                                     customId: recoveryInfo.customId)
+                }
+            case .stopped:
+                isStopped = true
+
+                // Only change the isPaused flag if there is no flight plan to upload
+                if flightPlanPathToUpload == nil {
+                    flightPlanPilotingItf.update(isPaused: false)
+                }
                 updateAvailability()
-            }
 
-            // if a flight plan should be uploaded
-            if let flightPlanPathToUpload = flightPlanPathToUpload {
-                uploadFlightPlan(filepath: flightPlanPathToUpload, customFlightPlanId: customFlightPlanId)
-            }
-        case .paused:
-            isStopped = false
+                if shouldRestartFlightPlan {
+                    shouldRestartFlightPlan = false
+                    sendStartFlightPlan()
+                    flightPlanPilotingItf.notifyUpdated()
+                } else {
+                    updateAvailability()
+                }
 
-            // Only change the isPaused flag if there is no flight plan to upload
-            if flightPlanPathToUpload == nil {
-                flightPlanPilotingItf.update(isPaused: true)
-            }
-            updateAvailability()
+                // if a flight plan should be uploaded
+                if let flightPlanPathToUpload = flightPlanPathToUpload {
+                    uploadFlightPlan(filepath: flightPlanPathToUpload,
+                                     customFlightPlanId: customFlightPlanId)
+                }
+            case .paused:
+                isStopped = false
 
-            // if a flight plan should be uploaded
-            if let flightPlanPathToUpload = flightPlanPathToUpload {
-                uploadFlightPlan(filepath: flightPlanPathToUpload, customFlightPlanId: customFlightPlanId)
+                // Only change the isPaused flag if there is no flight plan to upload
+                if flightPlanPathToUpload == nil {
+                    flightPlanPilotingItf.update(isPaused: true)
+                }
+                updateAvailability()
+
+                // if a flight plan should be uploaded
+                if let flightPlanPathToUpload = flightPlanPathToUpload {
+                    uploadFlightPlan(filepath: flightPlanPathToUpload,
+                                     customFlightPlanId: customFlightPlanId)
+                }
+            case .loaded:
+                // This case is not handled because it is not supported by Anafi
+                break
+            case .sdkCoreUnknown:
+                fallthrough
+            @unknown default:
+                // don't change anything if value is unknown
+                ULog.w(.tag, "Unknown mavlink state, skipping this event.")
+                return
             }
-        case .loaded:
-            // This case is not handled because it is not supported by Anafi
-            break
-        case .sdkCoreUnknown:
-            fallthrough
-        @unknown default:
-            // don't change anything if value is unknown
-            ULog.w(.tag, "Unknown mavlink state, skipping this event.")
-            return
         }
-    }
 
     func onMissionItemExecuted(idx: UInt) {
         if flightPlanPilotingItf.latestUploadState != .uploading {
@@ -488,7 +515,8 @@ extension FlightPlanPilotingItfController: ArsdkFeatureCommonMavlinkstateCallbac
 
 extension FlightPlanPilotingItfController: ArsdkFeatureFlightPlanCallback {
     func onInfo(missingInputsBitField: UInt) {
-        droneUnavailabilityReasons = FlightPlanUnavailabilityReason.createSetFrom(bitField: missingInputsBitField)
+        droneUnavailabilityReasons = FlightPlanUnavailabilityReason
+            .createSetFrom(bitField: missingInputsBitField)
         flightPlanAvailable = droneUnavailabilityReasons.isEmpty
         updateUnavailabilityReasons()
         updateAvailability()
@@ -514,8 +542,17 @@ extension FlightPlanPilotingItfController: ArsdkFeatureFlightPlanCallback {
     func onCapabilities(supportedCapabilitiesBitField: UInt) {
         let startAtSupported = ArsdkFeatureFlightPlanSupportedCapabilitiesBitField
             .isSet(.startAt, inBitField: supportedCapabilitiesBitField)
-        flightPlanPilotingItf.update(activateAtMissionItemSupported: startAtSupported)
-            .update(isUploadWithCustomIdSupported: startAtSupported).notifyUpdated()
+        flightPlanPilotingItf
+            .update(activateAtMissionItemSupported: startAtSupported)
+            .update(isUploadWithCustomIdSupported: startAtSupported)
+
+        let startAtV2Supported = ArsdkFeatureFlightPlanSupportedCapabilitiesBitField
+            .isSet(.startAtV2, inBitField: supportedCapabilitiesBitField)
+        flightPlanPilotingItf
+            .update(activateAtMissionItemV2Supported: startAtV2Supported)
+            .update(isUploadWithCustomIdSupported: startAtV2Supported)
+
+        flightPlanPilotingItf.notifyUpdated()
     }
 
     func onWaypointSkipped(item: UInt) {
@@ -573,5 +610,5 @@ extension FlightPlanUnavailabilityReason: ArsdkMappableEnum {
     static var arsdkMapper = Mapper<FlightPlanUnavailabilityReason, ArsdkFeatureFlightPlanIndicator>([
         .droneGpsInfoInaccurate: .droneGps,
         .droneNotCalibrated: .droneMagneto
-        ])
+    ])
 }

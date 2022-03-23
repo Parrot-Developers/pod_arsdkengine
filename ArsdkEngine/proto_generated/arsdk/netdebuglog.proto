@@ -11,9 +11,19 @@ option (olympe_package) = "netdebuglog";
 
 /* This is the entry point to receive messages from the drone. */
 message Event {
-    reserved 1 to 15; /* reserved for non-acknowledged events */
+	reserved 1 to 15; /* reserved for non-acknowledged events */
 
-    oneof id {
-        string logs_msg = 16;
-    }
+	oneof id {
+		Log log = 17;
+	}
+
+	reserved 16; /* deprecated event */
+
+	/* Log message. */
+	message Log {
+		/* Serial number of sender. */
+		string serial = 1;
+		/* Log message. */
+		string msg = 2;
+	}
 }

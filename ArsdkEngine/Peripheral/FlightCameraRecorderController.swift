@@ -41,53 +41,14 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
 
      /// All settings that can be stored
     enum SettingKey: String, StoreKey {
-        case activePipelinesKey = "activePipelines"
+        case pipelinesConfigurationKey = "pipelinesConfiguration"
     }
-
-    /// Stored settings
-    enum Setting: Hashable {
-        case activePipelines(Set<FlightCameraRecorderPipeline>)
-        /// Setting storage key
-        var key: SettingKey {
-            switch self {
-            case .activePipelines: return .activePipelinesKey
-            }
-        }
-        /// All values to allow enumerating settings
-        static let allCases: Set<Setting> = [.activePipelines([])]
-
-        func hash(into hasher: inout Hasher) {
-            hasher.combine(key)
-        }
-
-        static func == (lhs: Setting, rhs: Setting) -> Bool {
-            return lhs.key == rhs.key
-        }
-    }
-
-    /// Stored capabilities.
-    enum Capabilities {
-        case pipelines(Set<FlightCameraRecorderPipeline>)
-
-        /// All values to allow enumerating settings
-        static let allCases: [Capabilities] = [.pipelines([])]
-
-        /// Setting storage key
-        var key: SettingKey {
-            switch self {
-            case .pipelines: return .activePipelinesKey
-            }
-        }
-    }
-
-    /// Setting values as received from the drone
-    private var droneSettings = Set<Setting>()
-
-    /// Store device specific values
-    private let deviceStore: SettingsStore?
 
     /// Preset store for this flight camera recorder interface
     private var presetStore: SettingsStore?
+
+    /// Current pipelines configuration identifier on the drone.
+    private var currentId = UInt64(0)
 
     /// Constructor
     ///
@@ -95,37 +56,25 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
     override init(deviceController: DeviceController) {
 
         if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            deviceStore = nil
             presetStore = nil
         } else {
-            deviceStore = deviceController.deviceStore.getSettingsStore(key: FlightCameraRecorderController.settingKey)
             presetStore = deviceController.presetStore.getSettingsStore(key: FlightCameraRecorderController.settingKey)
         }
 
         super.init(deviceController: deviceController)
         flightCameraRecorder = FlightCameraRecorderCore(store: deviceController.device.peripheralStore, backend: self)
         // load settings
-        if let deviceStore = deviceStore, let presetStore = presetStore, !deviceStore.new && !presetStore.new {
+        if let presetStore = presetStore, !presetStore.new {
             loadPresets()
             flightCameraRecorder.publish()
         }
     }
 
-    /// Load saved settings
+    /// Load saved pipelines configuration identifier.
     private func loadPresets() {
-        if let deviceStore = deviceStore, let presetStore = presetStore {
-            Setting.allCases.forEach {
-                switch $0 {
-                case .activePipelines:
-                    if let supportedPipelines: StorableArray<FlightCameraRecorderPipeline> = deviceStore.read(
-                        key: $0.key),
-                       let activePipelines: StorableArray<FlightCameraRecorderPipeline> = presetStore.read(
-                        key: $0.key) {
-                        flightCameraRecorder.update(supportedValues: Set(supportedPipelines.storableValue))
-                            .update(activePipelines: Set(activePipelines.storableValue))
-                            .notifyUpdated()
-                    }
-                }
+        if let presetStore = presetStore {
+            if let presetId: UInt64 = presetStore.read(key: SettingKey.pipelinesConfigurationKey) {
+                flightCameraRecorder.update(pipelineConfigId: presetId).notifyUpdated()
             }
         }
     }
@@ -148,7 +97,6 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
 
     /// Drone is about to be forgotten
     override func willForget() {
-        deviceStore?.clear()
         flightCameraRecorder.unpublish()
         super.willForget()
     }
@@ -168,67 +116,46 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
     ///
     /// Iterate settings received during connection
     private func applyPresets() {
-        // iterate settings received during the connection
-        for setting in droneSettings {
-            switch setting {
-            case .activePipelines(let activePipelines):
-                if let preset: StorableArray<FlightCameraRecorderPipeline> = presetStore?.read(key: setting.key) {
-                    if Set(preset.storableValue) != activePipelines {
-                        sendConfigureCommand(Set(preset.storableValue))
-                    }
-                    flightCameraRecorder.update(activePipelines: Set(preset.storableValue)).notifyUpdated()
-                } else {
-                    flightCameraRecorder.update(activePipelines: activePipelines).notifyUpdated()
-                }
+        if let presetId: UInt64 = presetStore?.read(key: SettingKey.pipelinesConfigurationKey) {
+            if presetId != currentId {
+                sendConfigureCommand(presetId)
             }
+            flightCameraRecorder.update(pipelineConfigId: presetId).notifyUpdated()
+        } else {
+            flightCameraRecorder.update(pipelineConfigId: currentId).notifyUpdated()
         }
     }
 
-    /// Called when a command that notifies a setting change has been received.
+    /// Called when a command that notifies a pipelines configuration identifier change has been received.
     ///
-    /// - Parameter setting: setting that changed
-    func settingDidChange(_ setting: Setting) {
-        droneSettings.insert(setting)
-        switch setting {
-        case .activePipelines(let activePipelines):
-            if connected {
-                flightCameraRecorder.update(activePipelines: activePipelines).notifyUpdated()
-            }
-        }
-    }
-
-    /// Called when a command that notifies a capabilities change has been received.
-    ///
-    /// - Parameter capabilities: capabilities that changed
-    func capabilitiesDidChange(_ capabilities: Capabilities) {
-        switch capabilities {
-        case .pipelines(let supportedPipelines):
-            deviceStore?.write(key: capabilities.key, value: StorableArray(Array(supportedPipelines))).commit()
-            flightCameraRecorder.update(supportedValues: supportedPipelines)
-        }
-        flightCameraRecorder.notifyUpdated()
-    }
-
-    /// Sets active pipelines.
-    ///
-    /// - Parameter activePipelines: the new set of active pipelines
-    /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
-    func set(activePipelines: Set<FlightCameraRecorderPipeline>) -> Bool {
-        presetStore?.write(key: SettingKey.activePipelinesKey, value: StorableArray(Array(activePipelines))).commit()
+    /// - Parameter id: new pipelines configuration identifier.
+    func pipelinesConfigurationIdDidChange(_ id: UInt64) {
+        currentId = id
         if connected {
-            sendConfigureCommand(activePipelines)
+            flightCameraRecorder.update(pipelineConfigId: id).notifyUpdated()
+        }
+    }
+
+    /// Sets flight camera recording pipelines.
+    ///
+    /// - Parameter id: the new pipelines configuration identifier to set.
+    /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
+    func set(pipelineConfigId: UInt64) -> Bool {
+        presetStore?.write(key: SettingKey.pipelinesConfigurationKey, value: pipelineConfigId).commit()
+        if connected {
+            sendConfigureCommand(pipelineConfigId)
             return true
         } else {
-            flightCameraRecorder.update(activePipelines: activePipelines).notifyUpdated()
+            flightCameraRecorder.update(pipelineConfigId: pipelineConfigId).notifyUpdated()
             return false
         }
     }
 
     /// Configure command
     ///
-    /// - Parameter activePipelines: requested active pipelines.
-    func sendConfigureCommand(_ activePipelines: Set<FlightCameraRecorderPipeline>) {
-        sendCommand(ArsdkFeatureFcr.configurePipelinesEncoder(pipelinesBitField: Bitfield.of(Array(activePipelines))))
+    /// - Parameter id: requested  pipeline configuration identifier.
+    func sendConfigureCommand(_ id: UInt64) {
+        sendCommand(ArsdkFeatureFcr.configurePipelinesEncoder(id: id))
     }
 
     /// A command has been received.
@@ -244,72 +171,7 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
 /// Flight camera recorder decode callback implementation.
 extension FlightCameraRecorderController: ArsdkFeatureFcrCallback {
 
-    func onState(stateBitField: UInt64) {
-        let activePipelines = FlightCameraRecorderPipeline.createSetFrom(bitField: stateBitField)
-        settingDidChange(.activePipelines(activePipelines))
+    func onPipelines(id: UInt64) {
+        pipelinesConfigurationIdDidChange(id)
     }
-
-    func onCapabilities(capabilitiesBitField: UInt64) {
-        let supportedPipelines = FlightCameraRecorderPipeline.createSetFrom(bitField: capabilitiesBitField)
-        capabilitiesDidChange(.pipelines(supportedPipelines))
-    }
-}
-
-/// Extension that adds conversion from/to arsdk enum.
-extension FlightCameraRecorderPipeline: ArsdkMappableEnum {
-    /// Create set of flight camera recorder pipeline from all value set in a bitfield
-    ///
-    /// - Parameter bitField: arsdk bitfield
-    /// - Returns: set containing all flight camera recorder pipeline type set in bitField
-    static func createSetFrom(bitField: UInt64) -> Set<FlightCameraRecorderPipeline> {
-        var result = Set<FlightCameraRecorderPipeline>()
-        ArsdkFeatureFcrPipelineBitField.forAllSet(in: UInt(bitField)) { arsdkValue in
-            if let state = FlightCameraRecorderPipeline(fromArsdk: arsdkValue) {
-                result.insert(state)
-            }
-        }
-        return result
-    }
-
-    static var arsdkMapper = Mapper<FlightCameraRecorderPipeline, ArsdkFeatureFcrPipeline>([
-        .fcamTimelapse: .fcamTimelapse,
-        .fcamFollowme: .fcamTracking,
-        .fcamEmergency: .fcamEmergency,
-        .fstcamLeftTimelapse: .fstcamLeftTimelapse,
-        .fstcamLeftEmergency: .fstcamLeftEmergency,
-        .fstcamLeftCalibration: .fstcamLeftCalibration,
-        .fstcamLeftObstacleavoidance: .fstcamLeftObstacleavoidance,
-        .fstcamRightTimelapse: .fstcamRightTimelapse,
-        .fstcamRightEmergency: .fstcamRightEmergency,
-        .fstcamRightCalibration: .fstcamRightCalibration,
-        .fstcamRightObstacleavoidance: .fstcamRightObstacleavoidance,
-        .vcamPrecisehovering: .vcamPrecisehovering,
-        .vcamPrecisehome: .vcamPrecisehome,
-        .fstcamRightPrecisehovering: .fstcamRightPrecisehovering,
-        .fstcamLeftEvent: .fstcamLeftEvent,
-        .fstcamRightEvent: .fstcamRightEvent,
-        .fcamEvent: .fcamEvent
-        ])
-}
-
-extension FlightCameraRecorderPipeline: StorableEnum {
-    static let storableMapper = Mapper<FlightCameraRecorderPipeline, String>([
-        .fcamTimelapse: "fcamTimelapse",
-        .fcamFollowme: "fcamFollowme",
-        .fcamEmergency: "fcamEmergency",
-        .fstcamLeftTimelapse: "fstcamLeftTimelapse",
-        .fstcamLeftEmergency: "fstcamLeftEmergency",
-        .fstcamLeftCalibration: "fstcamLeftCalibration",
-        .fstcamLeftObstacleavoidance: "fstcamLeftObstacleavoidance",
-        .fstcamRightTimelapse: "fstcamRightTimelapse",
-        .fstcamRightEmergency: "fstcamRightEmergency",
-        .fstcamRightCalibration: "fstcamRightCalibration",
-        .fstcamRightObstacleavoidance: "fstcamRightObstacleavoidance",
-        .vcamPrecisehovering: "vcamPrecisehovering",
-        .vcamPrecisehome: "vcamPrecisehome",
-        .fstcamRightPrecisehovering: "fstcamRightPrecisehovering",
-        .fstcamLeftEvent: "fstcamLeftEvent",
-        .fstcamRightEvent: "fstcamRightEvent",
-        .fcamEvent: "fcamEvent"
-    ])
 }

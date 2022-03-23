@@ -42,6 +42,9 @@ class SkyControllerFamilyController: RCController {
         componentControllers.append(SkyControllerBatteryInfo(deviceController: self))
         componentControllers.append(SkyControllerCompass(deviceController: self))
         componentControllers.append(CellularLinkStatusController(deviceController: self))
+        if model == .skyCtrl4 {
+            componentControllers.append(CellularLogsController(deviceController: self))
+        }
 
         // Peripherals
         componentControllers.append(DroneManagerDroneFinder(proxyDeviceController: self))

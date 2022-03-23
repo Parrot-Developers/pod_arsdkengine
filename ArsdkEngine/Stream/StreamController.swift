@@ -159,6 +159,8 @@ public class StreamController: NSObject, StreamBackend {
     private var pendingSeekCmd: Command?
     /// Last SdkCoreStream command failed.
     private var lastCmdFailed: Command?
+    /// Last SdkCoreStream command status.
+    private var lastCmdStatus = Int32(0)
 
     /// Stream sinks.
     private var sinks: Set<SinkController> = []
@@ -269,7 +271,7 @@ public class StreamController: NSObject, StreamBackend {
             // Waiting opened state.
             break
         case .opened:
-            if sdkcoreStream.playbackState()?.speed == 0 {
+            if sdkcoreStream.playbackState()?.speed == 0 || lastCmdStatus == -ETIMEDOUT {
                 // Send play command.
                 setCmd(CommandPlay(streamCtrl: self))
             } else if let pendingSeekCmd = pendingSeekCmd {
@@ -297,7 +299,7 @@ public class StreamController: NSObject, StreamBackend {
             // Waiting opened state.
             break
         case .opened:
-            if sdkcoreStream.playbackState()?.speed != 0 {
+            if sdkcoreStream.playbackState()?.speed != 0 || lastCmdStatus == -ETIMEDOUT {
                 // Send pause cmd
                 setCmd(CommandPause(streamCtrl: self))
             } else if let pendingSeekCmd = pendingSeekCmd {
@@ -358,12 +360,16 @@ public class StreamController: NSObject, StreamBackend {
                 pendingSeekCmd = nil
             }
 
+            lastCmdFailed = nil
+            lastCmdStatus = 0
             currentCmd = nil
             stateRun()
         } else if status == -ETIMEDOUT {
             ULog.w(.streamTag, "command \(String(describing: currentCmd)) timeout")
             // Consider the command as not sent.
 
+            lastCmdFailed = currentCmd
+            lastCmdStatus = status
             currentCmd = nil
             stateRun()
         } else {
@@ -371,9 +377,11 @@ public class StreamController: NSObject, StreamBackend {
                    " err=\(status)(\(String(describing: strerror(-status)))")
 
             lastCmdFailed = currentCmd
+            lastCmdStatus = status
             currentCmd = nil
-            Timer.scheduledTimer(withTimeInterval: 0.01, repeats: false) { _ in
+            Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { _ in
                 self.lastCmdFailed = nil
+                self.lastCmdStatus = 0
                 self.stateRun()
             }
         }

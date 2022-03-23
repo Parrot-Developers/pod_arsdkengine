@@ -7,10 +7,10 @@ import SwiftProtobuf
 /// Listener for `ArsdkNetdebuglogEventDecoder`.
 protocol ArsdkNetdebuglogEventDecoderListener: AnyObject {
 
-    /// Processes a `String` event.
+    /// Processes a `Arsdk_Netdebuglog_Event.Log` event.
     ///
-    /// - Parameter logsMsg: event to process
-    func onLogsMsg(_ logsMsg: String)
+    /// - Parameter log: event to process
+    func onLog(_ log: Arsdk_Netdebuglog_Event.Log)
 }
 
 /// Decoder for arsdk.netdebuglog.Event events.
@@ -60,8 +60,8 @@ class ArsdkNetdebuglogEventDecoder: NSObject, ArsdkFeatureGenericCallback {
                 ULog.d(.tag, "ArsdkNetdebuglogEventDecoder event \(event)")
             }
             switch event.id {
-            case .logsMsg(let event):
-                listener?.onLogsMsg(event)
+            case .log(let event):
+                listener?.onLog(event)
             case .none:
                 ULog.w(.tag, "Unknown Arsdk_Netdebuglog_Event, skipping this event")
             }
@@ -73,10 +73,14 @@ class ArsdkNetdebuglogEventDecoder: NSObject, ArsdkFeatureGenericCallback {
 extension Arsdk_Netdebuglog_Event.OneOf_ID {
     var number: Int32 {
         switch self {
-        case .logsMsg: return 16
+        case .log: return 17
         }
     }
 }
+extension Arsdk_Netdebuglog_Event.Log {
+    static var serialFieldNumber: Int32 { 1 }
+    static var msgFieldNumber: Int32 { 2 }
+}
 extension Arsdk_Netdebuglog_Event {
-    static var logsMsgFieldNumber: Int32 { 16 }
+    static var logFieldNumber: Int32 { 17 }
 }

@@ -264,3 +264,35 @@ extension AutoLookAtPilotingItf: ArsdkFeatureAutoLookAtCallback {
         }
     }
 }
+
+extension TrackingIssue: ArsdkMappableEnum {
+
+    /// Create set of tracking issues from all value set in a bitfield
+    ///
+    /// - Parameter bitField: arsdk bitfield
+    /// - Returns: set containing all tracking issues set in bitField
+    static func createSetFrom(bitField: UInt) -> Set<TrackingIssue> {
+        var result = Set<TrackingIssue>()
+        ArsdkFeatureAutoLookAtIndicatorBitField.forAllSet(in: bitField) { arsdkValue in
+            if let missing = TrackingIssue(fromArsdk: arsdkValue) {
+                result.insert(missing)
+            }
+        }
+        return result
+    }
+    static var arsdkMapper = Mapper<TrackingIssue, ArsdkFeatureAutoLookAtIndicator>([
+        .droneGpsInfoInaccurate: .droneGps,
+        .droneNotCalibrated: .droneMagneto,
+        .droneOutOfGeofence: .droneGeofence,
+        .droneTooCloseToGround: .droneMinAltitude,
+        .droneAboveMaxAltitude: .droneMaxAltitude,
+        .droneNotFlying: .droneFlying,
+        .targetGpsInfoInaccurate: .targetPositionAccuracy,
+        .targetDetectionInfoMissing: .targetImageDetection,
+        .droneTooCloseToTarget: .droneTargetDistanceMin,
+        .droneTooFarFromTarget: .droneTargetDistanceMax,
+        .targetHorizontalSpeedKO: .targetHorizSpeed,
+        .targetVerticalSpeedKO: .targetVertSpeed,
+        .targetAltitudeAccuracyKO: .targetAltitudeAccuracy
+        ])
+}

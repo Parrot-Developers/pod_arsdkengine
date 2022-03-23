@@ -357,7 +357,6 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
     override func didConnect() {
         storeNewPresets()
         applyPresets()
-        gimbalMain.publish()
 
         if let backend = deviceController.backend {
             controlEncoderRegistration = backend.subscribeNoAckCommandEncoder(encoder: controlEncoder)
@@ -670,10 +669,13 @@ extension GimbalFeatureGimbal: GimbalBackend {
         }
         presetStore?.write(key: SettingKey.maxSpeedsKey, value: StorableDict(maxSpeeds)).commit()
 
-        if connected {
+        if connected,
+           let gimbalId = gimbalId,
+           let yaw = maxSpeeds[.yaw],
+           let pitch = maxSpeeds[.pitch],
+           let roll = maxSpeeds[.roll] {
             sendCommand(ArsdkFeatureGimbal.setMaxSpeedEncoder(
-                gimbalId: gimbalId!, yaw: Float(maxSpeeds[.yaw]!), pitch: Float(maxSpeeds[.pitch]!),
-                roll: Float(maxSpeeds[.roll]!)))
+                gimbalId: gimbalId, yaw: Float(yaw), pitch: Float(pitch), roll: Float(roll)))
             return true
         } else {
             gimbalMain.update(maxSpeedSetting: (min: nil, value: maxSpeed, max: nil), onAxis: axis).notifyUpdated()
@@ -682,11 +684,19 @@ extension GimbalFeatureGimbal: GimbalBackend {
     }
 
     func startOffsetsCorrectionProcess() {
-        sendCommand(ArsdkFeatureGimbal.startOffsetsUpdateEncoder(gimbalId: gimbalId!))
+        guard let gimbalId = gimbalId else {
+            ULog.e(.gimbalTag, "Can't start offsets correction: gimbal ID undefined")
+            return
+        }
+        sendCommand(ArsdkFeatureGimbal.startOffsetsUpdateEncoder(gimbalId: gimbalId))
     }
 
     func stopOffsetsCorrectionProcess() {
-        sendCommand(ArsdkFeatureGimbal.stopOffsetsUpdateEncoder(gimbalId: gimbalId!))
+        guard let gimbalId = gimbalId else {
+            ULog.e(.gimbalTag, "Can't stop offsets correction: gimbal ID undefined")
+            return
+        }
+        sendCommand(ArsdkFeatureGimbal.stopOffsetsUpdateEncoder(gimbalId: gimbalId))
     }
 
     func set(offsetCorrection: Double, onAxis axis: GimbalAxis) -> Bool {
@@ -700,10 +710,13 @@ extension GimbalFeatureGimbal: GimbalBackend {
             }
         }
 
-        if connected {
+        if connected,
+           let gimbalId = gimbalId,
+           let yaw = offsetCorrections[.yaw],
+           let pitch = offsetCorrections[.pitch],
+           let roll = offsetCorrections[.roll] {
             sendCommand(ArsdkFeatureGimbal.setOffsetsEncoder(
-                gimbalId: gimbalId!, yaw: Float(offsetCorrections[.yaw]!),
-                pitch: Float(offsetCorrections[.pitch]!), roll: Float(offsetCorrections[.roll]!)))
+                gimbalId: gimbalId, yaw: Float(yaw), pitch: Float(pitch), roll: Float(roll)))
             return true
         }
         return false

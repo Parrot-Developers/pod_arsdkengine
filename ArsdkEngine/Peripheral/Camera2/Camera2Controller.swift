@@ -446,6 +446,7 @@ class Camera2Controller {
         case .model:
             break
         case .config(let config):
+            ULog.d(.tag, "Current camera config \(config.description)")
             currentConfig = config
             camera.update(config: currentConfig)
         }

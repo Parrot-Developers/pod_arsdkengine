@@ -63,6 +63,10 @@ class DroneServer {
         self.webSocket = webSocket
     }
 
+    deinit {
+        httpSession.close()
+    }
+
     /// Get data
     ///
     /// - Note: the request is started in this function.

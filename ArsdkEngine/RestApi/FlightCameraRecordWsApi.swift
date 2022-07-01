@@ -79,7 +79,7 @@ class FlightCameraRecordWsApi {
 extension FlightCameraRecordWsApi: WebSocketSessionDelegate {
 
     func webSocketSessionDidReceiveMessage(_ data: Data) {
-        ULog.d(.flightCameraRecordTag, String(data: data, encoding: .utf8))
+        ULog.d(.flightCameraRecordTag, String(data: data, encoding: .utf8)!)
 
         // decode message
         do {

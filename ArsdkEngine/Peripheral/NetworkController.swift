@@ -111,8 +111,8 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
     /// Decoder for network events.
     private var arsdkDecoder: ArsdkNetworkEventDecoder!
 
-    /// Whether `State` message has been received since `GetState` command was sent.
-    private var stateReceived = false
+    /// Whether `State` message with capabilities has been received since `GetState` command was sent.
+    private var capabilitiesReceived = false
 
     /// Constructor.
     ///
@@ -150,7 +150,7 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
         super.willConnect()
         // remove settings stored while connecting. We will get new one on the next connection.
         droneSettings.removeAll()
-        stateReceived = false
+        capabilitiesReceived = false
         _ = sendGetStateCommand()
     }
 
@@ -450,8 +450,9 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
             settingDidChange(.directConnectionMode(mode))
         }
 
-        if !stateReceived {
-            stateReceived = true
+        if state.hasDefaultCapabilities,
+           !capabilitiesReceived {
+            capabilitiesReceived = true
             applyPresets()
             networkControl.publish()
         }
@@ -471,7 +472,7 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
             networkControl.update(link: nil)
         }
 
-        if !stateReceived { // first receipt of this message
+        if !capabilitiesReceived { // first receipt of this message
             // assume all routing policies are supported
             capabilitiesDidChange(.routingPolicy(Set(NetworkControlRoutingPolicy.allCases)))
         }

@@ -158,7 +158,6 @@ class CellularController: DeviceComponentController, CellularBackend {
                     if let mode: CellularMode = presetStore.read(key: setting.key) {
                         cellular.update(mode: mode)
                     }
-                    cellular.notifyUpdated()
                 case .apnConfiguration:
                     if let apnConfigurationPresetsData: ApnConfigurationPresets.Data =
                         presetStore.read(key: setting.key) {
@@ -167,19 +166,17 @@ class CellularController: DeviceComponentController, CellularBackend {
                             .update(apnUrl: apnConfigurationPresets.url)
                             .update(apnUsername: apnConfigurationPresets.username)
                             .update(apnPassword: apnConfigurationPresets.password)
-                            .notifyUpdated()
                     }
                 case .isRoamingAllowed:
                     if let isRoamingAllowed: Bool = presetStore.read(key: setting.key) {
-                        cellular.update(isRoamingAllowed: isRoamingAllowed).notifyUpdated()
+                        cellular.update(isRoamingAllowed: isRoamingAllowed)
                     }
-                    cellular.notifyUpdated()
                 case .networkMode:
                     if let networkMode: CellularNetworkMode = presetStore.read(key: setting.key) {
                         cellular.update(networkMode: networkMode)
                     }
-                    cellular.notifyUpdated()
                 }
+                cellular.notifyUpdated()
             }
         }
     }
@@ -254,13 +251,13 @@ class CellularController: DeviceComponentController, CellularBackend {
                     if preset != mode {
                         _ = sendModeCommand(preset)
                     }
-                    cellular.update(mode: preset).notifyUpdated()
+                    cellular.update(mode: preset)
                 } else {
-                    cellular.update(mode: mode).notifyUpdated()
+                    cellular.update(mode: mode)
                 }
             case .apnConfiguration(let isManual, let url, let username, let password):
-                if let apnConfigurationPresetsData: ApnConfigurationPresets.Data = presetStore?.read(key: setting.key) {
-                    apnConfigurationPresets.load(data: apnConfigurationPresetsData)
+                if let data: ApnConfigurationPresets.Data = presetStore?.read(key: setting.key) {
+                    apnConfigurationPresets.load(data: data)
                     let presetIsManual = apnConfigurationPresets.isManual
                     let presetUrl = apnConfigurationPresets.url
                     let presetUsername = apnConfigurationPresets.username
@@ -268,13 +265,22 @@ class CellularController: DeviceComponentController, CellularBackend {
 
                     if presetIsManual != isManual || presetUrl != url ||
                         presetUsername != username || presetPassword != password {
-                        _ = sendApnConfigurationCommand(isManual, url, username, password)
+                        _ = sendApnConfigurationCommand(presetIsManual, presetUrl, presetUsername, presetPassword)
                     }
+                    cellular.update(isApnManual: presetIsManual)
+                        .update(apnUrl: presetUrl)
+                        .update(apnUsername: presetUsername)
+                        .update(apnPassword: presetPassword)
+                } else {
+                    cellular.update(isApnManual: isManual)
+                        .update(apnUrl: url)
+                        .update(apnUsername: username)
+                        .update(apnPassword: password)
                 }
             case .isRoamingAllowed(let isRoamingAllowed):
                 if let preset: Bool = presetStore?.read(key: setting.key) {
                     if preset != isRoamingAllowed {
-                        _ = sendRoamingAllowedCommand(isRoamingAllowed)
+                        _ = sendRoamingAllowedCommand(preset)
                     }
                     cellular.update(isRoamingAllowed: preset)
                 } else {
@@ -285,11 +291,12 @@ class CellularController: DeviceComponentController, CellularBackend {
                     if preset != networkMode {
                         _ = sendNetworkModeCommand(preset)
                     }
-                    cellular.update(networkMode: preset).notifyUpdated()
+                    cellular.update(networkMode: preset)
                 } else {
-                    cellular.update(networkMode: networkMode).notifyUpdated()
+                    cellular.update(networkMode: networkMode)
                 }
             }
+            cellular.notifyUpdated()
         }
     }
 
@@ -503,7 +510,7 @@ extension CellularController: ArsdkFeatureCellularCallback {
         if modemId != MODEM_ID_MAIN {
             return
         }
-        var newMode: CellularMode = .disabled
+        let newMode: CellularMode
         switch mode {
         case .disabled:
             newMode = .disabled
@@ -555,8 +562,7 @@ extension CellularController: ArsdkFeatureCellularCallback {
         if modemId != MODEM_ID_MAIN {
             return
         }
-        cellular.update(isRoamingAllowed: (roamingAllowed == 0) ? false : true)
-            .notifyUpdated()
+        settingDidChange(.isRoamingAllowed(roamingAllowed != 0))
     }
 
     func onNetworkInformation(modemId: UInt, status: ArsdkFeatureCellularNetworkStatus) {
@@ -604,18 +610,14 @@ extension CellularController: ArsdkFeatureCellularCallback {
             ULog.w(.tag, "Unknown network mode, skipping this cellular Network Mode event.")
             return
         }
-        cellular.update(networkMode: newNetworkMode).notifyUpdated()
+        settingDidChange(.networkMode(newNetworkMode))
     }
 
     func onApnInformation(modemId: UInt, mode: UInt, url: String!, username: String!, password: String!) {
         if modemId != MODEM_ID_MAIN {
             return
         }
-        cellular.update(isApnManual: (mode == 1) ? true : false )
-            .update(apnUrl: url)
-            .update(apnUsername: username)
-            .update(apnPassword: password)
-            .notifyUpdated()
+        settingDidChange(.apnConfiguration(mode == 1, url, username, password))
     }
 
     func onRegistrationInformation(modemId: UInt, status: ArsdkFeatureCellularRegistrationStatus,

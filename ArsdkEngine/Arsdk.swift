@@ -217,7 +217,7 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
     /// An array of <NoAckStorage *>, containing all closure encoders is allocated and sent to the NoAck Command Loop
     private func updateNoAckCmdLoop() {
         let encodersArray = registeredNoAckEncoders.map {
-            NoAckStorage(cmdEncoder: $0.registeredEncoder, type: $0.type)!
+            NoAckStorage(cmdEncoder: $0.registeredEncoder, type: $0.type)
         }
         arsdk.arsdkCore.setNoAckCommands(encoders: encodersArray, handle: deviceHandle)
     }

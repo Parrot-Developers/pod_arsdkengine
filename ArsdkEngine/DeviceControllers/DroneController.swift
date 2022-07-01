@@ -308,8 +308,20 @@ class DroneController: DeviceController {
         var speedAccuracy = 0.0
         var availableDataBitfield: UInt = (Bitfield<ArsdkFeatureControllerInfoAvailableData>.of(.amslAltitude,
             .altitudeAccuracy))
-         // CLLocation doc: A negative value indicates an invalid speed or an invalid course
-        if newLocation.speed >= 0 && newLocation.course >= 0 {
+
+        // controller speed validity.
+        let speedIsValid = { () -> Bool in
+            guard newLocation.speedAccuracy >= 0 else { return false }
+            if newLocation.speed == 0.0 {
+                return true
+            } else if #available(iOS 13.4, *) {
+                return newLocation.courseAccuracy >= 0 && newLocation.courseAccuracy < 180.0
+            } else {
+                return newLocation.course >= 0
+            }
+        }
+
+        if speedIsValid() {
             let courseRad = newLocation.course.toRadians()
             northSpeed = cos(courseRad) * newLocation.speed
             eastSpeed = sin(courseRad) * newLocation.speed

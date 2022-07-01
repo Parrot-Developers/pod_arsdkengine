@@ -147,6 +147,7 @@ class MediaRestApi {
     ///
     /// - Parameters:
     ///   - resource: the resource to download
+    ///   - type: download type
     ///   - destDirectoryPath: the directory path where the resource should be stored
     ///   - progress: progress callback
     ///   - progressValue: the progress value, from 0 to 100.
@@ -154,13 +155,14 @@ class MediaRestApi {
     ///   - fileUrl: the url of the file. Nil if an error occurred.
     /// - Returns: the request
     func download(
-        resource: MediaItemResourceCore, destDirectoryPath: String,
+        resource: MediaItemResourceCore, type: DownloadType, destDirectoryPath: String,
         progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore? {
 
-        if let httpResource = resource.backendData as? MediaResource {
+        if let httpResource = resource.backendData as? MediaResource,
+           let urlStr = type == .full ? httpResource.urlStr : httpResource.previewUrlStr {
             return server.downloadFile(
-                api: httpResource.urlStr,
+                api: urlStr,
                 destination: URL(fileURLWithPath: destDirectoryPath)
                     .appendingPathComponent(httpResource.resId),
                 progress: progress,
@@ -324,6 +326,8 @@ class MediaRestApi {
             case mediaId = "media_id"
             case type
             case date = "datetime"
+            case bootDate = "boot_date"
+            case flightDate = "flight_date"
             case size
             case duration
             case runId = "run_id"
@@ -345,6 +349,10 @@ class MediaRestApi {
         let type: MediaType
         /// Media date.
         let date: Date
+        /// Drone boot date.
+        let bootDate: Date?
+        /// Flight date.
+        let flightDate: Date?
         /// Media size in bytes.
         let size: Int64
         /// Media duration in ms.
@@ -381,6 +389,8 @@ class MediaRestApi {
             mediaId = try values.decode(String.self, forKey: .mediaId)
             type = try values.decode(MediaType.self, forKey: .type)
             date = try values.decode(Date.self, forKey: .date)
+            bootDate = try values.decodeIfPresent(Date.self, forKey: .bootDate)
+            flightDate = try values.decodeIfPresent(Date.self, forKey: .flightDate)
             size = try values.decode(Int64.self, forKey: .size)
             duration = try values.decodeIfPresent(Int64.self, forKey: .duration)
             runId = try values.decode(String.self, forKey: .runId)
@@ -414,6 +424,7 @@ class MediaRestApi {
             case size
             case duration
             case urlStr = "url"
+            case previewUrlStr = "preview"
             case thumbnailUrlStr = "thumbnail"
             case streamUrlStr = "replay_url"
             case location = "gps"
@@ -438,6 +449,8 @@ class MediaRestApi {
         let duration: UInt64?
         /// Url of the resource
         let urlStr: String
+        /// Preview url of the resource as string (for photo)
+        let previewUrlStr: String?
         /// Thumbnail url of the resource as string
         let thumbnailUrlStr: String?
         /// Stream url as string
@@ -523,7 +536,8 @@ fileprivate extension MediaItemCore {
             let metadataTypes: Set<MetadataType> = httpMedia.thermal == true ? [.thermal] : []
             return MediaItemCore(
                 uid: httpMedia.mediaId, name: httpMedia.mediaId, type: type, runUid: httpMedia.runId,
-                customId: httpMedia.customId, customTitle: httpMedia.customTitle, creationDate: httpMedia.date,
+                customId: httpMedia.customId, customTitle: httpMedia.customTitle,
+                creationDate: httpMedia.date, bootDate: httpMedia.bootDate, flightDate: httpMedia.flightDate,
                 expectedCount: httpMedia.expectedCount,
                 photoMode: photoMode, panoramaType: panoramaType, streamUrl: httpMedia.streamUrlStr,
                 resources: resources, backendData: httpMedia, metadataTypes: metadataTypes)

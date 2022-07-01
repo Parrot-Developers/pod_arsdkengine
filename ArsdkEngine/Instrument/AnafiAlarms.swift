@@ -287,6 +287,23 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
         }
         alarms.update(level: level, forAlarm: .headingLock).notifyUpdated()
     }
+
+    func onIcingLevelChanged(state: ArsdkFeatureArdrone3PilotingstateIcinglevelchangedState) {
+        let level: Alarm.Level
+        switch state {
+        case .ok:
+            level = .off
+        case .warning:
+            level = .warning
+        case .critical:
+            level = .critical
+        case .sdkCoreUnknown:
+            fallthrough
+        @unknown default:
+            return
+        }
+        alarms.update(level: level, forAlarm: .icingLevel).notifyUpdated()
+    }
 }
 
 /// Anafi Setting State decode callback implementation

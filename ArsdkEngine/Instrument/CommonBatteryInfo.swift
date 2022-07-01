@@ -87,4 +87,30 @@ extension CommonBatteryInfo: ArsdkFeatureBatteryCallback {
     func onSerial(serial: String!) {
         batteryInfo.update(serial: serial).notifyUpdated()
     }
+
+    func onDescription(serial: String!, date: String!, design: UInt, cellCount: UInt,
+                       cellMinVoltage: UInt, cellMaxVoltage: UInt) {
+        batteryInfo
+            .update(batteryDescription: BatteryDescription(date: date, serial: serial,
+                                                           cellCount: cellCount,
+                                                           cellMinVoltage: cellMinVoltage,
+                                                           cellMaxVoltage: cellMaxVoltage,
+                                                           designCapacity: design))
+            .notifyUpdated()
+    }
+
+    func onTemperature(temperature: UInt) {
+        batteryInfo.update(temperature: temperature).notifyUpdated()
+    }
+
+    func onCapacity(fullCharge: UInt, remaining: UInt) {
+        batteryInfo
+            .update(capacity: BatteryCapacity(fullChargeCapacity: fullCharge,
+                                              remainingCapacity: remaining))
+            .notifyUpdated()
+    }
+
+    func onCellVoltage(index: UInt, cellVoltage: UInt) {
+        batteryInfo.update(cellVoltage: cellVoltage, at: Int(index)).notifyUpdated()
+    }
 }

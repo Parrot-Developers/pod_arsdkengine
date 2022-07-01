@@ -55,6 +55,8 @@ public class YuvSinkController: SinkController, YuvSinkBackend {
     }
 
     override public func close() {
+        guard !closed else { return }
+
         sdkCoreSink?.stop()
         sdkCoreSink = nil
         super.close()
@@ -68,6 +70,7 @@ public class YuvSinkController: SinkController, YuvSinkBackend {
     override func onSdkCoreStreamUnavailable() {
         super.onSdkCoreStreamUnavailable()
         streamCtrl.unsubscribeFromMedia(listener: mediaListener, mediaType: .yuv)
+        sdkCoreSink?.stop()
     }
 
     ///  YUV media listener implementation.

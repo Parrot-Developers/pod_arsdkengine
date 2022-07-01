@@ -90,12 +90,12 @@ class HttpMediaStoreDelegate: NSObject, MediaStoreDelegate {
         return mediaRestApi?.fetchThumbnail(media, completion: completion)
     }
 
-    func download(resource: MediaItemResourceCore, destDirectoryPath: String,
+    func download(resource: MediaItemResourceCore, type: DownloadType, destDirectoryPath: String,
                   progress: @escaping (_ progressValue: Int) -> Void,
                   completion: @escaping (URL?) -> Void) -> CancelableCore? {
 
         return mediaRestApi?.download(
-            resource: resource, destDirectoryPath: destDirectoryPath,
+            resource: resource, type: type, destDirectoryPath: destDirectoryPath,
             progress: progress, completion: completion)
     }
 

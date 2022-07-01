@@ -164,6 +164,7 @@ extension Camera2Router: Camera2CommandDelegate {
     }
 
     func configure(id: UInt64, config: Camera2ConfigCore.Config) -> Bool {
+        ULog.d(.tag, "Configure camera \(config.description)")
         var configure = Arsdk_Camera_Command.Configure()
         configure.cameraID = id
         configure.config = config.arsdkConfig

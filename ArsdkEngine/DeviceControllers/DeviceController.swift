@@ -800,7 +800,8 @@ class DeviceController: NSObject {
             let formerState = connectionSession.state
             connectionSession.state = .disconnected
 
-            self.arsdkTcpProxy = nil
+            arsdkTcpProxy = nil
+            droneServer = nil
 
             // In "connecting" state the "protocol" connection is not yet initiated.
             if formerState != .connecting {

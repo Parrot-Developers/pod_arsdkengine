@@ -39,6 +39,9 @@ public class SinkController: NSObject {
     /// Sdkcore stream powering this sink, `nil` if unavailable.
     var sdkcoreStream: ArsdkStream?
 
+    /// `true` if close is close() is called else `false`
+    var closed = false
+
     /// Constructor
     ///
     /// - Parameter streamCtrl: the stream controller providing the sdkcoreStream.
@@ -50,6 +53,9 @@ public class SinkController: NSObject {
 
     /// Closes the sink.
     public func close() {
+        guard !closed else { return }
+        closed = true
+
         if sdkcoreStream != nil {
             onSdkCoreStreamUnavailable()
         }

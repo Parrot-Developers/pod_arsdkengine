@@ -37,7 +37,7 @@ class MissionUpdaterController: DeviceComponentController {
     private(set) var missionUpdater: MissionUpdaterCore!
 
     /// Mission updater rest api
-    private var missionUpdaterRestApi: MissionUpdaterRestApi!
+    private var missionUpdaterRestApi: MissionUpdaterRestApi?
 
     /// Constructor
     ///
@@ -57,6 +57,7 @@ class MissionUpdaterController: DeviceComponentController {
 
     /// Drone is disconnected
     override func didDisconnect() {
+        missionUpdaterRestApi = nil
         missionUpdater.update(state: nil)
             .update(progress: nil)
             .update(filePath: nil)
@@ -68,12 +69,12 @@ class MissionUpdaterController: DeviceComponentController {
 /// Mission updater backend implementation
 extension MissionUpdaterController: MissionUpdaterBackend {
     func upload(filePath: URL, overwrite: Bool, postpone: Bool) -> CancelableCore? {
-        self.missionUpdater.update(state: .uploading)
+        missionUpdater.update(state: .uploading)
             .update(progress: 0)
             .update(filePath: filePath.absoluteString)
             .notifyUpdated()
 
-        return missionUpdaterRestApi.upload(missionFile: filePath, allowOverwrite: overwrite, postpone: postpone,
+        return missionUpdaterRestApi?.upload(missionFile: filePath, allowOverwrite: overwrite, postpone: postpone,
             progress: {currentProgress in
                 self.missionUpdater.update(progress: currentProgress).notifyUpdated()
         }, completion: { error in
@@ -89,13 +90,13 @@ extension MissionUpdaterController: MissionUpdaterBackend {
     }
 
     func delete(uid: String, success: @escaping (Bool) -> Void) {
-        missionUpdaterRestApi.deleteMission(uid: uid) { result in
+        missionUpdaterRestApi?.deleteMission(uid: uid) { result in
             success(result)
         }
     }
 
     public func browse() {
-        _ = missionUpdaterRestApi.getMissionList { missionList in
+        _ = missionUpdaterRestApi?.getMissionList { missionList in
             self.missionUpdater.update(missions: missionList).notifyUpdated()
         }
 

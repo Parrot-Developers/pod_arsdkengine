@@ -136,14 +136,17 @@ public class GlRenderSinkController: SinkController, GlRenderSinkBackend {
         let textureWidth = textureLoader != nil ? textureLoader!.textureSpec.width : 0
         let textureDarWidth = textureLoader != nil ? textureLoader!.textureSpec.ratioNumerator : 0
         let textureDarHeight = textureLoader != nil ? textureLoader!.textureSpec.ratioDenominator : 0
-        sdkcoreRenderer = sdkcoreStream.startRenderer(renderZone: renderZone, fillMode: fillMode,
-                                               zebrasEnabled: zebrasEnabled, zebrasThreshold: Float(zebrasThreshold),
-                                               textureWidth: Int32(textureWidth),
-                                               textureDarWidth: Int32(textureDarWidth),
-                                               textureDarHeight: Int32(textureDarHeight),
-                                               textureLoaderlistener: textureLoader != nil ? self : nil,
-                                               histogramsEnabled: histogramsEnabled, overlayListener: self,
-                                               listener: self)
+        sdkcoreRenderer = sdkcoreStream.startRenderer(renderZone: renderZone,
+                                                      fillMode: fillMode,
+                                                      zebrasEnabled: zebrasEnabled,
+                                                      zebrasThreshold: Float(zebrasThreshold),
+                                                      textureWidth: Int32(textureWidth),
+                                                      textureDarWidth: Int32(textureDarWidth),
+                                                      textureDarHeight: Int32(textureDarHeight),
+                                                      textureLoaderlistener: textureLoader != nil ? self : nil,
+                                                      histogramsEnabled: histogramsEnabled,
+                                                      overlayListener: self,
+                                                      listener: self)
         return sdkcoreRenderer != nil
     }
 

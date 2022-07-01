@@ -124,17 +124,14 @@ class CameraFeatureCameraRouter: DeviceComponentController {
 
             /// Queue used to dispatch messages on it in order to ensure synchronization between main queue and pomp
             /// loop. All synchronized variables of this object must be accessed (read and write) in this queue
-            private let queue = DispatchQueue(label: "com.parrot.zoom.encoder")
+            private let queue = DispatchQueue(label: "com.parrot.arsdkengine.zoom.encoder")
 
             // synchronized vars
-            /// Desired control mode
-            private var desiredControlMode = ArsdkFeatureCameraZoomControlMode.level
-            /// Desired target.
-            private var desiredTarget: Double = 1.0
+            /// Desired control
+            private var desiredControl: Control?
 
             // pomp loop only vars
-            private var latestControlMode = ArsdkFeatureCameraZoomControlMode.level
-            private var latestTarget: Double = 1.0
+            private var latestControl: Control?
 
             /// Number of time the same command has been sent
             private var sentCnt = -1
@@ -153,34 +150,56 @@ class CameraFeatureCameraRouter: DeviceComponentController {
                 encoderBlock = { [unowned self] in
                     // Note: this code will be called in the pomp loop
 
-                    var encoderControlMode = ArsdkFeatureCameraZoomControlMode.level
-                    var encoderTarget: Double = 0.0
+                    var encoderControl: Control?
                     // set the local var in a synchronized queue
                     self.queue.sync {
-                        encoderControlMode = self.desiredControlMode
-                        encoderTarget = self.desiredTarget
+                        encoderControl = desiredControl
                     }
 
                     // if control has changed or target has changed
-                    if self.latestControlMode != encoderControlMode ||
-                        self.latestTarget != encoderTarget {
-
-                        self.latestControlMode = encoderControlMode
-                        self.latestTarget = encoderTarget
-                        self.sentCnt = self.maxRepeatedSent
+                    if latestControl != encoderControl {
+                        latestControl = encoderControl
+                        sentCnt = maxRepeatedSent
                     }
 
-                    // only decrement the counter if the control is in level,
-                    // or, if the control is in velocity and target is zero
-                    if encoderControlMode == .level || encoderTarget == 0.0 {
-                        self.sentCnt -= 1
-                    }
+                    if let encoderControl = encoderControl {
+                        // only decrement the counter if the control is in level,
+                        // or, if the control is in velocity and target is zero
+                        if encoderControl.mode == .level || encoderControl.target == 0.0 {
+                            sentCnt -= 1
+                        }
 
-                    if self.sentCnt >= 0 {
-                        return ArsdkFeatureCamera.setZoomTargetEncoder(
-                            camId: cameraId, controlMode: encoderControlMode, target: Float(encoderTarget))
+                        if sentCnt >= 0 {
+                            return ArsdkFeatureCamera.setZoomTargetEncoder(camId: cameraId,
+                                                                           controlMode: encoderControl.mode,
+                                                                           target: Float(encoderControl.target))
+                        }
                     }
                     return nil
+                }
+            }
+
+            /// Zoom control
+            private struct Control: Equatable {
+                /// Zoom control mode
+                var mode = ArsdkFeatureCameraZoomControlMode.level
+                /// Zoom control target.
+                var target: Double = 1.0
+
+                /// Constructor
+                ///
+                /// - Parameters:
+                ///   - mode: control mode
+                ///   - target: target
+                init(mode: ArsdkFeatureCameraZoomControlMode, target: Double) {
+                    self.mode = mode
+                    self.target = target
+                }
+
+                static func == (lhs: Self, rhs: Self) -> Bool {
+                    if lhs.mode != rhs.mode {return false}
+                    if lhs.target != rhs.target {return false}
+                    return true
                 }
             }
 
@@ -191,8 +210,16 @@ class CameraFeatureCameraRouter: DeviceComponentController {
             ///   - target: target to send
             func control(mode: CameraZoomControlMode, target: Double) {
                 queue.sync {
-                    self.desiredControlMode = mode.arsdkValue!
-                    self.desiredTarget = target
+                    self.desiredControl = Control(mode: mode.arsdkValue!, target: target)
+                }
+            }
+
+            /// Resets the encoder.
+            ///
+            /// This method will make the encoder stop sending any non-ack control command.
+            func reset () {
+                queue.sync {
+                    self.desiredControl = nil
                 }
             }
         }
@@ -356,6 +383,11 @@ class CameraFeatureCameraRouter: DeviceComponentController {
 
         override func control(mode: CameraZoomControlMode, target: Double) {
             zoomControlEncoder.control(mode: mode, target: target)
+        }
+
+        override func resetLevel() {
+            router.sendCommand(ArsdkFeatureCamera.resetZoomEncoder(camId: cameraId))
+            zoomControlEncoder.reset()
         }
 
         override func sendAlignementCommand(yaw: Double, pitch: Double, roll: Double) -> Bool {

@@ -79,6 +79,7 @@ class CertificateUploaderController: DeviceComponentController, CertificateUploa
     /// Drone is disconnected
     override func didDisconnect() {
         certificateUploader.unpublish()
+        delegate.reset()
     }
 
     /// Drone is about to be forgotten

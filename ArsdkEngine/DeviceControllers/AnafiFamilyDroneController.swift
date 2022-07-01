@@ -85,7 +85,7 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(AnafiFlightMeter(deviceController: self))
         componentControllers.append(CameraFeatureExposureValues(deviceController: self))
         componentControllers.append(AnafiFlightInfo(deviceController: self))
-        if model == .anafi2 {
+        if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
             componentControllers.append(CellularLogsController(deviceController: self))
         }
         componentControllers.append(AnafiTakeoffChecklist(deviceController: self))
@@ -96,7 +96,7 @@ class AnafiFamilyDroneController: DroneController {
             StreamServerMultiController(deviceController: self)
         componentControllers.append(streamServer)
         componentControllers.append(CameraFeatureCameraRouter(deviceController: self))
-        if model == .anafi2 {
+        if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
             componentControllers.append(Anafi2Antiflicker(deviceController: self))
         } else {
             componentControllers.append(CameraFeatureAntiflicker(deviceController: self))
@@ -183,6 +183,11 @@ class AnafiFamilyDroneController: DroneController {
     override func protocolDidConnect() {
         (ephemerisConfig?.uploader as? HttpEphemerisUploader)?.droneServer = droneServer
         super.protocolDidConnect()
+    }
+
+    override func protocolDidDisconnect() {
+        (ephemerisConfig?.uploader as? HttpEphemerisUploader)?.droneServer = nil
+        super.protocolDidDisconnect()
     }
 
     override func protocolDidReceiveCommand(_ command: OpaquePointer) {

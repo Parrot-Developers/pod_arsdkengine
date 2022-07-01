@@ -85,7 +85,7 @@ class MediaWsApi {
 extension MediaWsApi: WebSocketSessionDelegate {
 
     func webSocketSessionDidReceiveMessage(_ data: Data) {
-        ULog.d(.mediaTag, String(data: data, encoding: .utf8))
+        ULog.d(.mediaTag, String(data: data, encoding: .utf8)!)
 
         // decode message
         do {

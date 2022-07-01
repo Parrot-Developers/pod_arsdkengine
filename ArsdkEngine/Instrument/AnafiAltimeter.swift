@@ -66,6 +66,8 @@ class AnafiAltimeter: DeviceComponentController {
     override func didReceiveCommand(_ command: OpaquePointer) {
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureArdrone3PilotingstateUid {
             ArsdkFeatureArdrone3Pilotingstate.decode(command, callback: self)
+        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureTerrainUid {
+            ArsdkFeatureTerrain.decode(command, callback: self)
         }
     }
 }
@@ -105,5 +107,24 @@ extension AnafiAltimeter: ArsdkFeatureArdrone3PilotingstateCallback {
 
     func onAltitudeAboveGroundChanged(altitude: Float) {
         altimeter.update(groundRelativeAltitude: Double(altitude)).notifyUpdated()
+    }
+}
+
+/// Anafi Terrain decode callback implementation
+extension AnafiAltimeter: ArsdkFeatureTerrainCallback {
+    func onAltitudeAboveTerrain(altitude: Int, type: ArsdkFeatureTerrainType, gridPrecision: Float) {
+        switch type {
+        case .none:
+            altimeter.update(terrainData: nil)
+        case .dted:
+            altimeter.update(terrainData: TerrainDataCore(altitude: altitude, gridPrecision: Double(gridPrecision)))
+        case .sdkCoreUnknown:
+            fallthrough
+        @unknown default:
+            // don't change anything if value is unknown
+            ULog.w(.tag, "Unknown ArsdkFeatureTerrainType, skipping this event.")
+            return
+        }
+        altimeter.notifyUpdated()
     }
 }

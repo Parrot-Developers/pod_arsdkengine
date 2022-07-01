@@ -103,12 +103,12 @@ public class StreamController: NSObject, StreamBackend {
         ///    - stream: gsdk StreamCore ower of this StreamController
         public init(url: String, trackName: String?, stream: StreamCore) {
 
-            let fileSource = SdkCoreFileSource(path: url, trackName: trackName)!
-            pompLoopUtil = PompLoopUtil(name: "FileReplay:"+url)
+            let fileSource = SdkCoreFileSource(path: url, trackName: trackName)
+            pompLoopUtil = PompLoopUtil(name: "com.parrot.arsdkengine.fileReplay:"+url)
 
             super.init(source: fileSource, stream: stream)
 
-            sdkcoreStream = ArsdkStream(pompLoopUtil: pompLoopUtil, listener: self)!
+            sdkcoreStream = ArsdkStream(pompLoopUtil: pompLoopUtil, listener: self)
             pompLoopUtil.runLoop()
         }
 

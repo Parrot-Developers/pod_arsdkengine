@@ -85,6 +85,7 @@ protocol MediaStoreDelegate: AnyObject {
     ///
     /// - Parameters:
     ///   - resource: resource to download
+    ///   - type: download type
     ///   - destDirectoryPath: download destination path
     ///   - progress: progress callback
     ///   - progressValue: the progress value, from 0 to 100
@@ -92,7 +93,7 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - fileUrl: the url of the downloaded file. `nil` if an error occurred
     /// - Returns: a request that can be canceled
     func download(
-        resource: MediaItemResourceCore, destDirectoryPath: String,
+        resource: MediaItemResourceCore, type: DownloadType, destDirectoryPath: String,
         progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore?
 
@@ -264,10 +265,11 @@ extension ArsdkMediaStore: MediaStoreBackend {
     ///
     /// - Parameters:
     ///   - mediaResources: media resources to download
+    ///   - type: download type
     ///   - destination: download destination
     ///   - progress: progress callback
     /// - Returns: download task, or nil if the request can't be send
-    public func download(mediaResources: MediaResourceListCore, destination: DownloadDestination,
+    public func download(mediaResources: MediaResourceListCore, type: DownloadType, destination: DownloadDestination,
                          progress: @escaping (MediaDownloader) -> Void) -> CancelableTaskCore? {
 
         let destDirectoryPath: String
@@ -362,13 +364,13 @@ extension ArsdkMediaStore: MediaStoreBackend {
             if let mediaResource = resourcesIterator.next() {
                 // request download
                 let req = delegate.download(
-                    resource: mediaResource.resource, destDirectoryPath: destDirectoryPath,
+                    resource: mediaResource.resource, type: type, destDirectoryPath: destDirectoryPath,
                     progress: { percent in notifyProgress(percent: Float(percent), currentMedia: mediaResource.media) },
                     completion: { fileUrl in
                         task.request = nil
                         if let fileUrl = fileUrl {
                             processDownloadedResource(media: mediaResource.media, fileUrl: fileUrl)
-                            if mediaResource.resource.signed {
+                            if mediaResource.resource.signed && type == .full {
                                 downloadResourceSignature(mediaResource: mediaResource, fileUrl: fileUrl)
                             } else {
                                 notifyProgressCompletion(currentMedia: mediaResource.media, fileUrl: fileUrl)
@@ -379,16 +381,15 @@ extension ArsdkMediaStore: MediaStoreBackend {
                             notifyProgressError(currentMedia: mediaResource.media)
                         }
                 })
-                // request created, update client request and notify progress
+                // progress for the new resource
+                notifyProgress(percent: 0, currentMedia: mediaResource.media)
+                // request created, update client request
                 if let req = req {
                     // store current low level request to cancel
                     task.request = req
-                    // progress for the new resource
-                    notifyProgress(percent: 0, currentMedia: mediaResource.media)
                 } else {
-                    // error sending request
-                    ULog.d(.ctrlTag, "media download error sending request, skipping media")
-                    notifyProgressError(currentMedia: mediaResource.media)
+                    ULog.d(.ctrlTag, "media resource download skipped")
+                    downloadNextResource()
                 }
             } else {
                 // no more resources to download

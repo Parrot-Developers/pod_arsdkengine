@@ -106,7 +106,8 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     private var flightPlanInterpreter: FlightPlanInterpreter = .legacy
     /// Custom flight plan id
     private var customFlightPlanId: String = ""
-
+    /// True if an upload is requested. If True the PilotingItf will be unavailable
+    private var uploadFpRequested = false
     /// Delegate to upload the FlightPlan
     private var uploader: ArsdkFlightplanUploader
 
@@ -148,6 +149,7 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
         flightPlanInterpreter = .legacy
         startAtMissionItem = nil
         disconnectionPolicy = .returnToHome
+        uploadFpRequested = false
 
         // reset values that does not have a meaning while disconnected
         flightPlanPilotingItf.update(isPaused: false).update(flightPlanFileIsKnown: false)
@@ -178,7 +180,7 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     /// - Note: caller is responsible to call the `notifiyUpdated()` function.
     private func updateUnavailabilityReasons() {
         var reasons: Set<FlightPlanUnavailabilityReason> = []
-        if remoteFlightPlanUid == nil && !isPlaying {
+        if (remoteFlightPlanUid == nil && !isPlaying) || uploadFpRequested {
             reasons.insert(.missingFlightPlanFile)
         }
         if !flightPlanAvailable {
@@ -218,7 +220,8 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     /// Update the local availability of the flight plan
     func updateAvailability() {
         if !isPlaying {
-            if (remoteFlightPlanUid != nil || flightPlanPathToUpload != nil) && flightPlanAvailable {
+            if (remoteFlightPlanUid != nil || flightPlanPathToUpload != nil) && flightPlanAvailable
+                && !uploadFpRequested {
                 notifyIdle()
             } else {
                 notifyUnavailable()
@@ -259,11 +262,17 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
     }
 
     func uploadFlightPlan(filepath: String, customFlightPlanId: String) {
+        self.uploadFpRequested = true
+        updateUnavailabilityReasons()
         self.customFlightPlanId = customFlightPlanId
         flightPlanPilotingItf.update(latestUploadState: .uploading)
             .update(latestMissionItemExecuted: nil)
             .update(latestMissionItemSkipped: nil)
-            .notifyUpdated()
+        if flightPlanPilotingItf.state != .unavailable {
+            notifyUnavailable()
+        }
+        self.flightPlanPilotingItf.notifyUpdated()
+
         if !isStopped {
             // stop current flightplan, if any, before uploading the file
             flightPlanPathToUpload = filepath
@@ -277,6 +286,7 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
             // uses the ftp or http uploader
             uploadHandle = uploader.uploadFlightPlan(filepath: filepath) { [weak self] success, flightPlanUid in
                 if let `self` = self {
+                    self.uploadFpRequested = false
                     self.currentUpload = nil
                     // if the upload was cancelled then do not update state there should be no
                     // state handling and the completion should be ignored.
@@ -310,6 +320,7 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
 
     func cancelPendingUpload() {
         currentUpload?.cancel()
+        uploadFpRequested = false
         currentUpload = nil
         flightPlanPilotingItf.update(latestUploadState: .none).notifyUpdated()
     }
@@ -461,18 +472,13 @@ extension FlightPlanPilotingItfController: ArsdkFeatureCommonMavlinkstateCallbac
             case .stopped:
                 isStopped = true
 
-                // Only change the isPaused flag if there is no flight plan to upload
-                if flightPlanPathToUpload == nil {
-                    flightPlanPilotingItf.update(isPaused: false)
-                }
+                flightPlanPilotingItf.update(isPaused: false)
                 updateAvailability()
 
                 if shouldRestartFlightPlan {
                     shouldRestartFlightPlan = false
                     sendStartFlightPlan()
                     flightPlanPilotingItf.notifyUpdated()
-                } else {
-                    updateAvailability()
                 }
 
                 // if a flight plan should be uploaded
@@ -608,7 +614,9 @@ extension FlightPlanUnavailabilityReason: ArsdkMappableEnum {
         return result
     }
     static var arsdkMapper = Mapper<FlightPlanUnavailabilityReason, ArsdkFeatureFlightPlanIndicator>([
+        .insufficientBattery: .droneBattery,
         .droneGpsInfoInaccurate: .droneGps,
-        .droneNotCalibrated: .droneMagneto
+        .droneNotCalibrated: .droneMagneto,
+        .droneInvalidState: .droneState
     ])
 }

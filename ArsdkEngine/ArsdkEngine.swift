@@ -168,7 +168,7 @@ public class ArsdkEngine: EngineBaseCore {
         switch model {
         case .drone(let droneModel):
             switch droneModel {
-            case .anafi4k, .anafiThermal, .anafi2, .anafiUa, .anafiUsa:
+            case .anafi4k, .anafiThermal, .anafi2, .anafiUa, .anafiUsa, .anafi3, .anafi3Usa:
                 return AnafiFamilyDroneController(engine: self, deviceUid: uid, name: name, model: droneModel)
             }
         case .rc(let rcModel):

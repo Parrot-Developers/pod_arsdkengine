@@ -121,6 +121,7 @@ class WifiAccessPointController: DeviceComponentController {
 
     /// Drone is disconnected
     override func didDisconnect() {
+        wifiAccessPoint.cancelSettingsRollback()
         wifiScanner.unpublish()
         wifiAccessPoint.unpublish()
         reverseGeocoderMonitor?.stop()

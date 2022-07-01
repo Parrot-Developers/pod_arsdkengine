@@ -45,7 +45,7 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
 
         /// Queue used to dispatch messages on it in order to ensure synchronization between main queue and pomp loop.
         /// All synchronized variables of this object must be accessed (read and write) in this queue
-        private let queue = DispatchQueue(label: "com.parrot.gimbal.encoder")
+        private let queue = DispatchQueue(label: "com.parrot.arsdkengine.gimbal.encoder")
 
         // synchronized vars
         /// Whether encoding a message is allowed.

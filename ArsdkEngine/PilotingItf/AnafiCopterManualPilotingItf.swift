@@ -33,9 +33,19 @@ import GroundSdk
 /// Manual piloting interface component controller for the Anafi-messages piloting based copter products
 class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
 
+    /// Drone flying state.
+    private var flyingState: ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState?
+
+    /// Takeoff alarms on, `nil` if the command is never received.
+    private var takeoffAlarmsOn: Set<ArsdkFeatureAlarmsTakeoffChecklistType>?
+    /// Takeoff alarms on incoming.
+    private var takeoffAlarmsOnTmp: Set<ArsdkFeatureAlarmsTakeoffChecklistType> = []
+
     /// Send takeoff command.
     override func sendTakeOffCommand() {
-        if self.droneController.drone.model == .anafi2 {
+        if self.droneController.drone.model == .anafi2 ||
+            self.droneController.drone.model == .anafi3 ||
+            self.droneController.drone.model == .anafi3Usa {
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending smarttakeoffland command")
             sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
         } else {
@@ -52,7 +62,9 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
 
     /// Send land command.
     override func sendLandCommand() {
-        if self.droneController.drone.model == .anafi2 {
+        if self.droneController.drone.model == .anafi2 ||
+            self.droneController.drone.model == .anafi3 ||
+            self.droneController.drone.model == .anafi3Usa {
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending smarttakeoffland command")
             sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
         } else {
@@ -115,7 +127,7 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
         sendCommand(ArsdkFeatureArdrone3Pilotingsettings.setMotionDetectionModeEncoder(enable: (value ? 1 : 0)))
     }
 
-    /// A command has been received
+    /// A command has been received.
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
@@ -129,27 +141,34 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
         } else if featureId == kArsdkFeatureArdrone3SpeedsettingsstateUid {
             // Speed Settings
             ArsdkFeatureArdrone3Speedsettingsstate.decode(command, callback: self)
+        } else if featureId == kArsdkFeatureAlarmsUid {
+            ArsdkFeatureAlarms.decode(command, callback: self)
         }
     }
-}
 
-/// Piloting State callback implementation
-extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
-    func onFlyingStateChanged(state: ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState) {
-        switch state {
+    /// Updates commands availabilities.
+    private func updateAvailabilities() {
+        guard let flyingState = flyingState else { return }
+
+        switch flyingState {
         case .landed,
              .landing:
-            manualCopterPilotingItf.update(canTakeOff: true).update(canLand: false).notifyUpdated()
+
+            let canTakeOff = takeoffAlarmsOn?.isEmpty ?? true
+            manualCopterPilotingItf.update(canTakeOff: canTakeOff).update(canLand: false).notifyUpdated()
         case .takingoff,
              .hovering,
              .motorRamping,
              .usertakeoff,
              .flying:
+
             manualCopterPilotingItf.update(canTakeOff: false).update(smartWillThrownTakeoff: false)
                 .update(canLand: true).notifyUpdated()
         case .emergency,
              .emergencyLanding:
-            manualCopterPilotingItf.update(canTakeOff: false).update(canLand: false).notifyUpdated()
+
+            let canTakeOff = takeoffAlarmsOn?.isEmpty ?? false
+            manualCopterPilotingItf.update(canTakeOff: canTakeOff).update(canLand: false).notifyUpdated()
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -157,6 +176,57 @@ extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3PilotingstateCallbac
             ULog.w(.tag, "Unknown flying state, skipping this event.")
             return
         }
+    }
+}
+
+extension AnafiCopterManualPilotingItf: ArsdkFeatureAlarmsCallback {
+    func onTakeoffChecklist(check: ArsdkFeatureAlarmsTakeoffChecklistType, state: ArsdkFeatureAlarmsState,
+                            listFlagsBitField: UInt) {
+
+        if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
+            // No alarm on.
+            takeoffAlarmsOn = []
+            takeoffAlarmsOnTmp = []
+
+            // Update availabilities.
+            updateAvailabilities()
+        } else {
+            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                // Start receiving a new alarm list.
+                takeoffAlarmsOnTmp = []
+            }
+
+            if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+                // Remove from the list.
+                takeoffAlarmsOnTmp.remove(check)
+            } else {
+                if state == .on {
+                    // Add to the list.
+                    takeoffAlarmsOnTmp.insert(check)
+                } else {
+                    // Remove from the list ; save only alarms on.
+                    takeoffAlarmsOnTmp.remove(check)
+                }
+            }
+
+            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
+                // End of list modiffication.
+                takeoffAlarmsOn = takeoffAlarmsOnTmp
+
+                // Update availabilities.
+                updateAvailabilities()
+            }
+        }
+    }
+}
+
+/// Piloting State callback implementation
+extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
+    func onFlyingStateChanged(state: ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState) {
+        flyingState = state
+
+        // Update availabilities.
+        updateAvailabilities()
     }
 
     func onMotionState(state: ArsdkFeatureArdrone3PilotingstateMotionstateState) {

@@ -740,6 +740,13 @@ class CameraControllerBase: CameraBackend {
         // Subclass must override this function to set the value
     }
 
+    /// Resets zoom to default level immediately.
+    ///
+    /// Bypasses any maximum zoom speed restriction and resets zoom level as fast as possible.
+    func resetLevel() {
+        // Subclass must override this function to set the value
+    }
+
     /// Sets alignment offsets.
     ///
     /// - Parameter yawOffset: the new offset to apply to the yaw axis

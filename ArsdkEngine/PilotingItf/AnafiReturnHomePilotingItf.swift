@@ -171,6 +171,9 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
                 case .lowBattery:
                     returnHomePilotingItf.update(reason: .powerLow)
                     notifyActive()
+                case .icing:
+                    returnHomePilotingItf.update(reason: .icedPropeller)
+                    notifyActive()
                 case .finished,
                      .stopped,
                      .enabled,

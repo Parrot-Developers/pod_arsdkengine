@@ -106,7 +106,9 @@ class UpdaterController: DeviceComponentController {
             case .rc(.skyCtrl3),
                  .rc(.skyCtrlUA): return Sc3UpdaterEventReceiver()
             case .rc(.skyCtrl4):  return Sc4UpdaterEventReceiver()
-            case .drone(.anafi2): return Anafi2UpdaterEventReceiver()
+            case .drone(.anafi2),
+                 .drone(.anafi3),
+                 .drone(.anafi3Usa): return Anafi2UpdaterEventReceiver()
             case .drone:          return AnafiUpdaterEventReceiver()
             }
         }
@@ -260,6 +262,8 @@ class UpdaterController: DeviceComponentController {
 
     override func didDisconnect() {
         updateUnavailabilityReasons = [.notConnected]
+
+        uploader.reset(updater: self)
 
         if !updateQueue.isEmpty {
             // if updates are in progress, move to .waitingForReboot state

@@ -57,7 +57,7 @@ class ArsdkNetdebuglogEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Netdebuglog_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkNetdebuglogEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkNetdebuglogEventDecoder event \(event)")
             }
             switch event.id {
             case .log(let event):

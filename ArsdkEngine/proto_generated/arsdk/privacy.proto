@@ -13,8 +13,8 @@ message Command {
   reserved 1 to 15; // reserved for non-acknowledged commands
 
   oneof id {
-     GetState get_state = 16;
-     SetLogMode set_log_mode = 17;
+    GetState get_state = 16;
+    SetLogMode set_log_mode = 17;
   }
 
   /* Get Current State.
@@ -30,7 +30,6 @@ message Command {
     LogStorage log_storage = 1;
     LogConfigPersistence log_config_persistence = 2;
     option (support) = "091a";
-    option (on_success) = "Event.State(log_storage=this.log_storage, log_config_persistence=this.log_config_persistence)";
   }
 }
 
@@ -63,7 +62,7 @@ enum LogConfigPersistence {
   LOG_CONFIG_PERSISTENCE_PERSISTENT = 0;
   /* Configuration will only be valid for the current device boot.
      Configuration will revert to the default factory configuration after the device reboots (and not the previous persistent one). */
-   LOG_CONFIG_PERSISTENCE_ONESHOT = 1;
+  LOG_CONFIG_PERSISTENCE_ONESHOT = 1;
 }
 
 enum LogStorage {

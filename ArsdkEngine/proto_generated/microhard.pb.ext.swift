@@ -67,7 +67,7 @@ class ArsdkMicrohardEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Microhard_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkMicrohardEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkMicrohardEventDecoder event \(event)")
             }
             switch event.id {
             case .state(let event):

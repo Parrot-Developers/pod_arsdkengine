@@ -57,7 +57,7 @@ class ArsdkControllernetworkEventDecoder: NSObject, ArsdkFeatureGenericCallback 
         }
         if let event = try? Arsdk_Controllernetwork_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkControllernetworkEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkControllernetworkEventDecoder event \(event)")
             }
             switch event.id {
             case .state(let event):

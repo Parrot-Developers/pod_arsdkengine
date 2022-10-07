@@ -34,7 +34,7 @@ import GroundSdk
 class PudRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Base address to access the report api
     private let baseApi = "/api/v1/pud"
@@ -42,7 +42,7 @@ class PudRestApi {
     /// Constructor
     ///
     /// - Parameter server: the drone server from which PUDs should be accessed
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

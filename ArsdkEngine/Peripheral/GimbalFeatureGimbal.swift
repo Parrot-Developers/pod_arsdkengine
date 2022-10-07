@@ -512,7 +512,9 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
                             roll: Float(speedToOverride[.roll] ?? maxSpeeds[.roll]!.current)))
                     }
                 } else {
-                    maxSpeeds.forEach { gimbalMain.update(maxSpeedSetting: $1, onAxis: $0) }
+                    maxSpeeds.forEach {
+                        gimbalMain.update(maxSpeedSetting: (min: $1.0, value: $1.1, max: $1.2), onAxis: $0)
+                    }
                 }
             case .stabilizedAxes(let stabilizedAxes):
                 if let storedStabilizedAxes: StorableArray<GimbalAxis> = presetStore?.read(key: setting.key) {
@@ -556,7 +558,9 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
         switch setting {
         case .maxSpeeds(let maxSpeeds):
             if connected {
-                maxSpeeds.forEach { gimbalMain.update(maxSpeedSetting: $1, onAxis: $0) }
+                maxSpeeds.forEach {
+                    gimbalMain.update(maxSpeedSetting: (min: $1.0, value: $1.1, max: $1.2), onAxis: $0)
+                }
                 deviceStore?.writeMultiRange(
                     key: setting.key,
                     value: Dictionary(uniqueKeysWithValues: maxSpeeds.map { ($0.key, ($0.value.min, $0.value.max)) }))

@@ -34,7 +34,7 @@ import GroundSdk
 class FlightCameraRecordRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Base address to access the flight camera record api
     private let baseApi = "/api/v1/fcr/records"
@@ -42,7 +42,7 @@ class FlightCameraRecordRestApi {
     /// Constructor
     ///
     /// - Parameter server: the drone server from which flight camera record should be accessed
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

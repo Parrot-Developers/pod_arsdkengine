@@ -46,7 +46,7 @@ class HttpSecureElementDownloaderDelegate: ArsdkSecureElementDownloaderDelegate 
     private var currentRequestForImg: CancelableCore?
 
     func configure(downloader: SecureElementController) {
-        if let droneServer = downloader.deviceController.droneServer {
+        if let droneServer = downloader.deviceController.deviceServer {
             secureElementApi = SecureElementRestApi(server: droneServer)
         }
     }

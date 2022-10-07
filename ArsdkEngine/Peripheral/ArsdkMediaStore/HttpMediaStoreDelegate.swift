@@ -43,7 +43,7 @@ class HttpMediaStoreDelegate: NSObject, MediaStoreDelegate {
     }
 
     func configure() {
-        if let droneServer = deviceController.droneServer {
+        if let droneServer = deviceController.deviceServer {
             mediaRestApi = MediaRestApi(server: droneServer)
         }
     }
@@ -53,7 +53,7 @@ class HttpMediaStoreDelegate: NSObject, MediaStoreDelegate {
     }
 
     func startWatchingContentChanges() {
-        if let droneServer = deviceController.droneServer {
+        if let droneServer = deviceController.deviceServer {
             mediaWsApi = MediaWsApi(server: droneServer) { [unowned self] in
                 self.mediaStore?.markContentChanged().notifyUpdated()
             }

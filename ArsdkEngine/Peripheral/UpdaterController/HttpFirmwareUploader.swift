@@ -37,7 +37,7 @@ class HttpFirmwareUploader: UpdaterFirmwareUploader {
     private var updateApi: UpdateRestApi?
 
     func configure(updater: UpdaterController) {
-        if let droneServer = updater.deviceController.droneServer {
+        if let droneServer = updater.deviceController.deviceServer {
             updateApi = UpdateRestApi(server: droneServer)
         }
     }

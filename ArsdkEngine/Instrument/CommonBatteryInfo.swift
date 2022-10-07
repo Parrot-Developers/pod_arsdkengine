@@ -113,4 +113,13 @@ extension CommonBatteryInfo: ArsdkFeatureBatteryCallback {
     func onCellVoltage(index: UInt, cellVoltage: UInt) {
         batteryInfo.update(cellVoltage: cellVoltage, at: Int(index)).notifyUpdated()
     }
+
+    func onVersion(hwRevision: UInt, fwVersion: String!, gaugeVersion: String!, usbVersion: String!) {
+        batteryInfo
+            .update(version: BatteryVersion(hardwareRevision: hwRevision,
+                                            firmwareVersion: fwVersion,
+                                            gaugeVersion: gaugeVersion,
+                                            usbVersion: usbVersion))
+            .notifyUpdated()
+    }
 }

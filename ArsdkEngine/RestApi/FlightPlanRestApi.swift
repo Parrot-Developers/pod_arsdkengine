@@ -34,12 +34,12 @@ import GroundSdk
 class FlightPlanRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Constructor
     ///
     /// - Parameter server: the drone server that the update should use
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

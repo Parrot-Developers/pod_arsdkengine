@@ -87,6 +87,7 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(AnafiFlightInfo(deviceController: self))
         if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
             componentControllers.append(CellularLogsController(deviceController: self))
+            componentControllers.append(Anafi2CellularSession(deviceController: self))
         }
         componentControllers.append(AnafiTakeoffChecklist(deviceController: self))
         // Peripherals
@@ -162,7 +163,11 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(NetworkController(deviceController: self))
         componentControllers.append(FlightCameraRecorderController(deviceController: self))
         componentControllers.append(SecureElementController(deviceController: self))
-        componentControllers.append(PrivacyController(deviceController: self))
+        componentControllers.append(AnafiPrivacy(deviceController: self))
+        if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
+            componentControllers.append(DebugShellController(deviceController: self))
+        }
+        componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
         sendDateAndTime = { [weak self] in
             let dateFormatter = DateFormatter()
             dateFormatter.timeZone = NSTimeZone.system
@@ -181,7 +186,7 @@ class AnafiFamilyDroneController: DroneController {
     }
 
     override func protocolDidConnect() {
-        (ephemerisConfig?.uploader as? HttpEphemerisUploader)?.droneServer = droneServer
+        (ephemerisConfig?.uploader as? HttpEphemerisUploader)?.droneServer = deviceServer
         super.protocolDidConnect()
     }
 

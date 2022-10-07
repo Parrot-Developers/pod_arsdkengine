@@ -30,50 +30,78 @@
 import Foundation
 import GroundSdk
 
-/// FlightLog downloader delegate that does the download through ftp
+/// FlightLog downloader delegate that does the download through ftp.
 class FtpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
+
+    /// Device controller.
+    private let deviceController: DeviceController
+
+    /// Flight log storage utility.
+    private let storage: FlightLogStorageCore
+
+    /// Flight log downloader component.
+    private var downloader: FlightLogDownloaderCore?
+
     /// FlightLog downloaded count.
     private var downloadCount = 0
 
     /// Current flightLog download request
     private var currentRequest: CancelableCore?
 
-    func configure(downloader: ArsdkFlightLogDownloader) { }
+    /// Constructor
+    ///
+    /// - Parameters:
+    ///     - deviceController: device controller
+    ///     - storage: flight log storage utility
+    init(deviceController: DeviceController, storage: FlightLogStorageCore) {
+        self.deviceController = deviceController
+        self.storage = storage
+    }
 
-    func reset(downloader: ArsdkFlightLogDownloader) { }
+    func configure(downloader: FlightLogDownloaderCore) {
+        self.downloader = downloader
+    }
 
-    func download(toDirectory directory: URL, downloader: ArsdkFlightLogDownloader) -> Bool {
-        guard currentRequest == nil, let flightLogStorage = downloader.flightLogStorage else {
-            return false
+    func reset() { }
+
+    func startWatchingContentChanges(arsdkDownloader: ArsdkFlightLogDownloader) { }
+
+    func stopWatchingContentChanges() { }
+
+    func download() {
+        guard currentRequest == nil else {
+            return
         }
 
-        currentRequest = downloader.deviceController.downloadFlightLog(
-            path: flightLogStorage.workDir.path,
+        downloadCount = 0
+        downloader?.update(completionStatus: .none)
+            .update(downloadingFlag: true)
+            .update(downloadedCount: downloadCount)
+            .notifyUpdated()
+
+        currentRequest = deviceController.downloadFlightLog(
+            path: storage.workDir.path,
             progress: { [weak self] file, status in
                 if status == .ok, let `self` = self {
                     self.downloadCount += 1
-                    downloader.flightLogDownloader.update(downloadedCount: self.downloadCount).notifyUpdated()
+                    self.downloader?.update(downloadedCount: self.downloadCount).notifyUpdated()
                     let filePath = URL(fileURLWithPath: file)
-                    flightLogStorage.notifyFlightLogReady(flightLogUrl: filePath)
-                    let deviceModel = ((downloader.deviceController as? DroneController) != nil) ? "drone" : "ctrl"
-                    GroundSdkCore.logEvent(message: "EVT:LOGS;event='download';source='\(deviceModel)';" +
-                        "file='\(filePath.lastPathComponent)'")
+                    self.storage.notifyFlightLogReady(flightLogUrl: filePath)
+                    GroundSdkCore.logEvent(message: "EVT:LOGS;event='download';source='ctrl';" +
+                                           "file='\(filePath.lastPathComponent)'")
                 }
             },
             completion: { status in
                 let success = status == .ok
-                downloader.flightLogDownloader.update(completionStatus: success ? .success : .interrupted)
+                self.downloader?.update(completionStatus: success ? .success : .interrupted)
                     .update(downloadingFlag: false)
                     .notifyUpdated()
                 self.currentRequest = nil
         })
-
-        return currentRequest != nil
     }
 
-    func delete() -> Bool {
+    func delete() {
         // Not implemented
-        return false
     }
 
     func cancel() {

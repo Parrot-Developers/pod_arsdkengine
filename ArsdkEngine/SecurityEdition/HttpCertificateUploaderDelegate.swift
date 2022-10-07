@@ -48,7 +48,7 @@ class HttpCertificateUploaderDelegate: CertificateUploaderDelegate {
 
     /// Configure
     func configure() {
-        if let droneServer = deviceController.droneServer {
+        if let droneServer = deviceController.deviceServer {
             certificateUploaderApi = CertificateUploaderRestApi(server: droneServer)
         }
     }

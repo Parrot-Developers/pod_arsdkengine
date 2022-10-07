@@ -333,7 +333,7 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
 
     func cleanBeforeRecovery(customId: String, resourceId: String,
                              completion: @escaping (CleanBeforeRecoveryResult) -> Void) -> CancelableCore? {
-        guard let droneServer = deviceController.droneServer else {
+        guard let droneServer = deviceController.deviceServer else {
             completion(.failed)
             return nil
         }
@@ -346,6 +346,11 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
                 completion(success ? .success : .failed)
             }
         }
+    }
+
+    // TODO: remove
+    func prepareForFlightPlanActivation() {
+        sendCommand(ArsdkFeatureFlightPlan.preConfigEncoder())
     }
 }
 

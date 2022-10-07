@@ -363,8 +363,8 @@ class DeviceController: NSObject {
     /// Always nil when not connected.
     private var arsdkTcpProxy: ArsdkTcpProxy?
 
-    /// Drone http server
-    var droneServer: DroneServer?
+    /// Device http server
+    var deviceServer: DeviceServer?
 
     /// All attached component controllers
     var componentControllers = [DeviceComponentController]()
@@ -740,12 +740,13 @@ class DeviceController: NSObject {
             ULog.i(.ctrlTag, "Device \(device.uid) connected, creating the device http client")
             protocolWillConnect()
             // can force unwrap backend since we are connecting
-            backend!.createTcpProxy(model: deviceModel, port: 80) { proxy, address, port in
+            backend!.createTcpProxy(model: deviceModel, port: 80) { [weak self] proxy, address, port in
+                guard let self = self else { return }
                 guard self.connectionSession.state == .creatingDeviceHttpClient else { return }
 
                 self.arsdkTcpProxy = proxy
                 if let address = address {
-                    self.droneServer = DroneServer(address: address, port: port)
+                    self.deviceServer = DeviceServer(address: address, port: port)
                 }
                 // even if the creation of the tcp proxy failed, transit to next connection state.
                 self.transitToNextConnectionState()
@@ -801,7 +802,7 @@ class DeviceController: NSObject {
             connectionSession.state = .disconnected
 
             arsdkTcpProxy = nil
-            droneServer = nil
+            deviceServer = nil
 
             // In "connecting" state the "protocol" connection is not yet initiated.
             if formerState != .connecting {
@@ -998,7 +999,9 @@ extension DeviceController {
 
     final func didReceiveCommand(_ command: OpaquePointer) {
         protocolDidReceiveCommand(command)
-        componentControllers.forEach { component in component.didReceiveCommand(command) }
+        componentControllers.forEach { component in
+            component.didReceiveCommand(command)
+        }
     }
 }
 

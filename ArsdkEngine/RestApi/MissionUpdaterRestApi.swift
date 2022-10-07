@@ -34,7 +34,7 @@ import GroundSdk
 class MissionUpdaterRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Base address to access the mission api
     private let baseApi = "/api/v1/mission/missions"
@@ -42,7 +42,7 @@ class MissionUpdaterRestApi {
     /// Constructor
     ///
     /// - Parameter server: the drone server from which missions should be accessed
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

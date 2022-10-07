@@ -213,13 +213,31 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
     func onForcedLandingAutoTrigger(reason: ArsdkFeatureArdrone3PilotingstateForcedlandingautotriggerReason,
                                     delay: UInt) {
 
+        alarms.update(level: .off, forAlarm: .automaticLandingBatteryIssue)
+        alarms.update(level: .off, forAlarm: .automaticLandingPropellerIcingIssue)
+        alarms.update(level: .off, forAlarm: .automaticLandingBatteryTooHot)
+        alarms.update(level: .off, forAlarm: .automaticLandingBatteryTooCold)
+        alarms.update(automaticLandingDelay: 0)
         switch reason {
         case .none:
-            alarms.update(level: .off, forAlarm: .automaticLandingBatteryIssue).update(automaticLandingDelay: 0)
+            break
         case .batteryCriticalSoon:
             alarms.update(level: delay > autoLandingCriticalDelay ? .warning : .critical,
                           forAlarm: .automaticLandingBatteryIssue)
                 .update(automaticLandingDelay: Double(delay))
+        case .propellerIcingCritical:
+            alarms.update(level: .critical,
+                          forAlarm: .automaticLandingPropellerIcingIssue)
+                  .update(automaticLandingDelay: Double(delay))
+        case .batteryTooHot:
+            alarms.update(level: .critical,
+                          forAlarm: .automaticLandingBatteryTooHot)
+                  .update(automaticLandingDelay: Double(delay))
+
+        case .batteryTooCold:
+            alarms.update(level: .critical,
+                          forAlarm: .automaticLandingBatteryTooCold)
+                  .update(automaticLandingDelay: Double(delay))
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -325,6 +343,7 @@ extension AnafiAlarms: ArsdkFeatureBatteryCallback {
             batteryAlarms[.batteryTooCold] = .off
             batteryAlarms[.batteryGaugeUpdateRequired] = .off
             batteryAlarms[.batteryAuthenticationFailure] = .off
+            batteryAlarms[.batteryPoorConnection] = .off
         }
 
         /// Updates alarms component with battery alarms and notifies update.
@@ -360,6 +379,8 @@ extension AnafiAlarms: ArsdkFeatureBatteryCallback {
                 alarm = .batteryGaugeUpdateRequired
             case .authenticationFailure:
                 alarm = .batteryAuthenticationFailure
+            case .lostComm:
+                alarm = .batteryPoorConnection
             case .sdkCoreUnknown:
                 fallthrough
             @unknown default:

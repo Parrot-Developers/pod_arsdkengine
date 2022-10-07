@@ -34,7 +34,7 @@ import GroundSdk
 class MediaWsApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
     /// closure called when the websocket notify changes of media store content
     private let contentDidChange: () -> Void
     /// Active websocket session
@@ -48,7 +48,7 @@ class MediaWsApi {
     /// - Parameters:
     ///   - server: the drone server from which medias should be accessed
     ///   - eventCb: callback called when media store content has changed
-    init(server: DroneServer, eventCb: @escaping () -> Void) {
+    init(server: DeviceServer, eventCb: @escaping () -> Void) {
         self.server = server
         self.contentDidChange = eventCb
         startSession()

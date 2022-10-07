@@ -62,7 +62,7 @@ class ArsdkCameraAlertEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Camera_Alert_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkCameraAlertEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkCameraAlertEventDecoder event \(event)")
             }
             switch event.id {
             case .tooDark(let event):

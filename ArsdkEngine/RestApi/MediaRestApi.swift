@@ -35,7 +35,7 @@ import CoreLocation
 class MediaRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Base address to access the media api
     private let baseApi = "/api/v1/media"
@@ -43,7 +43,7 @@ class MediaRestApi {
     /// Constructor
     ///
     /// - Parameter server: the drone server from which medias should be accessed
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

@@ -111,10 +111,8 @@ class SettingsStore {
     func getEntriesForPrefix(key: StoreKey) -> [String]? {
         var array: [String] = []
         if let arrayKeys = dictionary.getAllKeys() {
-            for keyFromArray in arrayKeys {
-                if keyFromArray.hasPrefix(key.key) {
-                    array.append(keyFromArray)
-                }
+            for keyFromArray in arrayKeys where keyFromArray.hasPrefix(key.key) {
+                array.append(keyFromArray)
             }
         }
         return array

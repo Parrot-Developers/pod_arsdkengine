@@ -133,7 +133,7 @@ def genDecoder(event, out):
     out.write("        }\n")
     out.write("        if let event = try? %s(serializedData: payload) {\n", event.commandId)
     out.write("            if !isNonAck {\n")
-    out.write("                ULog.d(.tag, \"%sDecoder event \\(event)\")\n", baseName)
+    out.write("                ULog.d(ULog.cmdTag, \"%sDecoder event \\(event)\")\n", baseName)
     out.write("            }\n")
     out.write("            switch event.id {\n")
     for msg in event.oneOf:

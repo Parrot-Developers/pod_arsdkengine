@@ -34,7 +34,7 @@ import GroundSdk
 class SecureElementRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Base address to access the secure element api
     private let baseApi = "/api/v1/secure-element"
@@ -42,7 +42,7 @@ class SecureElementRestApi {
     /// Constructor
     ///
     /// - Parameter server: the drone server from which secure element should be accessed
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

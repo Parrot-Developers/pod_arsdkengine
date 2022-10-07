@@ -41,15 +41,15 @@ class SkyControllerFamilyController: RCController {
         // Instruments
         componentControllers.append(SkyControllerBatteryInfo(deviceController: self))
         componentControllers.append(SkyControllerCompass(deviceController: self))
-        componentControllers.append(CellularLinkStatusController(deviceController: self))
-        if model == .skyCtrl4 {
+        if model == .skyCtrl4 || model == .skyCtrl4Black {
             componentControllers.append(CellularLogsController(deviceController: self))
+            componentControllers.append(SkyControllerCellularSession(deviceController: self))
         }
 
         // Peripherals
         componentControllers.append(DroneManagerDroneFinder(proxyDeviceController: self))
         switch model {
-        case .skyCtrl4:
+        case .skyCtrl4, .skyCtrl4Black:
             componentControllers.append(Sc4Gamepad(deviceController: self))
         case .skyCtrl3, .skyCtrlUA:
             componentControllers.append(Sc3Gamepad(deviceController: self))
@@ -81,6 +81,10 @@ class SkyControllerFamilyController: RCController {
         componentControllers.append(SkyControllerRadioControl(deviceController: self))
         if model == .skyCtrlUA {
             componentControllers.append(MicrohardController(deviceController: self))
+        }
+        componentControllers.append(SkyControllerPrivacy(deviceController: self))
+        if !useFtp {
+            componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
         }
         sendDateAndTime = { [weak self] in
             let dateFormatter = DateFormatter()

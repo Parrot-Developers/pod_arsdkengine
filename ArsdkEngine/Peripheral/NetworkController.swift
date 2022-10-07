@@ -477,7 +477,7 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
             capabilitiesDidChange(.routingPolicy(Set(NetworkControlRoutingPolicy.allCases)))
         }
 
-        if let routingPolicy = NetworkControlRoutingPolicy.init(fromArsdk: routingInfo.policy) {
+        if let routingPolicy = NetworkControlRoutingPolicy(fromArsdk: routingInfo.policy) {
             settingDidChange(.routingPolicy(routingPolicy))
         }
     }
@@ -559,7 +559,7 @@ extension NetworkControlLinkStatus: ArsdkMappableEnum {
 
 /// Extension that adds conversion from/to arsdk enum.
 ///
-/// - Note: NetworkControlLinkError.init(fromArsdk: .none) will return `nil`.
+/// - Note: NetworkControlLinkError(fromArsdk: .none) will return `nil`.
 extension NetworkControlLinkError: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<NetworkControlLinkError, Arsdk_Network_LinkError>([
         .authentication: .authentication,
@@ -582,10 +582,10 @@ extension NetworkDirectConnectionMode: ArsdkMappableEnum {
 extension Arsdk_Network_LinksStatus.LinkInfo {
     /// Creates a new `NetworkControlLinkInfoCore` from `Arsdk_Network_LinksStatus.LinkInfo`.
     var gsdkLinkInfo: NetworkControlLinkInfoCore? {
-        if let type = NetworkControlLinkType.init(fromArsdk: type),
-            let status = NetworkControlLinkStatus.init(fromArsdk: status) {
+        if let type = NetworkControlLinkType(fromArsdk: type),
+            let status = NetworkControlLinkStatus(fromArsdk: status) {
             let gsdkQuality = quality == 0 ? nil : Int(quality) - 1
-            let error = NetworkControlLinkError.init(fromArsdk: self.error)
+            let error = NetworkControlLinkError(fromArsdk: self.error)
             return NetworkControlLinkInfoCore(type: type, status: status, error: error, quality: gsdkQuality)
         }
         return nil

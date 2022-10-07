@@ -271,6 +271,9 @@ class Camera2Controller {
     /// Current configuration. Loaded from presets and merged with configuration updates from the drone.
     private var currentConfig = emptyConfig
 
+    /// Drone configuration, contains configuration updates from the drone.
+    private var droneConfig = emptyConfig
+
     /// Whether camera state event has been received since connection to drone.
     private var stateReceived = false
 
@@ -446,7 +449,7 @@ class Camera2Controller {
         case .model:
             break
         case .config(let config):
-            ULog.d(.tag, "Current camera config \(config.description)")
+            ULog.d(.cameraTag, "Current camera config \(config.description)")
             currentConfig = config
             camera.update(config: currentConfig)
         }
@@ -486,6 +489,7 @@ class Camera2Controller {
         exposureReceived = false
         zoomReceived = false
         currentConfig = Camera2Controller.emptyConfig
+        droneConfig = Camera2Controller.emptyConfig
         flightPlanState = nil
         // set camera as inactive, this will unpublish components
         active = false
@@ -523,7 +527,7 @@ extension Camera2Controller: Camera2Backend {
     func configure(config: Camera2ConfigCore.Config) -> Bool {
         presetStore?.write(key: SettingKey.configKey, value: config).commit()
         if connected {
-            return backend.configure(id: id, config: config.diffFrom(currentConfig))
+            return backend.configure(id: id, config: config.diffFrom(droneConfig))
         } else {
             camera.update(config: config).notifyUpdated()
             return false
@@ -591,6 +595,10 @@ extension Camera2Controller {
             camera.update(capabilities: capabilities)
         }
         if state.configSelected {
+            // update drone camera configuration
+            droneConfig = state.config.toGsdkConfig(defaultConfig: droneConfig)
+            ULog.d(.cameraTag, "Drone camera config \(droneConfig.description)")
+            // update current camera configuration, presets merged with updates from the drone
             settingDidChange(.config(state.config.toGsdkConfig(defaultConfig: currentConfig)))
         }
         if state.activeSelected {
@@ -650,7 +658,7 @@ extension Camera2Controller {
         case .unavailable:
             camera.photoCapture.unpublish()
         case .UNRECOGNIZED:
-            ULog.w(.tag, "Unknown photo state, skipping this event.")
+            ULog.w(.cameraTag, "Unknown photo state, skipping this event.")
         }
         camera.photoCapture.notifyUpdated()
     }
@@ -680,7 +688,7 @@ extension Camera2Controller {
         case .unavailable:
             camera.recording.unpublish()
         case .UNRECOGNIZED:
-            ULog.w(.tag, "Unknown recording state, skipping this event.")
+            ULog.w(.cameraTag, "Unknown recording state, skipping this event.")
         }
         camera.recording.notifyUpdated()
     }
@@ -693,7 +701,7 @@ extension Camera2Controller {
         if let mode = Camera2ExposureLockMode(fromArsdk: exposureLock.mode) {
             camera.exposureLock.update(mode: mode)
         } else {
-            ULog.w(.tag, "Unknown exposure lock mode, ignoring.")
+            ULog.w(.cameraTag, "Unknown exposure lock mode, ignoring.")
         }
         let supportModes = Set(exposureLock.supportedModes.compactMap { Camera2ExposureLockMode(fromArsdk: $0) })
         camera.exposureLock.update(supportedModes: supportModes).notifyUpdated()
@@ -710,7 +718,7 @@ extension Camera2Controller {
         if let mode = Camera2WhiteBalanceLockMode(fromArsdk: whiteBalanceLock.mode) {
             camera.whiteBalanceLock.update(mode: mode)
         } else {
-            ULog.w(.tag, "Unknown white balance lock mode, ignoring.")
+            ULog.w(.cameraTag, "Unknown white balance lock mode, ignoring.")
         }
         let supportModes
             = Set(whiteBalanceLock.supportedModes.compactMap { Camera2WhiteBalanceLockMode(fromArsdk: $0) })

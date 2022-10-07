@@ -49,7 +49,7 @@ class MissionUpdaterController: DeviceComponentController {
 
     /// Drone is connected
     override func didConnect() {
-        if let droneServer = deviceController.droneServer {
+        if let droneServer = deviceController.deviceServer {
             missionUpdaterRestApi = MissionUpdaterRestApi(server: droneServer)
         }
         missionUpdater.publish()

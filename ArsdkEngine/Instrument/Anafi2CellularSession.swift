@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Parrot Drones SAS
+// Copyright (C) 2022 Parrot Drones SAS
 //
 //    Redistribution and use in source and binary forms, with or without
 //    modification, are permitted provided that the following conditions
@@ -29,35 +29,45 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
-/// CellularLinkStatus component controller.
-class CellularLinkStatusController: DeviceComponentController {
+/// Cellular session component controller for Anafi 2 drones.
+class Anafi2CellularSession: DeviceComponentController {
 
-    /// Cellular link status component.
-    private var cellularLinkStatus: CellularLinkStatusCore!
+    typealias Command = Arsdk_Network_Command
+    typealias Event = Arsdk_Network_Event
+    typealias Encoder = ArsdkNetworkCommandEncoder
+    typealias Decoder = ArsdkNetworkEventDecoder
 
-    /// Decoder for controller network events.
-    private var arsdkDecoder: ArsdkControllernetworkEventDecoder!
+    /// Cellular session component.
+    private var cellularSession: CellularSessionCore!
+
+    /// Decoder for network events.
+    private var arsdkDecoder: Decoder!
 
     /// Constructor.
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        cellularLinkStatus = CellularLinkStatusCore(store: deviceController.device.instrumentStore)
-        arsdkDecoder = ArsdkControllernetworkEventDecoder(listener: self)
+        cellularSession = CellularSessionCore(store: deviceController.device.instrumentStore)
+        arsdkDecoder = Decoder(listener: self)
     }
 
     /// Device is about to be connected.
     override func willConnect() {
         super.willConnect()
-        _ = sendGetStateCommand()
+        // To avoid sending another GetState command, we piggy-back on the one sent by
+        // NetworkController.
+
+        // Of course, this won't work anymore if NetworkController is removed, so TODO find a better
+        // solution.
     }
 
     /// Device is disconnected.
     override func didDisconnect() {
-        cellularLinkStatus.unpublish()
-        cellularLinkStatus.update(status: nil)
+        cellularSession.unpublish()
+        cellularSession.update(status: nil)
     }
 
     /// A command has been received.
@@ -69,14 +79,14 @@ class CellularLinkStatusController: DeviceComponentController {
 }
 
 /// Extension for methods to send controller network commands.
-extension CellularLinkStatusController {
+extension Anafi2CellularSession {
     /// Sends to the device a controller network command.
     ///
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
-    func sendControllerNetworkCommand(_ command: Arsdk_Controllernetwork_Command.OneOf_ID) -> Bool {
+    func sendCommand(_ command: Command.OneOf_ID) -> Bool {
         var sent = false
-        if let encoder = ArsdkControllernetworkCommandEncoder.encoder(command) {
+        if let encoder = Encoder.encoder(command) {
             sendCommand(encoder)
             sent = true
         }
@@ -87,65 +97,30 @@ extension CellularLinkStatusController {
     ///
     /// - Returns: `true` if the command has been sent
     func sendGetStateCommand() -> Bool {
-        sendControllerNetworkCommand(.getState(Arsdk_Controllernetwork_Command.GetState()))
+        sendCommand(.getState(Command.GetState()))
     }
 }
 
 /// Extension for events processing.
-extension CellularLinkStatusController: ArsdkControllernetworkEventDecoderListener {
-    func onState(_ state: Arsdk_Controllernetwork_Event.State) {
+extension Anafi2CellularSession: ArsdkNetworkEventDecoderListener {
+    func onState(_ state: Event.State) {
         // links status
         if state.hasLinksStatus {
             processLinksStatus(state.linksStatus)
         }
 
-        cellularLinkStatus.publish()
-        cellularLinkStatus.notifyUpdated()
+        cellularSession.publish()
+        cellularSession.notifyUpdated()
     }
 
     /// Processes a `LinksStatus` message.
     ///
     /// - Parameter linksStatus: message to process
     func processLinksStatus(_ linksStatus: Arsdk_Network_LinksStatus) {
-        let cellularLink = linksStatus.links
-            .compactMap { $0.gsdkCellularLinkStatus }
-            .first
-        cellularLinkStatus.update(status: cellularLink)
-    }
-}
-
-/// Extension that adds conversion from/to arsdk enum.
-///
-/// - Note: CellularLinkStatusError.init(fromArsdk: .none) will return `nil`.
-extension CellularLinkStatusError: ArsdkMappableEnum {
-    static let arsdkMapper = Mapper<CellularLinkStatusError, Arsdk_Network_LinkError>([
-        .authentication: .authentication,
-        .communicationLink: .commLink,
-        .connect: .connect,
-        .dns: .dns,
-        .publish: .publish,
-        .timeout: .timeout,
-        .invite: .invite])
-}
-
-/// Extension that adds conversion to gsdk.
-extension Arsdk_Network_LinksStatus.LinkInfo {
-    /// Creates a new `CellularLinkStatusStatus` from `Arsdk_Network_LinksStatus.LinkInfo`.
-    var gsdkCellularLinkStatus: CellularLinkStatusStatus? {
-        if type == .cellular {
-            switch status {
-            case .up: return .up
-            case .down: return .down
-            case .connecting: return .connecting
-            case .ready: return .ready
-            case .running: return .running
-            case .error:
-                let theError = CellularLinkStatusError.init(fromArsdk: error)
-                return .error(error: theError)
-            case .UNRECOGNIZED:
-                return nil
-            }
+        guard let cellularLinkInfo = linksStatus.links.filter({ $0.type == .cellular }).first else {
+            cellularSession.update(status: nil)
+            return
         }
-        return nil
+        cellularSession.update(status: CellularSessionStatus(fromArsdk: cellularLinkInfo.cellularStatus))
     }
 }

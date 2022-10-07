@@ -1066,7 +1066,7 @@ extension CameraMode: ArsdkMappableEnum {
     static func createSetFrom(bitField: UInt) -> Set<CameraMode> {
         var result = Set<CameraMode>()
         ArsdkFeatureCameraCameraModeBitField.forAllSet(in: bitField) { arsdkValue in
-            if let mode = CameraMode.init(fromArsdk: arsdkValue) {
+            if let mode = CameraMode(fromArsdk: arsdkValue) {
                 result.insert(mode)
             }
         }

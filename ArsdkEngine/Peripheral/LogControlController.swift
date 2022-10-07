@@ -52,8 +52,17 @@ public enum LogControlSupportedCapabilities: Int, CustomStringConvertible, CaseI
 
 /// Base controller for Log Control peripheral
 class LogControlController: DeviceComponentController, LogControlBackend {
+    /// Command typealias
+    typealias Command = Arsdk_Developer_Command
+    typealias Event = Arsdk_Developer_Event
+    typealias Encoder = ArsdkDeveloperCommandEncoder
+    typealias Decoder = ArsdkDeveloperEventDecoder
+
     /// Log Control component
     private var logControl: LogControlCore!
+
+    /// Decoder for developer events.
+    private var arsdkDecoder: Decoder!
 
     /// Indicates if the drone supports the deactivation of Logs
     private var deactivateLogsIsSupported = false
@@ -64,15 +73,22 @@ class LogControlController: DeviceComponentController, LogControlBackend {
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
         logControl = LogControlCore(store: deviceController.device.peripheralStore, backend: self)
+        arsdkDecoder = Decoder(listener: self)
+    }
+
+    /// Drone is about to be connected.
+    override func willConnect() {
+        super.willConnect()
+        // To avoid sending another GetState command, we piggy-back on the one sent by
+        // DebugShellController.
+
+        // Of course, this won't work anymore if DebugShellController is removed, so TODO find a better
+        // solution..
     }
 
     /// Drone is connected
     override func didConnect() {
-        if deactivateLogsIsSupported {
-            logControl.publish()
-        } else {
-            logControl.unpublish()
-        }
+        logControl.publish()
     }
 
     /// Drone is disconnected
@@ -95,6 +111,12 @@ class LogControlController: DeviceComponentController, LogControlBackend {
         return false
     }
 
+    func activateMissionLogs(_ activate: Bool) -> Bool {
+        var command = Command.AirSdkLog()
+        command.enable = activate
+        return sendCommand(.airSdkLog(command))
+    }
+
     /// A command has been received
     ///
     /// - Parameter command: received command
@@ -102,6 +124,24 @@ class LogControlController: DeviceComponentController, LogControlBackend {
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureSecurityEditionUid {
             ArsdkFeatureSecurityEdition.decode(command, callback: self)
         }
+        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureGenericUid {
+            arsdkDecoder.decode(command)
+        }
+    }
+}
+
+private extension LogControlController {
+    /// Sends to the drone a developer airsdk log command.
+    ///
+    /// - Parameters:
+    ///   - command: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendCommand(_ command: Command.OneOf_ID) -> Bool {
+        if let encoder = Encoder.encoder(command) {
+            sendCommand(encoder)
+            return true
+        }
+        return false
     }
 }
 
@@ -128,6 +168,19 @@ extension LogControlController: ArsdkFeatureSecurityEditionCallback {
             return
         }
         logControl.update(areLogsEnabled: newLogsEnabled).notifyUpdated()
+    }
+}
+
+extension LogControlController: ArsdkDeveloperEventDecoderListener {
+
+    func onState(_ state: Event.State) {
+        if state.hasAirsdklog {
+            processAirsdkLog(state.airsdklog)
+        }
+    }
+
+    private func processAirsdkLog(_ event: Event.AirSdkLog) {
+        logControl.update(areMissionLogsEnabled: event.enabled).notifyUpdated()
     }
 }
 

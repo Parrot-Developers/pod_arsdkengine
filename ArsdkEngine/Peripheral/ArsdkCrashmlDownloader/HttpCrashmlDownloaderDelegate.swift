@@ -52,7 +52,7 @@ class HttpCrashmlDownloaderDelegate: ArsdkCrashmlDownloaderDelegate {
     private var currentRequest: CancelableCore?
 
     func configure(downloader: ArsdkCrashmlDownloader) {
-        if let droneServer = downloader.deviceController.droneServer {
+        if let droneServer = downloader.deviceController.deviceServer {
             reportApi = ReportRestApi(server: droneServer)
         }
     }

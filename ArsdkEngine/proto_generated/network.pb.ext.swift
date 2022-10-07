@@ -57,7 +57,7 @@ class ArsdkNetworkEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Network_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkNetworkEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkNetworkEventDecoder event \(event)")
             }
             switch event.id {
             case .state(let event):
@@ -158,6 +158,7 @@ extension Arsdk_Network_LinksStatus.LinkInfo {
     static var statusFieldNumber: Int32 { 2 }
     static var qualityFieldNumber: Int32 { 3 }
     static var errorFieldNumber: Int32 { 4 }
+    static var cellularStatusFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Network_LinksStatus {
     static var linksFieldNumber: Int32 { 1 }

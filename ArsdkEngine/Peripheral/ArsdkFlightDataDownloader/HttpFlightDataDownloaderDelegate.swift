@@ -52,7 +52,7 @@ class HttpFlightDataDownloaderDelegate: ArsdkFlightDataDownloaderDelegate {
     private var currentRequest: CancelableCore?
 
     func configure(downloader: ArsdkFlightDataDownloader) {
-        if let droneServer = downloader.deviceController.droneServer {
+        if let droneServer = downloader.deviceController.deviceServer {
             pudApi = PudRestApi(server: droneServer)
         }
     }

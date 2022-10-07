@@ -57,7 +57,7 @@ class ArsdkAntennaEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Antenna_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkAntennaEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkAntennaEventDecoder event \(event)")
             }
             switch event.id {
             case .state(let event):

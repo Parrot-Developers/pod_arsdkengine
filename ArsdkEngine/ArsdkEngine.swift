@@ -53,9 +53,6 @@ public class ArsdkEngine: EngineBaseCore {
     public required init(enginesController: EnginesControllerCore) {
         ULog.i(.tag, "Create ArsdkEngine")
 
-        // TODO: use global arsdkengine configuration
-        arsdkCoreCmdLogLevel = ArsdkCmdLog.acknowledgedOnlyWithoutFrequent
-
         super.init(enginesController: enginesController)
         arsdk = Arsdk(engine: self)
         persistentStore = createPersistentStore()
@@ -68,10 +65,8 @@ public class ArsdkEngine: EngineBaseCore {
     public override func startEngine() {
 
         if let blackBoxStorage = utilities.getUtility(Utilities.blackBoxStorage) {
-            ULog.d(.myparrot, "BLACKBOX Start Recorder")
+            ULog.d(.tag, "Start BlackBox recorder")
             blackBoxRecorder = BlackBoxRecorder(engine: self, blackBoxStorage: blackBoxStorage)
-        } else {
-            ULog.e(.myparrot, "BLACKBOX no Utilities.blackBoxStorage ?")
         }
 
         // create all known devices
@@ -173,7 +168,7 @@ public class ArsdkEngine: EngineBaseCore {
             }
         case .rc(let rcModel):
             switch rcModel {
-            case .skyCtrl3, .skyCtrl4, .skyCtrlUA:
+            case .skyCtrl3, .skyCtrl4, .skyCtrl4Black, .skyCtrlUA:
                 return SkyControllerFamilyController(engine: self, deviceUid: uid, model: rcModel, name: name)
             }
         }

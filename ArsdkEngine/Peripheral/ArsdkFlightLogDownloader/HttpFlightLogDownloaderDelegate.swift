@@ -30,82 +30,125 @@
 import Foundation
 import GroundSdk
 
-/// FlightLog downloader delegate that does the download through http
+/// FlightLog downloader delegate that does the download through http.
 class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
 
-    /// Flight Log REST Api.
+    /// Device controller.
+    private let deviceController: DeviceController
+
+    /// Flight log storage utility, `nil` if `converterStorage` is not `nil`.
+    private let storage: FlightLogStorageCore?
+
+    /// Flight log converter storage utility, `nil` if `storage` is not `nil`.
+    private let converterStorage: FlightLogConverterStorageCore?
+
+    /// Flight log downloader component.
+    private var downloader: FlightLogDownloaderCore?
+
+    /// Flight log REST API.
     /// Not nil when uploader has been configured. Nil after a reset.
     private var flightLogApi: FlightLogRestApi?
 
-    /// List of pending downloads
+    /// Flight log WebSocket API.
+    private var flightLogWsApi: FlightLogWsApi?
+
+    /// List of pending downloads.
     private var pendingDownloads: [FlightLogRestApi.FlightLog] = []
 
     /// FlightLog downloaded count.
     private var downloadCount = 0
 
-    /// Whether or not the current overall task has been canceled
+    /// Whether or not the current overall task has been canceled.
     private var isCanceled = false
 
-    /// Current report download request
+    /// Whether or not available flight log list should be queried again.
+    private var requery = false
+
+    /// Current log download request.
     /// - Note: this request can change during the overall download task (it can be the listing, downloading or deleting
     ///         request).
     private var currentRequest: CancelableCore?
 
-    /// Device uid
+    /// Device uid.
     private var deviceUid: String = ""
 
-    func configure(downloader: ArsdkFlightLogDownloader) {
-        if let droneServer = downloader.deviceController.droneServer {
-            flightLogApi = FlightLogRestApi(server: droneServer)
-        }
-        deviceUid = downloader.deviceController.device.uid
+    /// Constructor
+    ///
+    /// - Parameters:
+    ///     - deviceController: device controller
+    ///     - storage: flight log storage utility
+    init(deviceController: DeviceController, storage: FlightLogStorageCore) {
+        self.deviceController = deviceController
+        self.storage = storage
+        self.converterStorage = nil
     }
 
-    func reset(downloader: ArsdkFlightLogDownloader) {
+    /// Constructor
+    ///
+    /// - Parameters:
+    ///     - deviceController: device controller
+    ///     - converterStorage: flight log converter storage utility
+    init(deviceController: DeviceController, converterStorage: FlightLogConverterStorageCore) {
+        self.deviceController = deviceController
+        self.storage = nil
+        self.converterStorage = converterStorage
+    }
+
+    func configure(downloader: FlightLogDownloaderCore) {
+        self.downloader = downloader
+        if let droneServer = deviceController.deviceServer {
+            flightLogApi = FlightLogRestApi(server: droneServer)
+        }
+        deviceUid = deviceController.device.uid
+    }
+
+    func reset() {
         flightLogApi = nil
     }
 
-    func download(toDirectory directory: URL, downloader: ArsdkFlightLogDownloader) -> Bool {
-        guard currentRequest == nil else {
-            return false
-        }
-
-        isCanceled = false
-        currentRequest = flightLogApi?.getFlightLogList { flightLogList in
-            if let flightLogList = flightLogList {
-                self.pendingDownloads = flightLogList.sorted { $0.date > $1.date }
-
-                let list = self.pendingDownloads.map { $0.name }.joined(separator: ",")
-                GroundSdkCore.logEvent(message: "EVT:LOGS;event='list';source='drone';files='\(list)'")
-
-                self.downloadNextLog(toDirectory: directory, downloader: downloader)
-            } else {
-                downloader.flightLogDownloader.update(completionStatus: .interrupted)
-                    .update(downloadingFlag: false)
-                    .notifyUpdated()
-                self.currentRequest = nil
+    func startWatchingContentChanges(arsdkDownloader: ArsdkFlightLogDownloader) {
+        if let droneServer = deviceController.deviceServer {
+            flightLogWsApi = FlightLogWsApi(server: droneServer) {
+                arsdkDownloader.download()
             }
         }
-
-        return currentRequest != nil
     }
 
-    func delete() -> Bool {
+    func stopWatchingContentChanges() {
+        flightLogWsApi = nil
+    }
+
+    func download() {
+        guard flightLogApi != nil else {
+            return
+        }
         guard currentRequest == nil else {
-            return false
+            requery = true
+            return
+        }
+
+        downloadCount = 0
+        isCanceled = false
+        downloader?.update(completionStatus: .none)
+            .update(downloadingFlag: true)
+            .update(downloadedCount: downloadCount)
+            .notifyUpdated()
+
+        queryFlightLogList()
+    }
+
+    func delete() {
+        guard flightLogApi != nil else {
+            return
+        }
+        guard currentRequest == nil else {
+            requery = true
+            return
         }
 
         isCanceled = false
-        currentRequest = flightLogApi?.getFlightLogList { flightLogList in
-            if let flightLogList = flightLogList {
-                self.pendingDownloads = flightLogList
-                self.deleteNextLog()
-            } else {
-                self.currentRequest = nil
-            }
-        }
 
-        return currentRequest != nil
+        queryFlightLogListForDeletion()
     }
 
     func cancel() {
@@ -115,81 +158,117 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
         currentRequest?.cancel()
     }
 
-    /// Download next log.
-    ///
-    /// - Parameters:
-    ///   - directory: directory in which flight logs should be stored
-    ///   - downloader: the downloader in charge
-    private func downloadNextLog(toDirectory directory: URL, downloader: ArsdkFlightLogDownloader) {
+    /// Queries available flight logs from the drone.
+    /// In case some logs are available, starts downloading them.
+    private func queryFlightLogList() {
+        currentRequest = flightLogApi?.getFlightLogList { flightLogList in
+            if let flightLogList = flightLogList {
+                self.pendingDownloads = flightLogList.sorted { $0.date > $1.date }
+
+                let deviceModel = ((self.deviceController as? DroneController) != nil) ? "drone" : "ctrl"
+                let list = self.pendingDownloads.map { $0.name }.joined(separator: ",")
+                GroundSdkCore.logEvent(message: "EVT:LOGS;event='list';source='\(deviceModel)';files='\(list)'")
+
+                self.downloadNextLog()
+            } else {
+                self.downloader?.update(completionStatus: .interrupted)
+                    .update(downloadingFlag: false)
+                    .notifyUpdated()
+                self.currentRequest = nil
+            }
+        }
+    }
+
+    /// Downloads next flight log.
+    private func downloadNextLog() {
+        if requery {
+            requery = false
+            queryFlightLogList()
+            return
+        }
+        guard let destDir = storage?.workDir ?? converterStorage?.workDir else {
+            return
+        }
+
         if let flightLog = pendingDownloads.first {
             currentRequest = flightLogApi?.downloadFlightLog(
-            flightLog, toDirectory: directory, deviceUid: deviceUid) { fileUrl in
-                if let fileUrl = fileUrl {
-                    // delete flight log and download next flight log
-                    self.deleteFlightLogAndDownloadNext(toDirectory: directory,
-                                                        downloader: downloader, flightLog: flightLog,
-                                                        fileUrl: fileUrl)
-                } else {
-                    // even if the download failed, process next report
-                    if !self.pendingDownloads.isEmpty {
-                        self.pendingDownloads.removeFirst()
+                flightLog, toDirectory: destDir, deviceUid: deviceUid,
+                progress: { _ in },
+                completion: { fileUrl in
+                    if let fileUrl = fileUrl {
+                        // delete flight log and download next flight log
+                        self.deleteFlightLogAndDownloadNext(flightLog: flightLog, fileUrl: fileUrl)
+                    } else {
+                        // even if the download failed, process next log
+                        if !self.pendingDownloads.isEmpty {
+                            self.pendingDownloads.removeFirst()
+                        }
+                        self.downloadNextLog()
                     }
-                    self.downloadNextLog(toDirectory: directory, downloader: downloader)
-                }
-            }
+                })
         } else {
             if isCanceled {
-                downloader.flightLogDownloader.update(completionStatus: .interrupted)
+                self.downloader?.update(completionStatus: .interrupted)
             } else {
-                downloader.flightLogDownloader.update(completionStatus: .success)
+                self.downloader?.update(completionStatus: .success)
             }
-            downloader.flightLogDownloader.update(downloadingFlag: false).notifyUpdated()
+            self.downloader?.update(downloadingFlag: false).notifyUpdated()
             currentRequest = nil
             isCanceled = false
         }
     }
 
-    /// Delete flight log and start download for the next one
+    /// Deletes flight log from the remote device and starts downloading the next one.
     ///
     /// - Parameters:
-    ///   - directory: directory in which flight logs should be stored
-    ///   - downloader: the downloader in charge
-    ///   - flightLog: flightlog to delete
-    ///   - fileUrl: fileUrl to upload
-    private func deleteFlightLogAndDownloadNext(
-        toDirectory directory: URL, downloader: ArsdkFlightLogDownloader,
-        flightLog: FlightLogRestApi.FlightLog, fileUrl: URL) {
-        // delete the distant report
+    ///   - flightLog: flight log to delete
+    ///   - fileUrl: URL of the uploaded file
+    private func deleteFlightLogAndDownloadNext(flightLog: FlightLogRestApi.FlightLog, fileUrl: URL) {
         currentRequest = flightLogApi?.deleteFlightLog(flightLog) { _ in
             self.downloadCount += 1
-            // notify downloader
-            downloader.flightLogDownloader.update(
-                downloadedCount: self.downloadCount).notifyUpdated()
+            self.downloader?.update(downloadedCount: self.downloadCount).notifyUpdated()
 
-            downloader.flightLogConverterStorage?.notifyFlightLogReady(
-                flightLogUrl: URL(fileURLWithPath: fileUrl.path))
-            downloader.flightLogStorage?.notifyFlightLogReady(
-                flightLogUrl: URL(fileURLWithPath: fileUrl.path))
+            self.storage?.notifyFlightLogReady(flightLogUrl: URL(fileURLWithPath: fileUrl.path))
+            self.converterStorage?.notifyFlightLogReady(flightLogUrl: URL(fileURLWithPath: fileUrl.path))
 
-            let deviceModel = ((downloader.deviceController as? DroneController) != nil) ? "drone" : "ctrl"
+            let deviceModel = ((self.deviceController as? DroneController) != nil) ? "drone" : "ctrl"
             GroundSdkCore.logEvent(message: "EVT:LOGS;event='download';source='\(deviceModel)';" +
                 "file='\(fileUrl.lastPathComponent)'")
 
-            // even if the deletion failed, process next report
+            // even if the deletion failed, process next log
             if !self.pendingDownloads.isEmpty {
                 self.pendingDownloads.removeFirst()
             }
 
             // download next flight log
-            self.downloadNextLog(toDirectory: directory, downloader: downloader)
+            self.downloadNextLog()
         }
     }
 
-    /// Delete next log.
+    /// Queries available flight logs from the drone.
+    /// In case some logs are available, starts deleting them.
+    private func queryFlightLogListForDeletion() {
+        currentRequest = flightLogApi?.getFlightLogList { flightLogList in
+            if let flightLogList = flightLogList {
+                self.pendingDownloads = flightLogList
+                self.deleteNextLog()
+            } else {
+                self.currentRequest = nil
+            }
+        }
+    }
+
+    /// Deletes next flight log.
     private func deleteNextLog() {
+        if requery {
+            requery = false
+            queryFlightLogListForDeletion()
+            return
+        }
+
         if let flightLog = pendingDownloads.first {
             currentRequest = flightLogApi?.deleteFlightLog(flightLog) { _ in
-                // even if the deletion failed, process next report
+                // even if the deletion failed, process next log
                 if !self.pendingDownloads.isEmpty {
                     self.pendingDownloads.removeFirst()
                 }

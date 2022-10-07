@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Parrot Drones SAS
+// Copyright (C) 2022 Parrot Drones SAS
 //
 //    Redistribution and use in source and binary forms, with or without
 //    modification, are permitted provided that the following conditions
@@ -30,28 +30,28 @@
 import Foundation
 import GroundSdk
 
-/// WebSocket API notifying changes of flight camera record store content
-class FlightCameraRecordWsApi {
+/// WebSocket API notifying changes of flight log store content
+class FlightLogWsApi {
 
     /// Drone server
     private let server: DeviceServer
 
-    /// Closure called when the list of available FCR changes.
-    /// - Note: the drone will only trigger this event once after landing, when it is ready to serve collected FCR
-    ///         files after its own internal cleanup.
+    /// Closure called when the list of available flight logs changes.
+    /// - Note: the drone will only trigger this event once after landing, when it is ready to serve collected flight
+    ///         logs after its own internal cleanup.
     private let contentDidChange: () -> Void
 
     /// Active websocket session
     private var webSocketSession: WebSocketSession?
 
     /// Notification API
-    private let api = "/api/v1/fcr/notifications"
+    private let api = "/api/v1/fdr/fdr-lite/notifications"
 
     /// Constructor
     ///
     /// - Parameters:
     ///   - server: the drone server from which records should be accessed
-    ///   - eventCb: callback called when FCR store content has changed
+    ///   - eventCb: callback called when flight logs store content has changed
     init(server: DeviceServer, eventCb: @escaping () -> Void) {
         self.server = server
         self.contentDidChange = eventCb
@@ -68,28 +68,27 @@ class FlightCameraRecordWsApi {
 
         /// Event type
         enum EventType: String, Decodable {
-            /// Available flight camera records changed
-            case fcrUpdate = "fcr_update"
+            /// New flight log available
+            case liteRecordAdded = "lite_record_added"
         }
-        /// event name
+        /// Event name
         let name: EventType
     }
 }
 
-extension FlightCameraRecordWsApi: WebSocketSessionDelegate {
+extension FlightLogWsApi: WebSocketSessionDelegate {
 
     func webSocketSessionDidReceiveMessage(_ data: Data) {
-        ULog.d(.flightCameraRecordTag, String(data: data, encoding: .utf8)!)
-
         // decode message
         do {
             let event = try JSONDecoder().decode(Event.self, from: data)
             switch event.name {
-            case .fcrUpdate:
+            case .liteRecordAdded:
+                ULog.d(.flightLogTag, "Received lite_record_added notification")
                 contentDidChange()
             }
         } catch let error {
-            ULog.w(.flightCameraRecordTag, "Failed to decode data: \(error.localizedDescription)")
+            ULog.w(.flightLogTag, "Failed to decode data: \(error.localizedDescription)")
         }
     }
 

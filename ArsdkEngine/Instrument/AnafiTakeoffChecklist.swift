@@ -84,6 +84,8 @@ extension AnafiTakeoffChecklist: ArsdkFeatureAlarmsCallback {
             newKind = .batteryIdentification
         case .batteryCritical:
             newKind = .batteryLevel
+        case .batteryLostComm:
+            newKind = .batteryPoorConnection
         case .batteryIsTooCold:
             newKind = .batteryTooCold
         case .batteryIsTooHot:

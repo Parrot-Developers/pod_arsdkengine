@@ -4,28 +4,28 @@ import Foundation
 import GroundSdk
 import SwiftProtobuf
 
-/// Listener for `ArsdkLedEventDecoder`.
-protocol ArsdkLedEventDecoderListener: AnyObject {
+/// Listener for `ArsdkControllerprivacyEventDecoder`.
+protocol ArsdkControllerprivacyEventDecoderListener: AnyObject {
 
-    /// Processes a `Arsdk_Led_Event.Luminosity` event.
+    /// Processes a `Arsdk_Privacy_Event.State` event.
     ///
-    /// - Parameter luminosity: event to process
-    func onLuminosity(_ luminosity: Arsdk_Led_Event.Luminosity)
+    /// - Parameter state: event to process
+    func onState(_ state: Arsdk_Privacy_Event.State)
 }
 
-/// Decoder for arsdk.led.Event events.
-class ArsdkLedEventDecoder: NSObject, ArsdkFeatureGenericCallback {
+/// Decoder for arsdk.controllerprivacy.Event events.
+class ArsdkControllerprivacyEventDecoder: NSObject, ArsdkFeatureGenericCallback {
 
     /// Service identifier.
-    static let serviceId = "arsdk.led.Event".serviceId
+    static let serviceId = "arsdk.controllerprivacy.Event".serviceId
 
     /// Listener notified when events are decoded.
-    private weak var listener: ArsdkLedEventDecoderListener?
+    private weak var listener: ArsdkControllerprivacyEventDecoderListener?
 
     /// Constructor.
     ///
     /// - Parameter listener: listener notified when events are decoded
-    init(listener: ArsdkLedEventDecoderListener) {
+    init(listener: ArsdkControllerprivacyEventDecoderListener) {
        self.listener = listener
     }
 
@@ -52,45 +52,45 @@ class ArsdkLedEventDecoder: NSObject, ArsdkFeatureGenericCallback {
     ///    - serviceId: service identifier
     ///    - payload: event payload
     private func processEvent(serviceId: UInt, payload: Data, isNonAck: Bool) {
-        guard serviceId == ArsdkLedEventDecoder.serviceId else {
+        guard serviceId == ArsdkControllerprivacyEventDecoder.serviceId else {
             return
         }
-        if let event = try? Arsdk_Led_Event(serializedData: payload) {
+        if let event = try? Arsdk_Controllerprivacy_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(ULog.cmdTag, "ArsdkLedEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkControllerprivacyEventDecoder event \(event)")
             }
             switch event.id {
-            case .luminosity(let event):
-                listener?.onLuminosity(event)
+            case .state(let event):
+                listener?.onState(event)
             case .none:
-                ULog.w(.tag, "Unknown Arsdk_Led_Event, skipping this event")
+                ULog.w(.tag, "Unknown Arsdk_Controllerprivacy_Event, skipping this event")
             }
         }
     }
 }
 
 /// Extension to get command field number.
-extension Arsdk_Led_Event.OneOf_ID {
+extension Arsdk_Controllerprivacy_Event.OneOf_ID {
     var number: Int32 {
         switch self {
-        case .luminosity: return 16
+        case .state: return 16
         }
     }
 }
 
-/// Decoder for arsdk.led.Command commands.
-class ArsdkLedCommandEncoder {
+/// Decoder for arsdk.controllerprivacy.Command commands.
+class ArsdkControllerprivacyCommandEncoder {
 
     /// Service identifier.
-    static let serviceId = "arsdk.led.Command".serviceId
+    static let serviceId = "arsdk.controllerprivacy.Command".serviceId
 
     /// Gets encoder for a command.
     ///
     /// - Parameter command: command to encode
     /// - Returns: command encoder, or `nil`
-    static func encoder(_ command: Arsdk_Led_Command.OneOf_ID) -> ArsdkCommandEncoder? {
-        ULog.d(.tag, "ArsdkLedCommandEncoder command \(command)")
-        var message = Arsdk_Led_Command()
+    static func encoder(_ command: Arsdk_Controllerprivacy_Command.OneOf_ID) -> ArsdkCommandEncoder? {
+        ULog.d(.tag, "ArsdkControllerprivacyCommandEncoder command \(command)")
+        var message = Arsdk_Controllerprivacy_Command()
         message.id = command
         if let payload = try? message.serializedData() {
             return ArsdkFeatureGeneric.customCmdEncoder(serviceId: serviceId,
@@ -102,24 +102,18 @@ class ArsdkLedCommandEncoder {
 }
 
 /// Extension to get command field number.
-extension Arsdk_Led_Command.OneOf_ID {
+extension Arsdk_Controllerprivacy_Command.OneOf_ID {
     var number: Int32 {
         switch self {
-        case .getLuminosity: return 16
-        case .setLuminosity: return 17
+        case .getState: return 16
+        case .setLogMode: return 17
         }
     }
 }
-extension Arsdk_Led_Command.SetLuminosity {
-    static var valueFieldNumber: Int32 { 1 }
+extension Arsdk_Controllerprivacy_Command {
+    static var getStateFieldNumber: Int32 { 16 }
+    static var setLogModeFieldNumber: Int32 { 17 }
 }
-extension Arsdk_Led_Command {
-    static var getLuminosityFieldNumber: Int32 { 16 }
-    static var setLuminosityFieldNumber: Int32 { 17 }
-}
-extension Arsdk_Led_Event.Luminosity {
-    static var valueFieldNumber: Int32 { 1 }
-}
-extension Arsdk_Led_Event {
-    static var luminosityFieldNumber: Int32 { 16 }
+extension Arsdk_Controllerprivacy_Event {
+    static var stateFieldNumber: Int32 { 16 }
 }

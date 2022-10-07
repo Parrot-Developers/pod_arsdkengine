@@ -67,7 +67,7 @@ class ArsdkDevicemanagerEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Devicemanager_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkDevicemanagerEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkDevicemanagerEventDecoder event \(event)")
             }
             switch event.id {
             case .state(let event):

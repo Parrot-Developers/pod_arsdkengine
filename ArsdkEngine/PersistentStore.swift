@@ -60,7 +60,7 @@ class PersistentStore {
     /// UserDefault instance to back up data
     ///
     /// - note: set as internal var to be overriden by mocks
-    internal var userDefaults = UserDefaults.init()
+    internal var userDefaults = UserDefaults()
 
     /// Whole store content, loaded from UserDefault
     ///

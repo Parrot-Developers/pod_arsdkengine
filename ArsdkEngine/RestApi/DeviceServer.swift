@@ -30,8 +30,8 @@
 import Foundation
 import GroundSdk
 
-/// Object to access the drone http server.
-class DroneServer {
+/// Object to access the device http server.
+class DeviceServer {
 
     /// Base Http URL of this session
     private let baseHttpUrl: URL

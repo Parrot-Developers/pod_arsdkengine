@@ -174,13 +174,18 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
                 case .icing:
                     returnHomePilotingItf.update(reason: .icedPropeller)
                     notifyActive()
+                case .batteryLostComm:
+                    returnHomePilotingItf.update(reason: .batteryPoorConnection)
+                    notifyActive()
                 case .finished,
                      .stopped,
                      .enabled,
                      .disabled:
                     returnHomePilotingItf.update(reason: .none)
                     notifyActive()
-                case .flightplan, .blocked:
+                case .flightplan:
+                    returnHomePilotingItf.update(reason: .flightplan)
+                case .blocked:
                     // ignore this event
                     break
                 case .sdkCoreUnknown:

@@ -52,7 +52,7 @@ public enum ReportType: CustomStringConvertible {
 class ReportRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Base address to access the report api
     private let baseApi = "/api/v1/report"
@@ -60,7 +60,7 @@ class ReportRestApi {
     /// Constructor
     ///
     /// - Parameter server: the drone server from which report should be accessed
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

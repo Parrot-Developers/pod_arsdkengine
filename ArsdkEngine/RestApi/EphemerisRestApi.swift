@@ -53,12 +53,12 @@ class EphemerisRestApi {
     }
 
     /// Drone server
-    private unowned let server: DroneServer
+    private unowned let server: DeviceServer
 
     /// Constructor
     ///
     /// - Parameter server: the drone server that the upload should use
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 

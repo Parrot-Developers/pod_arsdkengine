@@ -87,7 +87,7 @@ class ArsdkCameraEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Camera_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkCameraEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkCameraEventDecoder event \(event)")
             }
             switch event.id {
             case .cameraExposure(let event):

@@ -123,7 +123,7 @@ public class StreamController: NSObject, StreamBackend {
     public var enabled: Bool = false {
         didSet {
             if oldValue != enabled {
-                ULog.i(.streamTag, "set enable: \(enabled)")
+                ULog.i(.streamTag, "\(self) set enable: \(enabled)")
                 stateRun()
             }
         }
@@ -186,14 +186,14 @@ public class StreamController: NSObject, StreamBackend {
 
     /// Set the stream in playing state.
     public func play() {
-        ULog.i(.streamTag, "play")
+        ULog.i(.streamTag, "\(self) play")
         state = .playing
         stateRun()
     }
 
     /// Set the stream in paused state.
     public func pause() {
-        ULog.i(.streamTag, "pause")
+        ULog.i(.streamTag, "\(self) pause")
         state = .paused
         stateRun()
     }
@@ -202,7 +202,7 @@ public class StreamController: NSObject, StreamBackend {
     ///
     /// - Parameter position: position to seek in the stream, in seconds.
     public func seek(position: Int) {
-        ULog.i(.streamTag, "seek to position: \(position)")
+        ULog.i(.streamTag, "\(self) seek to position: \(position)")
 
         if state == .stopped {
             state = .paused
@@ -213,7 +213,7 @@ public class StreamController: NSObject, StreamBackend {
 
     /// Set the stream in stopped state.
     public func stop() {
-        ULog.i(.streamTag, "stop")
+        ULog.i(.streamTag, "\(self) stop")
         state = .stopped
         pendingSeekCmd = nil
         stateRun()
@@ -221,7 +221,7 @@ public class StreamController: NSObject, StreamBackend {
 
     /// Manages the machine state.
     private func stateRun() {
-        ULog.d(.streamTag, "stateRun enabled: \(enabled) state: \(state)")
+        ULog.d(.streamTag, "\(self) stateRun enabled: \(enabled) state: \(state)")
 
         updateGsdkStreamState()
 
@@ -242,7 +242,7 @@ public class StreamController: NSObject, StreamBackend {
 
     /// Manages the stopped state.
     private func stateStoppedRun() {
-        ULog.d(.streamTag, "stateStoppedRun sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
+        ULog.d(.streamTag, "\(self) stateStoppedRun sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
         switch sdkcoreStream.state {
         case .opening:
             // abort openning
@@ -258,14 +258,14 @@ public class StreamController: NSObject, StreamBackend {
             // Do nothing.
             break
         @unknown default:
-            ULog.e(.streamTag, "stateStoppedRun Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
+            ULog.e(.streamTag, "\(self) stateStoppedRun Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
             return
         }
     }
 
     /// Manages the playing state.
     private func statePlayingRun() {
-        ULog.d(.streamTag, "statePlayingRun sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
+        ULog.d(.streamTag, "\(self) statePlayingRun sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
         switch sdkcoreStream.state {
         case .opening:
             // Waiting opened state.
@@ -286,14 +286,14 @@ public class StreamController: NSObject, StreamBackend {
             // Send open command.
             setCmd(CommandOpen(streamCtrl: self))
         @unknown default:
-            ULog.e(.streamTag, "statePlayingRun Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
+            ULog.e(.streamTag, "\(self) statePlayingRun Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
             return
         }
     }
 
     /// Manages the paused state.
     private func statePausedRun() {
-        ULog.d(.streamTag, "statePausedRun sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
+        ULog.d(.streamTag, "\(self) statePausedRun sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
         switch sdkcoreStream.state {
         case .opening:
             // Waiting opened state.
@@ -313,7 +313,7 @@ public class StreamController: NSObject, StreamBackend {
             // Send open command.
             setCmd(CommandOpen(streamCtrl: self))
         @unknown default:
-            ULog.e(.streamTag, "statePausedRun Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
+            ULog.e(.streamTag, "\(self) statePausedRun Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
             return
         }
     }
@@ -322,16 +322,16 @@ public class StreamController: NSObject, StreamBackend {
     private func updateGsdkStreamState() {
         DispatchQueue.main.async {
             if !self.enabled && self.state != .stopped {
-                ULog.i(.streamTag, "gsdkStream suspended")
+                ULog.i(.streamTag, "\(self) gsdkStream suspended")
                 self.gsdkStream?.update(state: .suspended).notifyUpdated()
             } else if self.state == .stopped {
-                ULog.i(.streamTag, "gsdkStream stopped")
+                ULog.i(.streamTag, "\(self) gsdkStream stopped")
                 self.gsdkStream?.update(state: .stopped).notifyUpdated()
             } else if self.sdkcoreStream.state == .opened {
-                ULog.i(.streamTag, "gsdkStream started")
+                ULog.i(.streamTag, "\(self) gsdkStream started")
                 self.gsdkStream?.update(state: .started).notifyUpdated()
             } else {
-                ULog.i(.streamTag, "gsdkStream starting")
+                ULog.i(.streamTag, "\(self) gsdkStream starting")
                 self.gsdkStream?.update(state: .starting).notifyUpdated()
             }
         }
@@ -341,7 +341,7 @@ public class StreamController: NSObject, StreamBackend {
     ///
     /// - Parameter cmd: command to send
     private func setCmd(_ cmd: Command) {
-        ULog.d(.streamTag, "setCmd cmd \(cmd) currentCmd: \(String(describing: currentCmd))" +
+        ULog.d(.streamTag, "\(self) setCmd cmd \(cmd) currentCmd: \(String(describing: currentCmd))" +
                 " lastCmdFailed: \(String(describing: lastCmdFailed))")
         if currentCmd == nil && cmd != lastCmdFailed {
             currentCmd = cmd
@@ -353,7 +353,7 @@ public class StreamController: NSObject, StreamBackend {
     ///
     /// - Parameter status: command completion status
     fileprivate func cmdCompletion(status: Int32) {
-        ULog.d(.streamTag, "cmdCompletion currentCmd: \(String(describing: currentCmd)) status: \(status)")
+        ULog.d(.streamTag, "\(self) cmdCompletion currentCmd: \(String(describing: currentCmd)) status: \(status)")
 
         if status == 0 {
             if currentCmd == pendingSeekCmd {
@@ -365,7 +365,7 @@ public class StreamController: NSObject, StreamBackend {
             currentCmd = nil
             stateRun()
         } else if status == -ETIMEDOUT {
-            ULog.w(.streamTag, "command \(String(describing: currentCmd)) timeout")
+            ULog.w(.streamTag, "\(self) command \(String(describing: currentCmd)) timeout")
             // Consider the command as not sent.
 
             lastCmdFailed = currentCmd
@@ -373,7 +373,7 @@ public class StreamController: NSObject, StreamBackend {
             currentCmd = nil
             stateRun()
         } else {
-            ULog.e(.streamTag, "cmdCompletion command \(String(describing: currentCmd))" +
+            ULog.e(.streamTag, "\(self) cmdCompletion command \(String(describing: currentCmd))" +
                    " err=\(status)(\(String(describing: strerror(-status)))")
 
             lastCmdFailed = currentCmd
@@ -474,7 +474,7 @@ extension StreamController {
 
 extension StreamController: ArsdkStreamListener {
     public func streamStateDidChange(_ stream: ArsdkStream) {
-        ULog.d(.streamTag, "streamStateDidChange \(sdkcoreStreamStateDescription())")
+        ULog.d(.streamTag, "\(self) streamStateDidChange \(sdkcoreStreamStateDescription())")
 
         stateRun()
 
@@ -497,11 +497,12 @@ extension StreamController: ArsdkStreamListener {
         case .closed:
             // notify the server of the stream conplet closure
             if state == .stopped || !enabled {
-                ULog.i(.streamTag, "streamDidClose")
+                ULog.i(.streamTag, "\(self) streamDidClose")
                 serverListener?.streamDidClose(streamController: self)
             }
         @unknown default:
-            ULog.e(.streamTag, "streamStateDidChange Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
+            ULog.e(.streamTag,
+                   "\(self) streamStateDidChange Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
             return
         }
     }
@@ -551,10 +552,11 @@ private class Command: NSObject {
 private class CommandOpen: Command {
 
     override func execute() {
-        ULog.d(.streamTag, "CommandOpen")
+        ULog.d(.streamTag, "\(streamCtrl) CommandOpen")
         streamCtrl.sdkcoreStream.open(streamCtrl.source) { [weak self] status in
-            ULog.d(.streamTag, "CommandOpen status: \(status)")
-            self?.streamCtrl.cmdCompletion(status: status)
+            guard let self = self else { return }
+            ULog.d(.streamTag, "\(self.streamCtrl) CommandOpen status: \(status)")
+            self.streamCtrl.cmdCompletion(status: status)
         }
     }
 }
@@ -563,10 +565,11 @@ private class CommandOpen: Command {
 private class CommandPlay: Command {
 
     override func execute() {
-        ULog.d(.streamTag, "CommandPlay")
+        ULog.d(.streamTag, "\(streamCtrl) CommandPlay")
         streamCtrl.sdkcoreStream.play { [weak self] status in
-            ULog.d(.streamTag, "CommandPlay status: \(status)")
-            self?.streamCtrl.cmdCompletion(status: status)
+            guard let self = self else { return }
+            ULog.d(.streamTag, "\(self.streamCtrl) CommandPlay status: \(status)")
+            self.streamCtrl.cmdCompletion(status: status)
         }
     }
 }
@@ -575,10 +578,11 @@ private class CommandPlay: Command {
 private class CommandPause: Command {
 
     override func execute() {
-        ULog.d(.streamTag, "CommandPause")
+        ULog.d(.streamTag, "\(streamCtrl) CommandPause")
         streamCtrl.sdkcoreStream.pause { [weak self] status in
-            ULog.d(.streamTag, "CommandPause status: \(status)")
-            self?.streamCtrl.cmdCompletion(status: status)
+            guard let self = self else { return }
+            ULog.d(.streamTag, "\(self.streamCtrl) CommandPause status: \(status)")
+            self.streamCtrl.cmdCompletion(status: status)
         }
     }
 }
@@ -599,10 +603,10 @@ private class CommandSeek: Command {
     }
 
     override func execute() {
-        ULog.d(.streamTag, "CommandSeek")
+        ULog.d(.streamTag, "\(streamCtrl) CommandSeek")
         streamCtrl.sdkcoreStream.seek(to: Int32(position)) { [weak self] status in
             if let self = self {
-                ULog.d(.streamTag, "CommandSeek to \(self.position) status: \(status)")
+                ULog.d(.streamTag, "\(self.streamCtrl) CommandSeek to \(self.position) status: \(status)")
                 self.streamCtrl.cmdCompletion(status: status)
             }
         }
@@ -621,10 +625,11 @@ private class CommandSeek: Command {
 private class CommandClose: Command {
 
     override func execute() {
-        ULog.d(.streamTag, "CommandClose")
+        ULog.d(.streamTag, "\(streamCtrl) CommandClose")
         streamCtrl.sdkcoreStream.close { [weak self] status in
-            ULog.d(.streamTag, "CommandClose status: \(status)")
-            self?.streamCtrl.cmdCompletion(status: status)
+            guard let self = self else { return }
+            ULog.d(.streamTag, "\(self.streamCtrl) CommandClose status: \(status)")
+            self.streamCtrl.cmdCompletion(status: status)
         }
     }
 }

@@ -57,7 +57,7 @@ class ArsdkPrivacyEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         }
         if let event = try? Arsdk_Privacy_Event(serializedData: payload) {
             if !isNonAck {
-                ULog.d(.tag, "ArsdkPrivacyEventDecoder event \(event)")
+                ULog.d(ULog.cmdTag, "ArsdkPrivacyEventDecoder event \(event)")
             }
             switch event.id {
             case .state(let event):

@@ -85,9 +85,6 @@ extension ULogTag {
     /// Logging tag of arsdk stream
     static let streamTag = ULogTag(name: "arsdkengine.stream")
 
-    /// tag myparrot debug
-    static let myparrot = ULogTag(name: "MYPARROT-arsdkv1-")
-
     /// Logging tag of arsdk stereo vision sensor
     static let stereovisionTag = ULogTag(name: "arsdkengine.stereovisionlog")
 

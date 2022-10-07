@@ -34,15 +34,15 @@ import GroundSdk
 class FlightLogRestApi {
 
     /// Drone server
-    private let server: DroneServer
+    private let server: DeviceServer
 
     /// Base address to access the flight log api
-    private let baseApi = "/api/v1/fdr/lite_records"
+    private let baseApi = "/api/v1/fdr"
 
     /// Constructor
     ///
     /// - Parameter server: the drone server from which flight log should be accessed
-    init(server: DroneServer) {
+    init(server: DeviceServer) {
         self.server = server
     }
 
@@ -54,7 +54,39 @@ class FlightLogRestApi {
     /// - Returns: the request
     func getFlightLogList(
         completion: @escaping (_ flightLogList: [FlightLog]?) -> Void) -> CancelableCore {
-        return server.getData(api: "\(baseApi)") { result, data in
+        return server.getData(api: "\(baseApi)/lite_records") { result, data in
+            switch result {
+            case .success:
+                // listing the flight logs is successful
+                if let data = data {
+                    let decoder = JSONDecoder()
+                    decoder.dateDecodingStrategy = .formatted(.iso8601Base)
+                    do {
+                        let flightLogs = try decoder.decode([FlightLog].self, from: data)
+                        completion(flightLogs)
+                    } catch let error {
+                        ULog.w(.flightLogTag,
+                               "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
+                                error.localizedDescription)
+                        completion(nil)
+                    }
+                }
+            default:
+                completion(nil)
+            }
+        }
+    }
+
+    /// Get the list of flight logs for the given boot id
+    ///
+    /// - Parameters:
+    ///   - bootId: the desired boot id
+    ///   - completion: the completion callback (called on the main thread)
+    ///   - flightLogList: list of flight logs available for the given boot id
+    /// - Returns: the request
+    func getFlightLogListForBootId(_ bootId: String = "CURRENT",
+        completion: @escaping (_ flightLogList: [FlightLog]?) -> Void) -> CancelableCore {
+        return server.getData(api: "\(baseApi)/bootids/\(bootId)") { result, data in
             switch result {
             case .success:
                 // listing the flight logs is successful
@@ -83,17 +115,20 @@ class FlightLogRestApi {
     ///   - flightLog: the flight log to download
     ///   - directory: the directory where to put the downloaded flight log into
     ///   - deviceUid: the device uid
+    ///   - progress: progress callback
+    ///   - progressValue: progress percentage (from 0 to 100)
     ///   - completion: the completion callback (called on the main thread)
     ///   - fileUrl: url of the locally downloaded file. `nil` if there were an error during download or during copy
     /// - Returns: the request
     func downloadFlightLog(
         _ flightLog: FlightLog, toDirectory directory: URL, deviceUid: String,
+        progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore {
 
         return server.downloadFile(
             api: flightLog.urlPath,
             destination: directory.appendingPathComponent(flightLog.name),
-            progress: { _ in },
+            progress: progress,
             completion: { _, localFileUrl in
                 completion(localFileUrl)
         })
@@ -123,6 +158,7 @@ class FlightLogRestApi {
             case name
             case date
             case urlPath = "url"
+            case size
         }
 
         /// Flight log name
@@ -131,5 +167,7 @@ class FlightLogRestApi {
         let date: Date
         /// Flight log url path (needs to be appended to an address and a port at least)
         let urlPath: String
+        /// Flight log size in bytes
+        let size: UInt64
     }
 }

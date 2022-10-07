@@ -81,7 +81,7 @@ class HttpFCRDownloaderDelegate: ArsdkFlightCameraRecordDownloaderDelegate {
 
     func configure(downloader: FlightCameraRecordDownloaderCore) {
         self.downloader = downloader
-        if let droneServer = deviceController.droneServer {
+        if let droneServer = deviceController.deviceServer {
             flightCameraRecordApi = FlightCameraRecordRestApi(server: droneServer)
         }
         deviceUid = deviceController.device.uid
@@ -92,7 +92,7 @@ class HttpFCRDownloaderDelegate: ArsdkFlightCameraRecordDownloaderDelegate {
     }
 
     func startWatchingContentChanges(arsdkDownloader: ArsdkFlightCameraRecordDownloader) {
-        if let droneServer = deviceController.droneServer {
+        if let droneServer = deviceController.deviceServer {
             flightCameraRecordWsApi = FlightCameraRecordWsApi(server: droneServer) {
                 arsdkDownloader.download()
             }

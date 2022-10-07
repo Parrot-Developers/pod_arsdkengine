@@ -45,7 +45,7 @@ class HttpEphemerisUploader: EphemerisUploader {
     private var ephemerisRestApi: EphemerisRestApi?
 
     /// Creation of EphemerisRestApi if droneServer exist
-    public var droneServer: DroneServer? {
+    public var droneServer: DeviceServer? {
         didSet {
             if let droneServer = droneServer {
                 ephemerisRestApi = EphemerisRestApi(server: droneServer)

@@ -220,11 +220,11 @@ extension ObstacleAvoidanceController: ArsdkFeatureObstacleAvoidanceCallback {
                   availability: ArsdkFeatureObstacleAvoidanceAvailability) {
         obstacleAvoidanceSupported = true
 
-        guard let mode = ObstacleAvoidanceMode.init(fromArsdk: mode) else {
+        guard let mode = ObstacleAvoidanceMode(fromArsdk: mode) else {
             ULog.w(.tag, "Unknown ArsdkFeatureObstacleAvoidanceMode, skipping this event.")
             return
         }
-        guard let state = ObstacleAvoidanceState.init(fromArsdk: state) else {
+        guard let state = ObstacleAvoidanceState(fromArsdk: state) else {
             ULog.w(.tag, "Unknown ArsdkFeatureObstacleAvoidanceState, skipping this event.")
             return
         }

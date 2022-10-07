@@ -30,22 +30,38 @@
 import Foundation
 import GroundSdk
 
+/// Privacy controller backend that should be implemented by subclasses.
+protocol PrivacyControllerBackend {
+
+    /// Sends get state command.
+    ///
+    /// - Parameter getState: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendCommand(getState: Arsdk_Privacy_Command.GetState) -> Bool
+
+    /// Sends log mode command.
+    ///
+    /// - Parameter setLogMode: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendCommand(setLogMode: Arsdk_Privacy_Command.SetLogMode) -> Bool
+}
+
 /// Controller for privacy related settings, like private mode.
 class PrivacyController: DeviceComponentController {
 
-    /// User Account Utility
+    /// User Account Utility.
     private var userAccountUtility: UserAccountUtilityCore?
 
-    /// Monitor of the userAccount changes
+    /// Monitor of the userAccount changes.
     private var userAccountMonitor: MonitorCore?
 
-    /// Decoder for privacy events.
-    private var arsdkDecoder: ArsdkPrivacyEventDecoder!
+    /// Privacy controller backend.
+    var backend: PrivacyControllerBackend!
 
     /// Whether `State` message has been received since `GetState` command was sent.
     private var stateReceived = false
 
-    /// Whether connected drone supports private mode.
+    /// Whether connected device supports private mode.
     private var privateModeSupported = false
 
     /// Private mode value.
@@ -58,11 +74,9 @@ class PrivacyController: DeviceComponentController {
         userAccountUtility = deviceController.engine.utilities.getUtility(Utilities.userAccount)
 
         super.init(deviceController: deviceController)
-
-        arsdkDecoder = ArsdkPrivacyEventDecoder(listener: self)
     }
 
-    /// Drone is about to be connected.
+    /// Device is about to be connected.
     override func willConnect() {
         super.willConnect()
 
@@ -70,14 +84,14 @@ class PrivacyController: DeviceComponentController {
         _ = sendGetStateCommand()
     }
 
-    /// Drone is connected.
+    /// Device is connected.
     override func didConnect() {
         userAccountMonitor = userAccountUtility?.startMonitoring(accountDidChange: { _ in
             self.applyPresets()
         })
     }
 
-    /// Drone is disconnected.
+    /// Device is disconnected.
     override func didDisconnect() {
         userAccountMonitor?.stop()
         userAccountMonitor = nil
@@ -91,29 +105,10 @@ class PrivacyController: DeviceComponentController {
             privateMode = userPrivateMode
         }
     }
-
-    /// A command has been received.
-    ///
-    /// - Parameter command: received command
-    override func didReceiveCommand(_ command: OpaquePointer) {
-        arsdkDecoder.decode(command)
-    }
 }
 
 /// Extension for methods to send Privacy commands.
 private extension PrivacyController {
-    /// Sends to the drone a Privacy command.
-    ///
-    /// - Parameter command: command to send
-    /// - Returns: `true` if the command has been sent
-    func sendPrivacyCommand(_ command: Arsdk_Privacy_Command.OneOf_ID) -> Bool {
-        var sent = false
-        if let encoder = ArsdkPrivacyCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
-        }
-        return sent
-    }
 
     /// Sends get state command.
     ///
@@ -121,7 +116,7 @@ private extension PrivacyController {
     func sendGetStateCommand() -> Bool {
         var getState = Arsdk_Privacy_Command.GetState()
         getState.includeDefaultCapabilities = true
-        return sendPrivacyCommand(.getState(getState))
+        return backend.sendCommand(getState: getState)
     }
 
     /// Sends log mode command.
@@ -132,14 +127,17 @@ private extension PrivacyController {
         var setLogMode = Arsdk_Privacy_Command.SetLogMode()
         setLogMode.logStorage = privateMode ? .none : .persistent
         setLogMode.logConfigPersistence = .persistent
-        return sendPrivacyCommand(.setLogMode(setLogMode))
+        return backend.sendCommand(setLogMode: setLogMode)
     }
 }
 
 /// Extension for events processing.
-extension PrivacyController: ArsdkPrivacyEventDecoderListener {
+extension PrivacyController {
 
-    func onState(_ state: Arsdk_Privacy_Event.State) {
+    /// Processes a `State` event.
+    ///
+    /// - Parameter state: state to process
+    func processState(_ state: Arsdk_Privacy_Event.State) {
         if state.hasDefaultCapabilities {
             privateModeSupported = state.defaultCapabilities.supportedLogStorage.contains(.none)
         }

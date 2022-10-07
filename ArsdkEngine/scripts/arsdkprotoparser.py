@@ -34,8 +34,10 @@ import string
 import pyparsing as pp
 from pyparsing import *
 
-#===============================================================================
-#===============================================================================
+# ===============================================================================
+# ===============================================================================
+
+
 class Message(object):
     def __init__(self, id):
         self.id = id
@@ -49,8 +51,10 @@ class Message(object):
         for id, number in self.fields.items():
             print("  " + id + " = " + number)
 
-#===============================================================================
-#===============================================================================
+# ===============================================================================
+# ===============================================================================
+
+
 class Command(object):
     def __init__(self, id, serviceId):
         self.commandId = id
@@ -64,10 +68,13 @@ class Command(object):
         print(self.commandId)
         print(self.serviceId)
         for msg in self.oneOf:
-            print("  " + msg['id'] + ": " + msg['type'] + " = " + msg['number'])
+            print("  " + msg['id'] + ": " +
+                  msg['type'] + " = " + msg['number'])
 
-#===============================================================================
-#===============================================================================
+# ===============================================================================
+# ===============================================================================
+
+
 class ProtoParser(object):
 
     PACKAGE_NAME_RES = "packageName"
@@ -82,7 +89,8 @@ class ProtoParser(object):
     ident = Word(alphas + "_.", alphanums + "_.")
     integer = Regex(r"[+-]?\d+")
 
-    LBRACE, RBRACE, LBRACK, RBRACK, LPAR, RPAR, EQ, SEMI, COMMA, LESSER, GREATER = map(Suppress, "{}[]()=;,<>")
+    LBRACE, RBRACE, LBRACK, RBRACK, LPAR, RPAR, EQ, SEMI, COMMA, LESSER, GREATER = map(
+        Suppress, "{}[]()=;,<>")
 
     kwds = """message required optional repeated enum extensions extends extend
               to package service rpc returns true false option import syntax
@@ -93,7 +101,7 @@ class ProtoParser(object):
     messageBody = Forward()
 
     messageDefn = (MESSAGE_ - ident(MSG_ID_RES)
-        + LBRACE + messageBody(MSG_BODY_RES) + RBRACE)
+                   + LBRACE + messageBody(MSG_BODY_RES) + RBRACE)
 
     oneOfBody = Forward()
 
@@ -121,7 +129,9 @@ class ProtoParser(object):
     )
 
     rvalue = integer | TRUE_ | FALSE_ | ident
-    fieldDirective = LBRACK + Group(Optional(LPAR) + ident + Optional(RPAR) + EQ + Group(rvalue | quotedString)) + RBRACK
+    fieldDirective = LBRACK + \
+        Group(Optional(LPAR) + ident + Optional(RPAR) +
+              EQ + Group(rvalue | ZeroOrMore(quotedString))) + RBRACK
     fieldDefnPrefix = REQUIRED_ | OPTIONAL_ | REPEATED_
     fieldDefn = (
         Optional(fieldDefnPrefix)
@@ -133,12 +143,15 @@ class ProtoParser(object):
         + SEMI
     )
 
-    optionDirective = OPTION_ - Optional(LPAR) + ident + Optional(RPAR) + EQ + ZeroOrMore(quotedString) + SEMI
+    optionDirective = OPTION_ - \
+        Optional(LPAR) + ident + Optional(RPAR) + \
+        EQ + ZeroOrMore(quotedString) + SEMI
 
     # reservedDefn ::= 'reserved' integer 'to' integer ';'
     # reservedDefn ::= 'reserved' integer ',' integer ';'
     # reservedDefn ::= 'reserved' integer ',' integer ',' 'to', integer ';'
-    reservedDefn = RESERVED_ - integer + ZeroOrMore(Group(TO_ | COMMA) + integer) + SEMI
+    reservedDefn = RESERVED_ - integer + \
+        ZeroOrMore(Group(TO_ | COMMA) + integer) + SEMI
 
     # enumDefn ::= 'enum' ident '{' { ident '=' integer ';' }* '}'
     enumDefn = (
@@ -148,7 +161,7 @@ class ProtoParser(object):
         + Dict(
             ZeroOrMore(
                 Group(ident + EQ + integer + ZeroOrMore(fieldDirective) + SEMI
-                | optionDirective | reservedDefn)
+                      | optionDirective | reservedDefn)
             )
         )
         + RBRACE
@@ -171,7 +184,7 @@ class ProtoParser(object):
     messageBody << Group(
         ZeroOrMore(
             Group(fieldDefn | enumDefn | messageDefn | extensionsDefn
-            | reservedDefn | messageExtension | oneOfDefn | optionDirective)
+                  | reservedDefn | messageExtension | oneOfDefn | optionDirective)
         )
     )
 
@@ -221,10 +234,13 @@ class ProtoParser(object):
 
         packageName = self.getPackageName(parseResults)
         baseName = self.getBaseName(parseResults)
-        messages = self.extractMessages(parseResults=parseResults, baseName=baseName)
+        messages = self.extractMessages(
+            parseResults=parseResults, baseName=baseName)
 
-        command = self.extractCmd(name="Command", parseResults=parseResults, packageName=packageName, baseName=baseName, messages=messages)
-        event = self.extractCmd(name="Event", parseResults=parseResults, packageName=packageName, baseName=baseName, messages=messages)
+        command = self.extractCmd(name="Command", parseResults=parseResults,
+                                  packageName=packageName, baseName=baseName, messages=messages)
+        event = self.extractCmd(name="Event", parseResults=parseResults,
+                                packageName=packageName, baseName=baseName, messages=messages)
 
         return messages, command, event
 
@@ -243,7 +259,7 @@ class ProtoParser(object):
         """
         for item in parseResults:
             if self.PACKAGE_NAME_RES in item:
-                return string.capwords(item[self.PACKAGE_NAME_RES], ".").replace(".","_")
+                return string.capwords(item[self.PACKAGE_NAME_RES], ".").replace(".", "_")
         return ""
 
     def extractMessages(self, parseResults, baseName):
@@ -255,7 +271,7 @@ class ProtoParser(object):
         self._extractMessages(parseResults, messages, baseName)
         return messages
 
-    def _extractMessages(self, resultItem, messages, baseName, parentMessage = None):
+    def _extractMessages(self, resultItem, messages, baseName, parentMessage=None):
         for item in resultItem:
             if self.MSG_ID_RES in item and self.MSG_BODY_RES in item:
                 messageId = item[self.MSG_ID_RES]
@@ -264,7 +280,8 @@ class ProtoParser(object):
                 else:
                     messageId = parentMessage.id + "." + messageId
                 message = Message(messageId)
-                self._extractMessages(item[self.MSG_BODY_RES], messages, messageId, message)
+                self._extractMessages(
+                    item[self.MSG_BODY_RES], messages, messageId, message)
                 messages.append(message)
             if self.ENUM_ID_RES in item:
                 messageId = item[self.ENUM_ID_RES]
@@ -275,10 +292,12 @@ class ProtoParser(object):
                 message = Message(messageId)
                 messages.append(message)
             if self.ONEOF_BODY_RES in item:
-                self._extractMessages(item[self.ONEOF_BODY_RES], messages, baseName, parentMessage)
+                self._extractMessages(
+                    item[self.ONEOF_BODY_RES], messages, baseName, parentMessage)
             if self.FIELD_ID_RES in item and self.FIELD_NB_RES in item:
                 if parentMessage is not None:
-                    parentMessage.addField(id=item[self.FIELD_ID_RES], number=item[self.FIELD_NB_RES])
+                    parentMessage.addField(
+                        id=item[self.FIELD_ID_RES], number=item[self.FIELD_NB_RES])
 
     def extractCmd(self, name, parseResults, packageName, baseName, messages):
         """
@@ -305,8 +324,10 @@ class ProtoParser(object):
                             fieldType = str(oneOfItem[self.FIELD_TYPE_RES][0])
                         else:
                             fieldType = oneOfItem[self.FIELD_TYPE_RES]
-                        msgType = self.normalizeType(fieldType, cmd.commandId, messages)
-                        cmd.addOneOf(str(oneOfItem[self.FIELD_ID_RES]), msgType, oneOfItem[self.FIELD_NB_RES])
+                        msgType = self.normalizeType(
+                            fieldType, cmd.commandId, messages)
+                        cmd.addOneOf(
+                            str(oneOfItem[self.FIELD_ID_RES]), msgType, oneOfItem[self.FIELD_NB_RES])
 
     def normalizeType(self, messageType, parentType, messages):
         """
@@ -320,20 +341,20 @@ class ProtoParser(object):
         for message in messages:
             if message.id.endswith("_" + messageType):
                 return message.id
-        return messageType
+        return string.capwords(messageType, ".").replace(".", "_", messageType.count(".") - 1)
 
 
-#===============================================================================
-#===============================================================================
+# ===============================================================================
+# ===============================================================================
 def main():
     # Parse options
     parser = optparse.OptionParser()
     parser.add_option('-i', '--input',
-              action="store", dest="inputpath",
-              help="path to protobuf file", default="in.proto")
+                      action="store", dest="inputpath",
+                      help="path to protobuf file", default="in.proto")
     parser.add_option('-o', '--output',
-              action="store", dest="outpath",
-              help="output directory", default="out")
+                      action="store", dest="outpath",
+                      help="output directory", default="out")
     options, args = parser.parse_args()
 
     # Parse protobuf file
@@ -349,7 +370,7 @@ def main():
         event.dump()
 
 
-#===============================================================================
-#===============================================================================
+# ===============================================================================
+# ===============================================================================
 if __name__ == "__main__":
     main()

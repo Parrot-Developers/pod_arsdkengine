@@ -386,6 +386,161 @@ extension Arsdk_Network_DirectConnectionMode: CaseIterable {
 
 #endif  // swift(>=4.2)
 
+/// Cellular status 
+enum Arsdk_Network_CellularStatus: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case unknown // = 0
+
+  /// Modem status. 
+  case modemOff // = 1
+  case modemOffline // = 2
+  case modemFlashing // = 3
+  case modemOnline // = 4
+  case modemError // = 5
+
+  /// SIM status. 
+  case simLocked // = 6
+  case simReady // = 7
+  case simAbsent // = 8
+  case simError // = 9
+
+  /// Network registration status. 
+  case networkSearching // = 10
+  case networkHome // = 11
+  case networkRoaming // = 12
+  case networkRegistrationDenied // = 13
+  case networkActivationDenied // = 14
+
+  /// Parrot server connection status. 
+  case serverWaitApcToken // = 15
+  case serverConnecting // = 16
+  case serverConnected // = 17
+  case serverUnreachableDns // = 18
+  case serverUnreachableConnect // = 19
+  case serverUnreachableAuth // = 20
+
+  /// Drone/controller connection status. 
+  case connectionOffline // = 21
+  case connectionConnecting // = 22
+  case connectionEstablished // = 23
+  case connectionError // = 24
+  case connectionErrorCommLink // = 25
+  case connectionErrorTimeout // = 26
+  case connectionErrorMismatch // = 27
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unknown
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unknown
+    case 1: self = .modemOff
+    case 2: self = .modemOffline
+    case 3: self = .modemFlashing
+    case 4: self = .modemOnline
+    case 5: self = .modemError
+    case 6: self = .simLocked
+    case 7: self = .simReady
+    case 8: self = .simAbsent
+    case 9: self = .simError
+    case 10: self = .networkSearching
+    case 11: self = .networkHome
+    case 12: self = .networkRoaming
+    case 13: self = .networkRegistrationDenied
+    case 14: self = .networkActivationDenied
+    case 15: self = .serverWaitApcToken
+    case 16: self = .serverConnecting
+    case 17: self = .serverConnected
+    case 18: self = .serverUnreachableDns
+    case 19: self = .serverUnreachableConnect
+    case 20: self = .serverUnreachableAuth
+    case 21: self = .connectionOffline
+    case 22: self = .connectionConnecting
+    case 23: self = .connectionEstablished
+    case 24: self = .connectionError
+    case 25: self = .connectionErrorCommLink
+    case 26: self = .connectionErrorTimeout
+    case 27: self = .connectionErrorMismatch
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unknown: return 0
+    case .modemOff: return 1
+    case .modemOffline: return 2
+    case .modemFlashing: return 3
+    case .modemOnline: return 4
+    case .modemError: return 5
+    case .simLocked: return 6
+    case .simReady: return 7
+    case .simAbsent: return 8
+    case .simError: return 9
+    case .networkSearching: return 10
+    case .networkHome: return 11
+    case .networkRoaming: return 12
+    case .networkRegistrationDenied: return 13
+    case .networkActivationDenied: return 14
+    case .serverWaitApcToken: return 15
+    case .serverConnecting: return 16
+    case .serverConnected: return 17
+    case .serverUnreachableDns: return 18
+    case .serverUnreachableConnect: return 19
+    case .serverUnreachableAuth: return 20
+    case .connectionOffline: return 21
+    case .connectionConnecting: return 22
+    case .connectionEstablished: return 23
+    case .connectionError: return 24
+    case .connectionErrorCommLink: return 25
+    case .connectionErrorTimeout: return 26
+    case .connectionErrorMismatch: return 27
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Network_CellularStatus: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Network_CellularStatus] = [
+    .unknown,
+    .modemOff,
+    .modemOffline,
+    .modemFlashing,
+    .modemOnline,
+    .modemError,
+    .simLocked,
+    .simReady,
+    .simAbsent,
+    .simError,
+    .networkSearching,
+    .networkHome,
+    .networkRoaming,
+    .networkRegistrationDenied,
+    .networkActivationDenied,
+    .serverWaitApcToken,
+    .serverConnecting,
+    .serverConnected,
+    .serverUnreachableDns,
+    .serverUnreachableConnect,
+    .serverUnreachableAuth,
+    .connectionOffline,
+    .connectionConnecting,
+    .connectionEstablished,
+    .connectionError,
+    .connectionErrorCommLink,
+    .connectionErrorTimeout,
+    .connectionErrorMismatch,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 /// This is the entry point to send messages to the drone. 
 struct Arsdk_Network_Command {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -703,6 +858,9 @@ struct Arsdk_Network_LinksStatus {
     /// Link error. 
     var error: Arsdk_Network_LinkError = .none
 
+    /// Extended status of cellular links. 
+    var cellularStatus: Arsdk_Network_CellularStatus = .unknown
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
@@ -784,6 +942,39 @@ extension Arsdk_Network_DirectConnectionMode: SwiftProtobuf._ProtoNameProviding 
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "DIRECT_CONNECTION_MODE_LEGACY"),
     1: .same(proto: "DIRECT_CONNECTION_MODE_SECURE"),
+  ]
+}
+
+extension Arsdk_Network_CellularStatus: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "CELLULAR_STATUS_UNKNOWN"),
+    1: .same(proto: "CELLULAR_STATUS_MODEM_OFF"),
+    2: .same(proto: "CELLULAR_STATUS_MODEM_OFFLINE"),
+    3: .same(proto: "CELLULAR_STATUS_MODEM_FLASHING"),
+    4: .same(proto: "CELLULAR_STATUS_MODEM_ONLINE"),
+    5: .same(proto: "CELLULAR_STATUS_MODEM_ERROR"),
+    6: .same(proto: "CELLULAR_STATUS_SIM_LOCKED"),
+    7: .same(proto: "CELLULAR_STATUS_SIM_READY"),
+    8: .same(proto: "CELLULAR_STATUS_SIM_ABSENT"),
+    9: .same(proto: "CELLULAR_STATUS_SIM_ERROR"),
+    10: .same(proto: "CELLULAR_STATUS_NETWORK_SEARCHING"),
+    11: .same(proto: "CELLULAR_STATUS_NETWORK_HOME"),
+    12: .same(proto: "CELLULAR_STATUS_NETWORK_ROAMING"),
+    13: .same(proto: "CELLULAR_STATUS_NETWORK_REGISTRATION_DENIED"),
+    14: .same(proto: "CELLULAR_STATUS_NETWORK_ACTIVATION_DENIED"),
+    15: .same(proto: "CELLULAR_STATUS_SERVER_WAIT_APC_TOKEN"),
+    16: .same(proto: "CELLULAR_STATUS_SERVER_CONNECTING"),
+    17: .same(proto: "CELLULAR_STATUS_SERVER_CONNECTED"),
+    18: .same(proto: "CELLULAR_STATUS_SERVER_UNREACHABLE_DNS"),
+    19: .same(proto: "CELLULAR_STATUS_SERVER_UNREACHABLE_CONNECT"),
+    20: .same(proto: "CELLULAR_STATUS_SERVER_UNREACHABLE_AUTH"),
+    21: .same(proto: "CELLULAR_STATUS_CONNECTION_OFFLINE"),
+    22: .same(proto: "CELLULAR_STATUS_CONNECTION_CONNECTING"),
+    23: .same(proto: "CELLULAR_STATUS_CONNECTION_ESTABLISHED"),
+    24: .same(proto: "CELLULAR_STATUS_CONNECTION_ERROR"),
+    25: .same(proto: "CELLULAR_STATUS_CONNECTION_ERROR_COMM_LINK"),
+    26: .same(proto: "CELLULAR_STATUS_CONNECTION_ERROR_TIMEOUT"),
+    27: .same(proto: "CELLULAR_STATUS_CONNECTION_ERROR_MISMATCH"),
   ]
 }
 
@@ -1288,6 +1479,7 @@ extension Arsdk_Network_LinksStatus.LinkInfo: SwiftProtobuf.Message, SwiftProtob
     2: .same(proto: "status"),
     3: .same(proto: "quality"),
     4: .same(proto: "error"),
+    5: .standard(proto: "cellular_status"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1300,6 +1492,7 @@ extension Arsdk_Network_LinksStatus.LinkInfo: SwiftProtobuf.Message, SwiftProtob
       case 2: try { try decoder.decodeSingularEnumField(value: &self.status) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self.quality) }()
       case 4: try { try decoder.decodeSingularEnumField(value: &self.error) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.cellularStatus) }()
       default: break
       }
     }
@@ -1318,6 +1511,9 @@ extension Arsdk_Network_LinksStatus.LinkInfo: SwiftProtobuf.Message, SwiftProtob
     if self.error != .none {
       try visitor.visitSingularEnumField(value: self.error, fieldNumber: 4)
     }
+    if self.cellularStatus != .unknown {
+      try visitor.visitSingularEnumField(value: self.cellularStatus, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1326,6 +1522,7 @@ extension Arsdk_Network_LinksStatus.LinkInfo: SwiftProtobuf.Message, SwiftProtob
     if lhs.status != rhs.status {return false}
     if lhs.quality != rhs.quality {return false}
     if lhs.error != rhs.error {return false}
+    if lhs.cellularStatus != rhs.cellularStatus {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

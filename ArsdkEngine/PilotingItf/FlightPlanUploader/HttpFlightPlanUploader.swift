@@ -38,7 +38,7 @@ class HttpFlightPlanUploader: ArsdkFlightplanUploader {
     private var flightPlanApi: FlightPlanRestApi?
 
     func configure(flightPlanPilotingItfController: FlightPlanPilotingItfController) {
-        if let droneServer = flightPlanPilotingItfController.deviceController.droneServer {
+        if let droneServer = flightPlanPilotingItfController.deviceController.deviceServer {
             flightPlanApi = FlightPlanRestApi(server: droneServer)
         }
     }

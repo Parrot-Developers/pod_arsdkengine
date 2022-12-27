@@ -109,9 +109,9 @@ class AnafiGps: DeviceComponentController {
     private func loadPersistedData() {
         // load location
         if let latitude: Double = deviceStore.read(key: PersistedDataKey.latitude),
-            let longitude: Double = deviceStore.read(key: PersistedDataKey.longitude),
-            let altitude: Double = deviceStore.read(key: PersistedDataKey.altitude),
-            let date: Date = deviceStore.read(key: PersistedDataKey.locationDate) {
+           let longitude: Double = deviceStore.read(key: PersistedDataKey.longitude),
+           let altitude: Double = deviceStore.read(key: PersistedDataKey.altitude),
+           let date: Date = deviceStore.read(key: PersistedDataKey.locationDate) {
 
             gps.update(latitude: latitude, longitude: longitude, altitude: altitude, date: date)
         }
@@ -142,31 +142,30 @@ class AnafiGps: DeviceComponentController {
 /// Anafi Piloting State decode callback implementation
 extension AnafiGps: ArsdkFeatureArdrone3PilotingstateCallback {
     func onPositionChanged(latitude: Double, longitude: Double, altitude: Double) {
-        if useOnGpsLocationChanged {
+        guard !useOnGpsLocationChanged else { return }
+        guard latitude != AnafiGps.UnknownCoordinate && longitude != AnafiGps.UnknownCoordinate else {
             return
         }
-
-        if (latitude != AnafiGps.UnknownCoordinate) && (longitude != AnafiGps.UnknownCoordinate) {
-            let date = Date()
-            gps.update(latitude: latitude, longitude: longitude, altitude: altitude, date: date).notifyUpdated()
-            save(latitude: latitude, longitude: longitude, altitude: altitude, date: date)
-        }
+        let date = Date()
+        gps.update(latitude: latitude, longitude: longitude, altitude: altitude, date: date).notifyUpdated()
+        save(latitude: latitude, longitude: longitude, altitude: altitude, date: date)
     }
 
     func onGpsLocationChanged(latitude: Double, longitude: Double, altitude: Double,
                               latitudeAccuracy: Int, longitudeAccuracy: Int, altitudeAccuracy: Int) {
         useOnGpsLocationChanged = true
-        if (latitude != AnafiGps.UnknownCoordinate) && (longitude != AnafiGps.UnknownCoordinate) {
-            let date = Date()
-            let horizontalAccuracy = Double(max(latitudeAccuracy, longitudeAccuracy))
-            let verticalAccuracy = Double(altitudeAccuracy)
-            gps.update(latitude: latitude, longitude: longitude, altitude: altitude, date: date)
-                .update(horizontalAccuracy: horizontalAccuracy)
-                .update(verticalAccuracy: verticalAccuracy)
-                .notifyUpdated()
-            save(latitude: latitude, longitude: longitude, altitude: altitude, date: date)
-            save(horizontalAccuracy: horizontalAccuracy, verticalAccuracy: verticalAccuracy)
+        guard latitude != AnafiGps.UnknownCoordinate && longitude != AnafiGps.UnknownCoordinate else {
+            return
         }
+        let date = Date()
+        let horizontalAccuracy = Double(max(latitudeAccuracy, longitudeAccuracy))
+        let verticalAccuracy = Double(altitudeAccuracy)
+        gps.update(latitude: latitude, longitude: longitude, altitude: altitude, date: date)
+            .update(horizontalAccuracy: horizontalAccuracy)
+            .update(verticalAccuracy: verticalAccuracy)
+            .notifyUpdated()
+        save(latitude: latitude, longitude: longitude, altitude: altitude, date: date)
+        save(horizontalAccuracy: horizontalAccuracy, verticalAccuracy: verticalAccuracy)
     }
 }
 

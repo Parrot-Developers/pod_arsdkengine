@@ -214,6 +214,8 @@ extension AnafiPoiPilotingItf: PoiPilotingItfBackend {
             switch mode {
             case .lockedGimbal:
                 arsdkMode = .lockedGimbal
+            case .lockedOnceGimbal:
+                arsdkMode = .lockedOnceGimbal
             case .freeGimbal:
                 arsdkMode = .freeGimbal
             }
@@ -255,8 +257,7 @@ extension AnafiPoiPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
         case .running:
             let newPointOfInterest: PointOfInterestCore?
             if latitude != AnafiPoiPilotingItf.UnknownCoordinate &&
-                longitude != AnafiPoiPilotingItf.UnknownCoordinate &&
-                altitude != AnafiPoiPilotingItf.UnknownCoordinate {
+                longitude != AnafiPoiPilotingItf.UnknownCoordinate {
                 newPointOfInterest = PointOfInterestCore(latitude: latitude, longitude: longitude, altitude: altitude,
                                                          mode: .lockedGimbal)
             } else {
@@ -289,12 +290,13 @@ extension AnafiPoiPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
         case .running:
             let newPointOfInterest: PointOfInterestCore?
             if latitude != AnafiPoiPilotingItf.UnknownCoordinate &&
-                longitude != AnafiPoiPilotingItf.UnknownCoordinate &&
-                altitude != AnafiPoiPilotingItf.UnknownCoordinate {
+                longitude != AnafiPoiPilotingItf.UnknownCoordinate {
                 let newMode: PointOfInterestMode?
                 switch mode {
                 case .lockedGimbal:
                     newMode = .lockedGimbal
+                case .lockedOnceGimbal:
+                    newMode = .lockedOnceGimbal
                 case .freeGimbal:
                     newMode = .freeGimbal
                 case .sdkCoreUnknown:

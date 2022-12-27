@@ -91,8 +91,8 @@ extension ULogTag {
     /// Logging tag of arsdk missions
     static let missionsTag = ULogTag(name: "arsdkengine.missions")
 
-    /// Logging tag of arsdk credentials
-    static let credentialTag = ULogTag(name: "arsdkengine.credential")
+    /// Logging tag of arsdk certificate
+    static let certificateTag = ULogTag(name: "arsdkengine.certificate")
 
     /// Logging tag of arsdk engine netwok control
     static let networkControlTag = ULogTag(name: "arsdkengine.networkControl")

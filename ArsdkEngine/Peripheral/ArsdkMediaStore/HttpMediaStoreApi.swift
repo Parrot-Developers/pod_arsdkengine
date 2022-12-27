@@ -30,13 +30,13 @@
 import Foundation
 import GroundSdk
 
-class HttpMediaStoreDelegate: NSObject, MediaStoreDelegate {
+class HttpMediaStoreApi: NSObject, MediaStoreApi {
 
     private let deviceController: DeviceController
     private var mediaRestApi: MediaRestApi?
     private var mediaWsApi: MediaWsApi?
 
-    var mediaStore: MediaStoreCore!
+    weak var delegate: MediaStoreApiDelegate?
 
     init(deviceController: DeviceController) {
         self.deviceController = deviceController
@@ -54,8 +54,8 @@ class HttpMediaStoreDelegate: NSObject, MediaStoreDelegate {
 
     func startWatchingContentChanges() {
         if let droneServer = deviceController.deviceServer {
-            mediaWsApi = MediaWsApi(server: droneServer) { [unowned self] in
-                self.mediaStore?.markContentChanged().notifyUpdated()
+            mediaWsApi = MediaWsApi(server: droneServer) { [unowned self] event in
+                self.delegate?.receivedMediaStoreChangedEvent(event)
             }
         }
     }
@@ -65,24 +65,28 @@ class HttpMediaStoreDelegate: NSObject, MediaStoreDelegate {
     }
 
     func browse(completion: @escaping ([MediaItemCore]) -> Void) -> CancelableCore? {
-        return mediaRestApi?.getMediaList { medias in
-            completion(medias ?? [])
-        }
+        browse(storage: nil, completion: completion)
     }
 
     func browse(storage: StorageType?, completion: @escaping ([MediaItemCore]) -> Void) -> CancelableCore? {
-        return mediaRestApi?.getMediaList(storage: storage, completion: { medias in
+        mediaRestApi?.getMediaList(storage: storage, completion: { medias in
             completion(medias ?? [])
         })
     }
 
     func downloadThumbnail(for owner: MediaStoreThumbnailCacheCore.ThumbnailOwner,
-                           completion: @escaping (Data?) -> Void) -> CancelableCore? {
+                           completion: @escaping (Data?) -> Void) -> IdentifiableCancelableCore? {
         switch owner {
         case .media(let media):
-            return mediaRestApi?.fetchThumbnail(media, completion: completion)
-        case .resource(_, let resource):
-            return mediaRestApi?.fetchThumbnail(resource, completion: completion)
+            return mediaRestApi?.fetchThumbnail(media,
+                                                completion: completion).map {
+                IdentifiableCancelableTaskCore(id: owner.uid, request: $0)
+            }
+        case .resource(let resource):
+            return mediaRestApi?.fetchThumbnail(resource,
+                                                completion: completion).map {
+                IdentifiableCancelableTaskCore(id: owner.uid, request: $0)
+            }
         }
     }
 
@@ -131,21 +135,21 @@ class HttpMediaStoreDelegate: NSObject, MediaStoreDelegate {
     }
 }
 
-extension HttpMediaStoreDelegate: ArsdkFeatureMediastoreCallback {
+extension HttpMediaStoreApi: ArsdkFeatureMediastoreCallback {
     func onState(state: ArsdkFeatureMediastoreState) {
         guard let indexingState = MediaStoreIndexingState(fromArsdk: state) else {
             // don't change anything if value is unknown
             ULog.w(.mediaTag, "Unknown indexing state, skipping this event.")
             return
         }
-
-        mediaStore.update(indexingState: indexingState).notifyUpdated()
+        self.delegate?.indexingStateChanged(indexingState)
     }
 
     func onCounters(videoMediaCount: Int, photoMediaCount: Int, videoResourceCount: Int, photoResourceCount: Int) {
-        mediaStore.update(photoMediaCount: photoMediaCount).update(videoMediaCount: videoMediaCount)
-            .update(photoResourceCount: photoResourceCount).update(videoResourceCount: videoResourceCount)
-            .notifyUpdated()
+        self.delegate?.countersUpdated(videoMediaCount: videoMediaCount,
+                                       photoMediaCount: photoMediaCount,
+                                       videoResourceCount: videoResourceCount,
+                                       photoResourceCount: photoResourceCount)
     }
 }
 

@@ -106,7 +106,8 @@ class UpdaterController: DeviceComponentController {
             case .rc(.skyCtrl3),
                  .rc(.skyCtrlUA): return Sc3UpdaterEventReceiver()
             case .rc(.skyCtrl4),
-                 .rc(.skyCtrl4Black): return Sc4UpdaterEventReceiver()
+                 .rc(.skyCtrl4Black),
+                 .rc(.skyCtrl5): return Sc4UpdaterEventReceiver()
             case .drone(.anafi2),
                  .drone(.anafi3),
                  .drone(.anafi3Usa): return Anafi2UpdaterEventReceiver()

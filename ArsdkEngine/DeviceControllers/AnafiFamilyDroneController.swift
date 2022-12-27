@@ -93,8 +93,9 @@ class AnafiFamilyDroneController: DroneController {
         // Peripherals
         componentControllers.append(AnafiMagnetometer(deviceController: self))
         let streamServer = (model == .anafi4k || model == .anafiThermal || model == .anafiUa || model == .anafiUsa) ?
-            StreamServerMonoController(deviceController: self) :
-            StreamServerMultiController(deviceController: self)
+            StreamServerController(deviceController: self, maxConcurrentStreams: 1,
+                                   liveSourceMap: { src in src == .frontCamera ? .unspecified: src }) :
+            StreamServerController(deviceController: self)
         componentControllers.append(streamServer)
         componentControllers.append(CameraFeatureCameraRouter(deviceController: self))
         if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
@@ -159,13 +160,17 @@ class AnafiFamilyDroneController: DroneController {
             componentControllers.append(AnafiDevToolbox(deviceController: self))
         }
         componentControllers.append(MissionManagerController(deviceController: self))
-        componentControllers.append(CertificateUploaderController(deviceController: self))
+        let certificateUploader = (model == .anafi2 || model == .anafi3 || model == .anafi3Usa) ?
+            Anafi2CertificateUploader(deviceController: self) :
+            AnafiCertificateUploader(deviceController: self)
+        componentControllers.append(certificateUploader)
         componentControllers.append(NetworkController(deviceController: self))
         componentControllers.append(FlightCameraRecorderController(deviceController: self))
         componentControllers.append(SecureElementController(deviceController: self))
         componentControllers.append(AnafiPrivacy(deviceController: self))
         if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
             componentControllers.append(DebugShellController(deviceController: self))
+            componentControllers.append(AnafiTerrainControl(deviceController: self))
         }
         componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
         sendDateAndTime = { [weak self] in

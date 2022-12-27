@@ -41,7 +41,7 @@ class MissionUpdaterController: DeviceComponentController {
 
     /// Constructor
     ///
-    /// - Parameter: deviceController: device controller owning this component controller (weak)
+    /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
         missionUpdater = MissionUpdaterCore(store: deviceController.device.peripheralStore, backend: self)
@@ -68,25 +68,27 @@ class MissionUpdaterController: DeviceComponentController {
 
 /// Mission updater backend implementation
 extension MissionUpdaterController: MissionUpdaterBackend {
-    func upload(filePath: URL, overwrite: Bool, postpone: Bool) -> CancelableCore? {
+    func upload(filePath: URL, overwrite: Bool, postpone: Bool, makeDefault: Bool) -> CancelableCore? {
         missionUpdater.update(state: .uploading)
             .update(progress: 0)
             .update(filePath: filePath.absoluteString)
             .notifyUpdated()
 
-        return missionUpdaterRestApi?.upload(missionFile: filePath, allowOverwrite: overwrite, postpone: postpone,
-            progress: {currentProgress in
+        return missionUpdaterRestApi?.upload(
+            missionFile: filePath, overwrite: overwrite, postpone: postpone, makeDefault: makeDefault,
+            progress: { currentProgress in
                 self.missionUpdater.update(progress: currentProgress).notifyUpdated()
-        }, completion: { error in
-            self.missionUpdater.update(progress: nil)
-            if let error = error {
-                self.missionUpdater.update(state: .failed(error: error)).notifyUpdated()
+            },
+            completion: { error in
+                self.missionUpdater.update(progress: nil)
+                if let error = error {
+                    self.missionUpdater.update(state: .failed(error: error)).notifyUpdated()
 
-            } else {
-                self.missionUpdater.update(state: .success)
-                    .update(filePath: nil).notifyUpdated()
-            }
-        })
+                } else {
+                    self.missionUpdater.update(state: .success)
+                        .update(filePath: nil).notifyUpdated()
+                }
+            })
     }
 
     func delete(uid: String, success: @escaping (Bool) -> Void) {

@@ -30,39 +30,38 @@
 import Foundation
 import GroundSdk
 
-/// Stream controller listerner for stream server
-public protocol StreamControllerServerListener {
-    /// Notifies that the stream would like to be open, following an explicit request of play or pause.
-    /// - Parameter streamController: the caller stream controller.
-    func streamWouldOpen(streamController: StreamController)
-    /// Notifies the close of the native stream, following an explicit request of stop or disable.
-    /// - Parameter streamController: the caller stream controller.
-    func streamDidClose(streamController: StreamController)
-}
-
 /// Stream controller implementation making the link between a StreamCore and an ArsdkStream.
-public class StreamController: NSObject, StreamBackend {
+public class StreamController: NSObject, ReplayCoreBackend {
 
     /// Live stream controller.
     class Live: StreamController {
         /// Device controller owner of the stream.
         let droneController: DroneController
 
+        /// Ground SDK live stream.
+        var gsdkStreamLive: CameraLiveCore {
+            gsdkStream as! CameraLiveCore
+        }
+
+        /// Ground SDK camera live source.
+        public let gsdkSource: CameraLiveSource
+
         /// Constructor.
         ///
         /// - Parameters:
         ///    - deviceController: device controller to use to open the stream
-        ///    - cameraType: type of camera live to stream
-        ///    - stream: gsdk StreamCore ower of this StreamController
-        public init(deviceController: DeviceController, cameraType: CameraLiveSource,
-                    stream: StreamCore) {
-
+        ///    - source: live source for the stream
+        public init(deviceController: DeviceController, source: CameraLiveSource) {
             self.droneController = (deviceController as! DroneController)
-            let source = droneController.createVideoSourceLive(cameraType: cameraType.arsdkValue!)!
+            gsdkSource = source
+            let arsdkSource = droneController.createVideoSourceLive(cameraType: source.arsdkValue!)!
+            let sdkcoreStream = droneController.createVideoStream()!
+            let backend = StreamCoreBackendCore()
+            let gsdkStreamLive = CameraLiveCore(source: source, backend: backend)
+            super.init(source: arsdkSource, stream: gsdkStreamLive, sdkcoreStream: sdkcoreStream, backend: backend)
 
-            super.init(source: source, stream: stream)
-
-            self.sdkcoreStream = droneController.createVideoStream(listener: self)!
+            backend.controller = self
+            sdkcoreStream.listener = self
         }
     }
 
@@ -71,22 +70,32 @@ public class StreamController: NSObject, StreamBackend {
         /// Device controller owner of the stream.
         let droneController: DroneController
 
+        /// Ground SDK media replay.
+        var gsdkStreamMediaReplay: MediaReplayCore {
+            gsdkStream as! MediaReplayCore
+        }
+
+        /// Ground SDK media source.
+        public let gsdkSource: MediaSourceCore
+
         /// Constructor.
         ///
         /// - Parameters:
         ///    - deviceController: device controller to use to open the stream
-        ///    - url: media source url
-        ///    - trackName: track name of the source to stream
-        ///    - stream: gsdk StreamCore ower of this StreamController
-        public init(deviceController: DeviceController, url: String, trackName: String?,
-                    stream: StreamCore) {
-
+        ///    - source: media source to stream
+        public init(deviceController: DeviceController, source: MediaSourceCore) {
             self.droneController = (deviceController as! DroneController)
-            let source = droneController.createVideoSourceMedia(url: url, trackName: trackName)!
+            gsdkSource = source
+            let arsdkSource = droneController.createVideoSourceMedia(url: source.streamUrl,
+                                                                     trackName: source.streamTrackName)!
+            let sdkcoreStream = droneController.createVideoStream()!
+            let backend = StreamCoreBackendCore()
+            let gsdkStreamMediaReplay = MediaReplayCore(source: source, backend: backend)
+            super.init(source: arsdkSource, stream: gsdkStreamMediaReplay, sdkcoreStream: sdkcoreStream,
+                       backend: backend)
 
-            super.init(source: source, stream: stream)
-
-            sdkcoreStream = droneController.createVideoStream(listener: self)!
+            backend.controller = self
+            sdkcoreStream.listener = self
         }
     }
 
@@ -95,20 +104,30 @@ public class StreamController: NSObject, StreamBackend {
         /// Pomp loop running the sdkcoreStream.
         let pompLoopUtil: PompLoopUtil
 
+        /// Ground SDK file replay.
+        var gsdkStreamFileReplay: FileReplayCore {
+            gsdkStream as! FileReplayCore
+        }
+
+        /// Ground SDK file source.
+        public let gsdkSource: FileReplaySource
+
         /// Constructor.
         ///
-        /// - Parameters:
-        ///    - url: file source url
-        ///    - trackName: track name of the source to stream
-        ///    - stream: gsdk StreamCore ower of this StreamController
-        public init(url: String, trackName: String?, stream: StreamCore) {
+        /// - Parameter source: file source to stream
+        public init(source: FileReplaySource) {
 
-            let fileSource = SdkCoreFileSource(path: url, trackName: trackName)
-            pompLoopUtil = PompLoopUtil(name: "com.parrot.arsdkengine.fileReplay:"+url)
+            gsdkSource = source
+            let fileSource = SdkCoreFileSource(path: source.file.path, trackName: source.trackName)
+            pompLoopUtil = PompLoopUtil(name: "com.parrot.arsdkengine.fileReplay:" + source.file.path)
+            let backend = StreamCoreBackendCore()
+            let gsdkStreamFileReplay = FileReplayCore(source: source, backend: backend)
+            let sdkcoreStream = ArsdkStream(pompLoopUtil: pompLoopUtil)
+            super.init(source: fileSource, stream: gsdkStreamFileReplay, sdkcoreStream: sdkcoreStream, backend: backend)
 
-            super.init(source: fileSource, stream: stream)
+            backend.controller = self
+            sdkcoreStream.listener = self
 
-            sdkcoreStream = ArsdkStream(pompLoopUtil: pompLoopUtil, listener: self)
             pompLoopUtil.runLoop()
         }
 
@@ -122,36 +141,40 @@ public class StreamController: NSObject, StreamBackend {
     /// If `true` the stream is enabled and the `state` is effective.
     public var enabled: Bool = false {
         didSet {
-            if oldValue != enabled {
-                ULog.i(.streamTag, "\(self) set enable: \(enabled)")
-                stateRun()
-            }
+            guard oldValue != enabled else { return }
+
+            ULog.i(.streamTag, "\(self) set enable: \(enabled)")
+            stateRun()
         }
     }
 
     /// Play state.
     public var state = StreamPlayState.stopped {
         didSet {
-            if oldValue != state {
-                DispatchQueue.main.async {
-                    if self.state != .stopped {
-                        self.serverListener?.streamWouldOpen(streamController: self)
-                    }
+            guard oldValue != state else { return }
 
-                    self.gsdkStream?.streamPlayStateDidChange(playState: self.state)
+            DispatchQueue.main.async {
+                if oldValue == .stopped {
+                    self.listeners.forEach { listener in
+                        listener.streamWouldOpen()
+                    }
                 }
+                self.gsdkStream.streamPlayStateDidChange(playState: self.state)
             }
         }
     }
 
     /// Gsdk StreamCore for which this object is the backend.
-    private weak var gsdkStream: StreamCore?
+    var gsdkStream: StreamCore
 
     /// SdkCoreStream instance.
-    fileprivate var sdkcoreStream: ArsdkStream!
+    var sdkcoreStream: ArsdkStream
 
     /// Stream source to play.
     fileprivate let source: SdkCoreSource
+
+    /// StreamCore backend.
+    private let backend: StreamCoreBackendCore
 
     /// Current SdkCoreStream command.
     private var currentCmd: Command?
@@ -161,27 +184,38 @@ public class StreamController: NSObject, StreamBackend {
     private var lastCmdFailed: Command?
     /// Last SdkCoreStream command status.
     private var lastCmdStatus = Int32(0)
-
-    /// Stream sinks.
-    private var sinks: Set<SinkController> = []
-
-    /// Media registry
-    private var medias = MediaRegistry()
-
-    /// Stream server listening this StreamController
-    public var serverListener: StreamControllerServerListener?
+    /// Stream controller listeners.
+    private var listeners: Set<Listener> = []
+    /// `true` if he stream controller is disposed and waits for the sdkcoreStream closure.
+    private var disposed = false
 
     /// Constructor
     ///
     /// - Parameters :
     ///    - source: source to stream
     ///    - stream: gsdk StreamCore ower of this StreamController
-    init(source: SdkCoreSource, stream: StreamCore) {
+    ///    - sdkcoreStream: sdkcoreStream to control
+    ///    - backend: StreamCore backend.
+    private init(source: SdkCoreSource, stream: StreamCore, sdkcoreStream: ArsdkStream,
+                 backend: StreamCoreBackendCore) {
         self.gsdkStream = stream
         self.source = source
+        self.sdkcoreStream = sdkcoreStream
+        self.backend = backend
         super.init()
+    }
 
-        // MUST be inherited to set property sdkcoreStream.
+    /// Disposes the controller.
+    ///
+    /// Must be called to correctly close sdkcoreStream.
+    ///
+    /// Once disposed, controller must not be used anymore.
+    public func dispose() {
+        assert(!disposed, "StreamController already disposed")
+        disposed = true
+        gsdkStream.releaseStream()
+        // stop sdkcoreStream
+        stop()
     }
 
     /// Set the stream in playing state.
@@ -217,6 +251,20 @@ public class StreamController: NSObject, StreamBackend {
         state = .stopped
         pendingSeekCmd = nil
         stateRun()
+    }
+
+    public func newSink(config: SinkCoreConfig) -> SinkCore {
+        if let config = config as? GlRenderSinkCore.Config {
+            let sinkCtrl = GlRenderSinkController(streamCtrl: self, config: config)
+            sinkCtrl.register()
+            return sinkCtrl.gsdkRenderSink
+        } else if let config = config as? RawVideoSinkConfig {
+            let sinkCtrl = RawVideoSinkController(streamCtrl: self, config: config)
+            sinkCtrl.register()
+            return sinkCtrl.rawVideoSinkCore
+        } else {
+            fatalError("Bad stream sink configuration")
+        }
     }
 
     /// Manages the machine state.
@@ -323,16 +371,16 @@ public class StreamController: NSObject, StreamBackend {
         DispatchQueue.main.async {
             if !self.enabled && self.state != .stopped {
                 ULog.i(.streamTag, "\(self) gsdkStream suspended")
-                self.gsdkStream?.update(state: .suspended).notifyUpdated()
+                self.gsdkStream.update(state: .suspended).notifyUpdated()
             } else if self.state == .stopped {
                 ULog.i(.streamTag, "\(self) gsdkStream stopped")
-                self.gsdkStream?.update(state: .stopped).notifyUpdated()
+                self.gsdkStream.update(state: .stopped).notifyUpdated()
             } else if self.sdkcoreStream.state == .opened {
                 ULog.i(.streamTag, "\(self) gsdkStream started")
-                self.gsdkStream?.update(state: .started).notifyUpdated()
+                self.gsdkStream.update(state: .started).notifyUpdated()
             } else {
                 ULog.i(.streamTag, "\(self) gsdkStream starting")
-                self.gsdkStream?.update(state: .starting).notifyUpdated()
+                self.gsdkStream.update(state: .starting).notifyUpdated()
             }
         }
     }
@@ -407,68 +455,75 @@ public class StreamController: NSObject, StreamBackend {
     }
 }
 
-// extension for sinks
+/// extension for sinks
 extension StreamController {
 
-    /// Registers a sink.
+    /// Registers a listener
     ///
-    /// - Parameter sink: sink to register
-    public func register(sink: SinkController) {
-        sinks.insert(sink)
-        if sdkcoreStream.state == .opened {
-            DispatchQueue.main.async {
-                sink.onSdkCoreStreamAvailable(sdkCoreStream: self.sdkcoreStream)
-            }
+    /// - Parameters:
+    ///    - streamWouldOpen: callback when the stream would open.
+    ///    - sdkcoreStreamStateDidChange: callback on the Sdkcore stream state change.
+    ///    - availableMediaDidChange: callback on the media availability change.
+    ///
+    /// - Returns listener: listener registered
+    public func register(streamWouldOpen: @escaping () -> Void,
+                         sdkcoreStreamStateDidChange: @escaping (ArsdkStreamState) -> Void,
+                         availableMediaDidChange: @escaping () -> Void) -> ListenerHandle {
+        let listener = Listener(streamWouldOpen: streamWouldOpen,
+                                sdkcoreStreamStateDidChange: sdkcoreStreamStateDidChange,
+                                availableMediaDidChange: availableMediaDidChange)
+        listeners.insert(listener)
+        return ListenerHandle(strmCtrl: self, listener: listener)
+    }
+
+    /// Stream controller listener handle
+    /// The listener is removed when the handle is deinit.
+    public class ListenerHandle {
+        /// Stream controller
+        weak var strmCtrl: StreamController?
+
+        /// Stream controller listener
+        let listener: Listener
+
+        init(strmCtrl: StreamController, listener: Listener) {
+            self.strmCtrl = strmCtrl
+            self.listener = listener
+        }
+
+        deinit {
+            // unregister the listener
+            strmCtrl?.listeners.remove(listener)
         }
     }
 
-    /// Unregisters a sink.
-    ///
-    /// - Parameter sink: sink to unregister
-    public func unregister(sink: SinkController) {
-        sinks.remove(sink)
-    }
+    /// Stream controller listener for stream server
+    class Listener: NSObject {
 
-    /// Retrieves RendererSink backend.
-    ///
-    /// - Parameter renderSink: GlRenderSinkCore owner of this backend.
-    ///
-    /// - returns: new GlRenderSink backend
-    public func getRenderSinkBackend(renderSink: GlRenderSinkCore) -> GlRenderSinkBackend {
-        return GlRenderSinkController(gsdkRenderSink: renderSink, streamCtrl: self)
-    }
+        /// Notifies that the stream would like to be open, following an explicit request of play or pause.
+        let streamWouldOpen: () -> Void
 
-    /// Retrieves YuvSink backend.
-    ///
-    /// - Parameter yuvSink: YuvSinkCore owner of this backend.
-    ///
-    /// - returns: new YuvSink backend
-    public func getYuvSinkBackend(yuvSink: YuvSinkCore) -> YuvSinkBackend {
-        return YuvSinkController(gsdkYuvSink: yuvSink, streamCtrl: self)
-    }
+        /// Notifies that the underlying sdkcore stream state changed.
+        ///
+        /// - Parameter state: new sdkcore stream state
+        let sdkcoreStreamStateDidChange: (ArsdkStreamState) -> Void
 
-    /// Subscribes to stream media availability changes.
-    ///
-    /// In case a media of the requested kind is available when this method is called,
-    /// 'MediaListener.onMediaAvailable()' is called immediately.
-    ///
-    /// - Parameters:
-    ///    - listener: listener notified of media availability changes
-    ///    - mediaType: type of media to listen
-    func subscribeToMedia(listener: MediaListener, mediaType: SdkCoreMediaType) {
-        medias.registerListener(listener: listener, mediaType: mediaType)
-    }
+        /// Notifies that the set of available medias for this stream changed.
+        let availableMediaDidChange: () -> Void
 
-    /// Unsubscribes from stream media availability changes.
-    ///
-    /// In case a media of the subscribed kind is still available when this method is called,
-    /// {@code listener.}{@link MediaListener#onMediaUnavailable()} onMediaUnavailable()} is called immediately.
-    ///
-    /// - Parameters:
-    ///    - listener: listener to unsubscribe
-    ///    - mediaType: type of media that was listened
-    func unsubscribeFromMedia(listener: MediaListener, mediaType: SdkCoreMediaType) {
-        medias.unregisterListener(listener: listener, mediaType: mediaType)
+        /// Contructor
+        ///
+        /// - Parameters:
+        ///    - streamWouldOpen: Callback to notifies that the stream would like to be open,
+        ///      following an explicit request of play or pause.
+        ///    - sdkcoreStreamStateDidChange: Notifies that the underlying sdkcore stream state changed.
+        ///    - availableMediaDidChange: Notifies that the set of available medias for this stream changed.
+        init(streamWouldOpen: @escaping () -> Void,
+             sdkcoreStreamStateDidChange: @escaping (ArsdkStreamState) -> Void,
+             availableMediaDidChange: @escaping () -> Void) {
+            self.streamWouldOpen = streamWouldOpen
+            self.sdkcoreStreamStateDidChange = sdkcoreStreamStateDidChange
+            self.availableMediaDidChange = availableMediaDidChange
+        }
     }
 }
 
@@ -478,48 +533,29 @@ extension StreamController: ArsdkStreamListener {
 
         stateRun()
 
-        switch sdkcoreStream.state {
-        case .opening:
-            break
-
-        case .opened:
-            // Notify sinks of the sdkCoreStream avability
-            for sink in sinks {
-                sink.onSdkCoreStreamAvailable(sdkCoreStream: sdkcoreStream)
-            }
-
-        case .closing:
-            // Notify sinks of the sdkCoreStream unavability
-            for sink in sinks {
-                sink.onSdkCoreStreamUnavailable()
-            }
-
-        case .closed:
-            // notify the server of the stream conplet closure
-            if state == .stopped || !enabled {
-                ULog.i(.streamTag, "\(self) streamDidClose")
-                serverListener?.streamDidClose(streamController: self)
-            }
-        @unknown default:
-            ULog.e(.streamTag,
-                   "\(self) streamStateDidChange Bad sdkcoreStream.state: \(sdkcoreStreamStateDescription())")
-            return
+        // notify state change.
+        for listener in listeners {
+            listener.sdkcoreStreamStateDidChange(sdkcoreStream.state)
         }
     }
 
     public func streamPlaybackStateDidChange(_ stream: ArsdkStream, playbackState: ArsdkStreamPlaybackState) {
-        gsdkStream?.streamPlaybackStateDidChange(duration: playbackState.duration,
-                                       position: playbackState.position,
-                                       speed: playbackState.speed,
-                                       timestamp: TimeProvider.timeInterval)
+        gsdkStream.streamPlaybackStateDidChange(duration: playbackState.duration,
+                                                position: playbackState.position,
+                                                speed: playbackState.speed,
+                                                timestamp: TimeProvider.timeInterval)
     }
 
     public func mediaAdded(_ stream: ArsdkStream, mediaInfo: SdkCoreMediaInfo) {
-        medias.addMedia(info: mediaInfo)
+        listeners.forEach { listener in
+            listener.availableMediaDidChange()
+        }
     }
 
     public func mediaRemoved(_ stream: ArsdkStream, mediaInfo: SdkCoreMediaInfo) {
-        medias.removeMedia(info: mediaInfo)
+        listeners.forEach { listener in
+            listener.availableMediaDidChange()
+        }
     }
 }
 
@@ -644,4 +680,47 @@ extension CameraLiveSource: ArsdkMappableEnum {
         .frontStereoCameraRight: .frontStereoCameraRight,
         .verticalCamera: .verticalCamera,
         .disparity: .disparity])
+}
+
+/// StreamCore backend implementation
+private class StreamCoreBackendCore: StreamCoreBackend {
+    /// Stream controller
+    weak var controller: StreamController?
+
+    var enabled: Bool {
+        get {
+            controller?.enabled ?? false
+        }
+        set {
+            assert(controller != nil)
+            controller?.enabled = newValue
+        }
+    }
+
+    var state: StreamPlayState { controller?.state ?? .stopped }
+
+    func play() {
+        assert(controller != nil)
+        controller?.play()
+    }
+
+    func pause() {
+        assert(controller != nil)
+        controller?.pause()
+    }
+
+    func seek(position: Int) {
+        assert(controller != nil)
+        controller?.seek(position: position)
+    }
+
+    func stop() {
+        assert(controller != nil)
+        controller?.stop()
+    }
+
+    func newSink(config: SinkCoreConfig) -> SinkCore {
+        assert(controller != nil)
+        return controller?.newSink(config: config) ?? SinkCore()
+    }
 }

@@ -2281,7 +2281,7 @@ private struct StylePresets {
 
     /// Update
     ///
-    /// - Parameter: activeStyle: new activeStyle
+    /// - Parameter activeStyle: new activeStyle
     mutating func update(activeStyle: CameraStyle) {
         data.activeStyle = activeStyle
     }

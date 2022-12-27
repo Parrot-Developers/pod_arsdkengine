@@ -601,13 +601,16 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
         @unknown default:
             break
         }
-        if pilotingMode == nil || supportedAnimations[pilotingMode!] != nil {
-            return
-        }
+
+        // Manage list flags even if the element is ignored.
+
         if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
             supportedAnimations = [:]
         }
-        supportedAnimations[pilotingMode!] = AnimationType.createSetFrom(bitField: typeBitField)
+
+        if let pilotingMode = pilotingMode, supportedAnimations[pilotingMode] == nil {
+            supportedAnimations[pilotingMode] = AnimationType.createSetFrom(bitField: typeBitField)
+        }
 
         if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
             updateAvailableAnimations()
@@ -659,10 +662,11 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
         @unknown default:
             break
         }
-        if animation == nil {
-            return
+
+        if let animation = animation {
+            issueForAnimationType[animation] = AnimationIssue.createSetFrom(bitField: missingInputsBitField)
         }
-        issueForAnimationType[animation!] = AnimationIssue.createSetFrom(bitField: missingInputsBitField)
+
         if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
             updateAvailableAnimations()
             animationPilotingItf.update(issueForAnimationType: issueForAnimationType).notifyUpdated()

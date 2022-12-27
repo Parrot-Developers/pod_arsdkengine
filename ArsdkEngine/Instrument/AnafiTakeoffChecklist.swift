@@ -94,6 +94,8 @@ extension AnafiTakeoffChecklist: ArsdkFeatureAlarmsCallback {
             newKind = .batteryUsbPortConnection
         case .cellularFlashing:
             newKind = .cellularModemFirmwareUpdate
+        case .dri:
+            newKind = .dri
         case .droneInclinationTooHigh:
             newKind = .droneInclination
         case  .gps:
@@ -129,21 +131,23 @@ extension AnafiTakeoffChecklist: ArsdkFeatureAlarmsCallback {
             break
         }
 
-        guard let kind = newKind, let level = newLevel else {
-            return
-        }
+        // Manage list flags even if the element is unknown.
 
         if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
             resetAlarms()
-            takeoffChecklist.update(level: level, forAlarm: kind)
+            if let kind = newKind, let level = newLevel {
+                takeoffChecklist.update(level: level, forAlarm: kind)
+            }
         } else if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
             resetAlarms()
             takeoffChecklist.notifyUpdated()
-        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField),
+                  let kind = newKind {
             takeoffChecklist.update(level: .off, forAlarm: kind).notifyUpdated()
-        } else {
+        } else if let kind = newKind, let level = newLevel {
             takeoffChecklist.update(level: level, forAlarm: kind)
         }
+
         if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
             takeoffChecklist.notifyUpdated()
         }

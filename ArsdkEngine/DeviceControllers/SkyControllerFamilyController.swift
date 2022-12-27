@@ -41,7 +41,7 @@ class SkyControllerFamilyController: RCController {
         // Instruments
         componentControllers.append(SkyControllerBatteryInfo(deviceController: self))
         componentControllers.append(SkyControllerCompass(deviceController: self))
-        if model == .skyCtrl4 || model == .skyCtrl4Black {
+        if model == .skyCtrl4 || model == .skyCtrl4Black || model == .skyCtrl5 {
             componentControllers.append(CellularLogsController(deviceController: self))
             componentControllers.append(SkyControllerCellularSession(deviceController: self))
         }
@@ -49,7 +49,7 @@ class SkyControllerFamilyController: RCController {
         // Peripherals
         componentControllers.append(DroneManagerDroneFinder(proxyDeviceController: self))
         switch model {
-        case .skyCtrl4, .skyCtrl4Black:
+        case .skyCtrl4, .skyCtrl4Black, .skyCtrl5:
             componentControllers.append(Sc4Gamepad(deviceController: self))
         case .skyCtrl3, .skyCtrlUA:
             componentControllers.append(Sc3Gamepad(deviceController: self))

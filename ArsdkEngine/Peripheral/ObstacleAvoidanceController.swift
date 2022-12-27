@@ -108,6 +108,13 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
         }
     }
 
+    /// Drone is about to be connected.
+    override func willConnect() {
+        super.willConnect()
+        // remove settings stored while connecting. We will get new ones on the next connection.
+        droneSettings.removeAll()
+    }
+
     /// Drone is connected.
     override func didConnect() {
         applyPresets()
@@ -151,7 +158,7 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
             case .preferredMode(let preferredMode):
                 if let preset: ObstacleAvoidanceMode = presetStore?.read(key: setting.key) {
                     if preset != preferredMode {
-                        _ = sendPreferredModeCommand(preset)
+                        _ = sendSetModeCommand(preset)
                     }
                     obstacleAvoidance.update(preferredMode: preset).notifyUpdated()
                 } else {
@@ -176,9 +183,8 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
 
     func set(preferredMode: ObstacleAvoidanceMode) -> Bool {
         presetStore?.write(key: SettingKey.preferredModeKey, value: preferredMode).commit()
-
         if connected {
-            return sendPreferredModeCommand(preferredMode)
+            return sendSetModeCommand(preferredMode)
         } else {
             obstacleAvoidance.update(preferredMode: preferredMode).notifyUpdated()
             return false
@@ -189,9 +195,9 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
     ///
     /// - Parameter mode: requested mode.
     /// - Returns: true if the command has been sent
-    func sendPreferredModeCommand(_ preferredMode: ObstacleAvoidanceMode) -> Bool {
-        if obstacleAvoidance.mode.supportedValues.contains(preferredMode) {
-            switch preferredMode {
+    func sendSetModeCommand(_ mode: ObstacleAvoidanceMode) -> Bool {
+        if obstacleAvoidance.mode.supportedValues.contains(mode) {
+            switch mode {
             case .disabled:
                 sendCommand(ArsdkFeatureObstacleAvoidance.setModeEncoder(mode: .disabled))
             case .standard:

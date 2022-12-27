@@ -47,6 +47,9 @@ public class ArsdkEngine: EngineBaseCore {
     /// Nil if the config does not allow to record black boxes
     private(set) var blackBoxRecorder: BlackBoxRecorder?
 
+    /// File Replay provider
+    private let fileReplayProvider = FileReplayProviderCore()
+
     /// Constructor
     ///
     /// - Parameter enginesController: engine controller owning the engine
@@ -59,7 +62,8 @@ public class ArsdkEngine: EngineBaseCore {
         AppDefaults.importTo(persistentStore: persistentStore)
 
         // Publish utilities by the engine initiative.
-        publishUtility(FileReplayBackendProviderCore())
+        publishUtility(fileReplayProvider)
+        publishUtility(PlanUtilityBackendProviderCore())
     }
 
     public override func startEngine() {
@@ -91,6 +95,7 @@ public class ArsdkEngine: EngineBaseCore {
         }
 
         deviceControllers.removeAll(keepingCapacity: false)
+        fileReplayProvider.releaseStreams()
         arsdk.stop()
     }
 
@@ -168,7 +173,7 @@ public class ArsdkEngine: EngineBaseCore {
             }
         case .rc(let rcModel):
             switch rcModel {
-            case .skyCtrl3, .skyCtrl4, .skyCtrl4Black, .skyCtrlUA:
+            case .skyCtrl3, .skyCtrl4, .skyCtrl4Black, .skyCtrlUA, .skyCtrl5:
                 return SkyControllerFamilyController(engine: self, deviceUid: uid, model: rcModel, name: name)
             }
         }

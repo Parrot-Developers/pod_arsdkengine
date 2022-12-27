@@ -2895,9 +2895,21 @@ struct Arsdk_Camera_Event {
 
       var storage: Arsdk_Camera_StorageType = .internal
 
+      /// null if not supported; otherwise milliseconds
+      var duration: SwiftProtobuf.Google_Protobuf_UInt64Value {
+        get {return _duration ?? SwiftProtobuf.Google_Protobuf_UInt64Value()}
+        set {_duration = newValue}
+      }
+      /// Returns true if `duration` has been explicitly set.
+      var hasDuration: Bool {return self._duration != nil}
+      /// Clears the value of `duration`. Subsequent reads from it will return its default value.
+      mutating func clearDuration() {self._duration = nil}
+
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
       init() {}
+
+      fileprivate var _duration: SwiftProtobuf.Google_Protobuf_UInt64Value? = nil
     }
 
     struct Recording {
@@ -2913,9 +2925,21 @@ struct Arsdk_Camera_Event {
 
       var storage: Arsdk_Camera_StorageType = .internal
 
+      /// null if not supported; otherwise milliseconds
+      var duration: SwiftProtobuf.Google_Protobuf_UInt64Value {
+        get {return _duration ?? SwiftProtobuf.Google_Protobuf_UInt64Value()}
+        set {_duration = newValue}
+      }
+      /// Returns true if `duration` has been explicitly set.
+      var hasDuration: Bool {return self._duration != nil}
+      /// Clears the value of `duration`. Subsequent reads from it will return its default value.
+      mutating func clearDuration() {self._duration = nil}
+
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
       init() {}
+
+      fileprivate var _duration: SwiftProtobuf.Google_Protobuf_UInt64Value? = nil
     }
 
     struct WhiteBalanceLock {
@@ -5106,6 +5130,7 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
     2: .standard(proto: "start_timestamp"),
     3: .standard(proto: "photo_count"),
     4: .same(proto: "storage"),
+    5: .same(proto: "duration"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5118,12 +5143,17 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.startTimestamp) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.photoCount) }()
       case 4: try { try decoder.decodeSingularEnumField(value: &self.storage) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._duration) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.state != .unavailable {
       try visitor.visitSingularEnumField(value: self.state, fieldNumber: 1)
     }
@@ -5136,6 +5166,9 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
     if self.storage != .internal {
       try visitor.visitSingularEnumField(value: self.storage, fieldNumber: 4)
     }
+    try { if let v = self._duration {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5144,6 +5177,7 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.startTimestamp != rhs.startTimestamp {return false}
     if lhs.photoCount != rhs.photoCount {return false}
     if lhs.storage != rhs.storage {return false}
+    if lhs._duration != rhs._duration {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5156,6 +5190,7 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
     2: .standard(proto: "start_timestamp"),
     3: .standard(proto: "video_bitrate"),
     4: .same(proto: "storage"),
+    5: .same(proto: "duration"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5168,12 +5203,17 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.startTimestamp) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.videoBitrate) }()
       case 4: try { try decoder.decodeSingularEnumField(value: &self.storage) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._duration) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.state != .unavailable {
       try visitor.visitSingularEnumField(value: self.state, fieldNumber: 1)
     }
@@ -5186,6 +5226,9 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
     if self.storage != .internal {
       try visitor.visitSingularEnumField(value: self.storage, fieldNumber: 4)
     }
+    try { if let v = self._duration {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5194,6 +5237,7 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
     if lhs.startTimestamp != rhs.startTimestamp {return false}
     if lhs.videoBitrate != rhs.videoBitrate {return false}
     if lhs.storage != rhs.storage {return false}
+    if lhs._duration != rhs._duration {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

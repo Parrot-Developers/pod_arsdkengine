@@ -639,9 +639,20 @@ extension Camera2Controller {
         photoStateReceived = true
         switch photo.state {
         case .active:
-            let startTime = Date(timeIntervalSince1970: Double(photo.startTimestamp) / 1000.0)
+            let now = Date(timeIntervalSinceReferenceDate: TimeProvider.timeInterval)
+            let startTimeFromDrone = Date(timeIntervalSince1970: Double(photo.startTimestamp) / 1000.0)
+            let duration = photo.hasDuration
+                            ? Double(photo.duration.value) / 1000.0
+                            : now.timeIntervalSince(startTimeFromDrone)
+            let startTimeOnSystemClock = TimeProvider.dispatchTime.uptimeSeconds - duration
+            let durationClosure = {
+                TimeProvider.dispatchTime.uptimeSeconds - startTimeOnSystemClock
+            }
             let photoCount = Int(photo.photoCount)
-            camera.photoCapture.update(state: .started(startTime: startTime, photoCount: photoCount,
+            camera.photoCapture.update(state: .started(startTime: Date(timeInterval: -duration, since: now),
+                                                       startTimeOnSystemClock: startTimeOnSystemClock,
+                                                       duration: durationClosure,
+                                                       photoCount: photoCount,
                                                        mediaStorage: StorageType(fromArsdk: photo.storage)))
             if active {
                 camera.photoCapture.publish()
@@ -670,8 +681,19 @@ extension Camera2Controller {
         recordingStateReceived = true
         switch recording.state {
         case .active:
-            let startTime = Date(timeIntervalSince1970: Double(recording.startTimestamp) / 1000.0)
-            camera.recording.update(state: .started(startTime: startTime, videoBitrate: UInt(recording.videoBitrate),
+            let now = Date(timeIntervalSinceReferenceDate: TimeProvider.timeInterval)
+            let startTimeFromDrone = Date(timeIntervalSince1970: Double(recording.startTimestamp) / 1000.0)
+            let duration = recording.hasDuration
+                            ? Double(recording.duration.value) / 1000.0
+                            : now.timeIntervalSince(startTimeFromDrone)
+            let startTimeOnSystemClock = TimeProvider.dispatchTime.uptimeSeconds - duration
+            let durationClosure = {
+                TimeProvider.dispatchTime.uptimeSeconds - startTimeOnSystemClock
+            }
+            camera.recording.update(state: .started(startTime: Date(timeInterval: -duration, since: now),
+                                                    startTimeOnSystemClock: startTimeOnSystemClock,
+                                                    duration: durationClosure,
+                                                    videoBitrate: UInt(recording.videoBitrate),
                                                     mediaStorage: StorageType(fromArsdk: recording.storage)))
             if active {
                 camera.recording.publish()
@@ -807,7 +829,7 @@ extension Camera2Controller {
         case .gpsLapse:
             camera.photoProgressIndicator.resetRemainingTime()
                 .update(remainingDistance: nextPhotoInterval.interval)
-        default :
+        default:
             camera.photoProgressIndicator.resetRemainingTime().resetRemainingDistance()
         }
         camera.photoProgressIndicator.notifyUpdated()

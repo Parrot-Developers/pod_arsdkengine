@@ -1,4 +1,4 @@
-// Copyright (C) 2020 Parrot Drones SAS
+// Copyright (C) 2021 Parrot Drones SAS
 //
 //    Redistribution and use in source and binary forms, with or without
 //    modification, are permitted provided that the following conditions
@@ -30,47 +30,31 @@
 import Foundation
 import GroundSdk
 
-/// Certificate uploader for Http
-class HttpCertificateUploaderDelegate: CertificateUploaderDelegate {
+/// Implementation of the `FileReplayBackendProvider` utility.
+class FileReplayProviderCore: FileReplayProvider {
 
-    /// Security edition REST Api.
-    private var certificateUploaderApi: CertificateUploaderRestApi?
+    /// The utility descriptor
+    let desc: UtilityCoreDescriptor = Utilities.fileReplayProvider
 
-    /// DeviceController, used to upload the firmware.
-    private let deviceController: DeviceController
+    /// File replay controllers
+    var controllers = Set<StreamController.FileReplay>()
 
-    /// Constructor
-    ///
-    /// - Parameter deviceController: the device controller
-    init(deviceController: DeviceController) {
-        self.deviceController = deviceController
+    func newFileReplay(source: FileReplaySource) -> FileReplayCore {
+        let streamCtrl = StreamController.FileReplay(source: source)
+        controllers.insert(streamCtrl)
+        streamCtrl.enabled = true
+        return streamCtrl.gsdkStreamFileReplay
     }
 
-    /// Configure
-    func configure() {
-        if let droneServer = deviceController.deviceServer {
-            certificateUploaderApi = CertificateUploaderRestApi(server: droneServer)
+    func releaseFileReplay(stream: FileReplayCore) {
+        if let ctrl = controllers.first(where: { $0.gsdkStreamFileReplay == stream }) {
+            ctrl.dispose()
+            controllers.remove(ctrl)
         }
     }
 
-    /// Reset
-    func reset() {
-        certificateUploaderApi = nil
-    }
-
-    /// Upload the certificate
-    ///
-    /// - Parameters:
-    ///   - certificate: certificate file path
-    ///   - completion: completion callback
-    func upload(certificate filepath: String, completion: @escaping (Bool) -> Void) -> CancelableCore? {
-        return certificateUploaderApi?.upload(filepath: filepath, completion: { success in
-            if success {
-                completion(true)
-            } else {
-                completion(false)
-                ULog.w(.credentialTag, "HTTP - Upload of certificate file failed")
-            }
-        })
+    /// Releases all streams
+    func releaseStreams() {
+        controllers.removeAll()
     }
 }

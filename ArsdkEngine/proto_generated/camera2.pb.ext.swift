@@ -234,12 +234,14 @@ extension Arsdk_Camera_Event.State.Photo {
     static var startTimestampFieldNumber: Int32 { 2 }
     static var photoCountFieldNumber: Int32 { 3 }
     static var storageFieldNumber: Int32 { 4 }
+    static var durationFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Camera_Event.State.Recording {
     static var stateFieldNumber: Int32 { 1 }
     static var startTimestampFieldNumber: Int32 { 2 }
     static var videoBitrateFieldNumber: Int32 { 3 }
     static var storageFieldNumber: Int32 { 4 }
+    static var durationFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Camera_Event.State.WhiteBalanceLock {
     static var supportedModesFieldNumber: Int32 { 1 }

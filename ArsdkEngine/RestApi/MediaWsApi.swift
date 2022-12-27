@@ -31,12 +31,12 @@ import Foundation
 import GroundSdk
 
 /// WebSocket API notifying changes of mediastore content
-class MediaWsApi {
+public class MediaWsApi {
 
     /// Drone server
     private let server: DeviceServer
     /// closure called when the websocket notify changes of media store content
-    private let contentDidChange: () -> Void
+    private let eventOccured: (MediaStoreApiChangeEvent) -> Void
     /// Active websocket session
     private var webSocketSession: WebSocketSession?
 
@@ -47,10 +47,11 @@ class MediaWsApi {
     ///
     /// - Parameters:
     ///   - server: the drone server from which medias should be accessed
-    ///   - eventCb: callback called when media store content has changed
-    init(server: DeviceServer, eventCb: @escaping () -> Void) {
+    ///   - onEvent: callback called when media store content has changed
+    ///   - event: the event that occured
+    init(server: DeviceServer, onEvent: @escaping (_ event: MediaStoreApiChangeEvent) -> Void) {
         self.server = server
-        self.contentDidChange = eventCb
+        self.eventOccured = onEvent
         startSession()
     }
 
@@ -58,12 +59,16 @@ class MediaWsApi {
     private func startSession() {
         webSocketSession = server.newWebSocketSession(api: api, delegate: self)
     }
+}
+
+// MARK: - Notification decoding
+
+public extension MediaWsApi {
 
     /// Notification event.
-    private struct Event: Decodable {
-
+    struct Notification: Decodable {
         /// Event type
-        enum EventType: String, Decodable {
+        enum Name: String, Decodable {
             /// The first resource of a new media has been created
             case mediaCreated = "media_created"
             /// The last resource of a media has been removed
@@ -77,24 +82,65 @@ class MediaWsApi {
             /// Media database indexing state has changed
             case indexingStateChanged = "indexing_state_changed"
         }
-        /// event name
-        let name: EventType
+        enum CodingKeys: String, CodingKey {
+            case name = "name"
+            case data = "data"
+        }
+        let name: Name
+        let event: MediaStoreApiChangeEvent
+
+        enum MediaIdCodinKeys: String, CodingKey {
+            case mediaId = "media_id"
+        }
+
+        public init(from decoder: Decoder) throws {
+            let topContainer = try decoder.container(keyedBy: CodingKeys.self)
+            self.name = try topContainer.decode(Name.self, forKey: .name)
+            let nestedContainer = try topContainer.nestedContainer(keyedBy: MediaStoreApiChangeEvent.CodingKeys.self,
+                                                                   forKey: .data)
+            // depending on the type of the notification the `data` container can contain different
+            // types
+            switch self.name {
+            case .allMediaRemoved:
+                self.event = .allMediaRemoved
+            case .indexingStateChanged:
+                let old = try nestedContainer.decode(MediaStoreApiChangeEvent.IndexingState.self, forKey: .oldState)
+                let new = try nestedContainer.decode(MediaStoreApiChangeEvent.IndexingState.self, forKey: .newState)
+                self.event = .indexingStateChanged(oldState: old, newState: new)
+            case .mediaCreated:
+                self.event = .createdMedia(try nestedContainer.decode(MediaRestApi.Media.self,
+                                                                      forKey: .media))
+            case .mediaRemoved:
+                self.event = .removedMedia(mediaId: try nestedContainer.decode(String.self,
+                                                                               forKey: .mediaId))
+            case .resourceCreated:
+                let mediaIdContainer = try nestedContainer.nestedContainer(keyedBy: MediaIdCodinKeys.self,
+                                                                           forKey: .resource)
+                let mediaId = try mediaIdContainer.decode(String.self, forKey: .mediaId)
+                let resource = try nestedContainer.decode(MediaRestApi.MediaResource.self,
+                                                          forKey: .resource)
+                self.event = .createdResource(resource, mediaId: mediaId)
+            case .resourceRemoved:
+                self.event = .removedResource(resourceId: try nestedContainer.decode(String.self,
+                                                                                     forKey: .resourceId))
+            }
+        }
     }
 }
+
+// MARK: - Web socket delegate
 
 extension MediaWsApi: WebSocketSessionDelegate {
 
     func webSocketSessionDidReceiveMessage(_ data: Data) {
-        ULog.d(.mediaTag, String(data: data, encoding: .utf8)!)
-
+        ULog.d(.mediaTag, "webSocketSessionDidReceiveMessage received \(String(data: data, encoding: .utf8) ?? "<undecodable data>")")
         // decode message
         do {
-            let event = try JSONDecoder().decode(Event.self, from: data)
-            switch event.name {
-            case .mediaCreated, .mediaRemoved, .resourceCreated, .resourceRemoved, .allMediaRemoved,
-                 .indexingStateChanged:
-                contentDidChange()
-            }
+            let decoder = JSONDecoder()
+            // need to override the way date are parsed because default format is iso8601 extended
+            decoder.dateDecodingStrategy = .formatted(.iso8601Base)
+            let notification = try decoder.decode(Notification.self, from: data)
+            eventOccured(notification.event)
         } catch let error {
             ULog.w(.mediaTag, "Failed to decode data: \(error.localizedDescription)")
         }
@@ -110,5 +156,6 @@ extension MediaWsApi: WebSocketSessionDelegate {
 
     func webSocketSessionConnectionHasError() {
         // An error occurred, ignoring
+        ULog.e(.mediaTag, "web socket encountered an error")
     }
 }

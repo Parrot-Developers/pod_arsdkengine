@@ -53,8 +53,7 @@ class FlightPlanRestApi {
     /// - Returns: The request.
     func upload(filepath: String,
                 completion: @escaping (_ success: Bool, _ flightPlanUid: String?) -> Void) -> CancelableCore {
-        let cancellable = CancelableTaskCore()
-        cancellable.request = server.putFile(
+        CancelableTaskCore(request: server.putFile(
             api: "/api/v1/upload/flightplan", fileUrl: URL(fileURLWithPath: filepath),
             progress: { _ in }, completion: { result, data in
                 let uid: String?
@@ -69,7 +68,6 @@ class FlightPlanRestApi {
                 case .error, .httpError, .canceled:
                     completion(false, nil)
                 }
-            })
-        return cancellable
+            }))
     }
 }

@@ -157,44 +157,42 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
                 returnHomePilotingItf.notifyUpdated()
             }
         case .inProgress,
-             .pending:
+                .pending:
             // reset the auto trigger delay if any
             autoTriggerDelay = nil
-            if pilotingItf.state != .active {
-                switch reason {
-                case .userRequest:
-                    returnHomePilotingItf.update(reason: .userRequested)
-                    notifyActive()
-                case .connectionLost:
-                    returnHomePilotingItf.update(reason: .connectionLost)
-                    notifyActive()
-                case .lowBattery:
-                    returnHomePilotingItf.update(reason: .powerLow)
-                    notifyActive()
-                case .icing:
-                    returnHomePilotingItf.update(reason: .icedPropeller)
-                    notifyActive()
-                case .batteryLostComm:
-                    returnHomePilotingItf.update(reason: .batteryPoorConnection)
-                    notifyActive()
-                case .finished,
-                     .stopped,
-                     .enabled,
-                     .disabled:
-                    returnHomePilotingItf.update(reason: .none)
-                    notifyActive()
-                case .flightplan:
-                    returnHomePilotingItf.update(reason: .flightplan)
-                case .blocked:
-                    // ignore this event
-                    break
-                case .sdkCoreUnknown:
-                    fallthrough
-                @unknown default:
-                    // don't change anything if value is unknown
-                    ULog.w(.tag, "Unknown reason, reason won't be modified and might be wrong.")
-                    notifyActive()
-                }
+            switch reason {
+            case .userRequest:
+                returnHomePilotingItf.update(reason: .userRequested)
+                notifyActive()
+            case .connectionLost:
+                returnHomePilotingItf.update(reason: .connectionLost)
+                notifyActive()
+            case .lowBattery:
+                returnHomePilotingItf.update(reason: .powerLow)
+                notifyActive()
+            case .icing:
+                returnHomePilotingItf.update(reason: .icedPropeller)
+                notifyActive()
+            case .batteryLostComm:
+                returnHomePilotingItf.update(reason: .batteryPoorConnection)
+                notifyActive()
+            case .finished,
+                    .stopped,
+                    .enabled,
+                    .disabled:
+                returnHomePilotingItf.update(reason: .none)
+                notifyActive()
+            case .flightplan:
+                returnHomePilotingItf.update(reason: .flightplan)
+            case .blocked:
+                // ignore this event
+                break
+            case .sdkCoreUnknown:
+                fallthrough
+            @unknown default:
+                // don't change anything if value is unknown
+                ULog.w(.tag, "Unknown reason, reason won't be modified and might be wrong.")
+                notifyActive()
             }
         case .unavailable:
             returnHomePilotingItf.update(reason: .none)
@@ -321,7 +319,7 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
         @unknown default:
             // don't change anything if value is unknown
             ULog.w(.tag, "Unknown home type, skipping this event.")
-                return
+            return
         }
         returnHomePilotingItf.update(currentTarget: homeType).notifyUpdated()
     }
@@ -404,5 +402,5 @@ extension ReturnHomeIssue: ArsdkMappableEnum {
         .droneGpsInfoInaccurate: .droneGps,
         .droneNotCalibrated: .droneMagneto,
         .droneNotFlying: .droneFlying
-        ])
+    ])
 }

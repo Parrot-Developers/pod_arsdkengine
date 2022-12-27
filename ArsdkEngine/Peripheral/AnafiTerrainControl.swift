@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Parrot Drones SAS
+// Copyright (C) 2022 Parrot Drones SAS
 //
 //    Redistribution and use in source and binary forms, with or without
 //    modification, are permitted provided that the following conditions
@@ -30,25 +30,32 @@
 import Foundation
 import GroundSdk
 
-/// Implementation of the `FileReplayBackendProvider` utility.
-class FileReplayBackendProviderCore: FileReplayBackendProvider {
+/// Terrain control component controller for Anafi message based drones.
+class AnafiTerrainControl: DeviceComponentController {
+    /// Terrain control component.
+    private var terrain: TerrainControlCore!
 
-    let desc: UtilityCoreDescriptor = Utilities.fileReplayBackendProvider
-
-    /// Constructor
-    public init() {
+    /// Constructor.
+    ///
+    /// - Parameter deviceController: device controller owning this component controller (weak)
+    override init(deviceController: DeviceController) {
+        super.init(deviceController: deviceController)
+        terrain = TerrainControlCore(store: deviceController.device.peripheralStore, backend: self)
     }
 
-    /// Retrieves FileReplay stream backend.
-    ///
-    /// - Parameters:
-    ///    - url: url of the media to stream
-    ///    - trackName: track name to stream
-    ///    - stream: stream owner of the backend
-    /// - Returns: a new FileReplay stream backend
-    public func getStreamBackend(url: URL, trackName: String, stream: StreamCore) -> StreamBackend {
-        let streamCtrl = StreamController.FileReplay(url: url.path, trackName: trackName, stream: stream)
-        streamCtrl.enabled = true
-        return streamCtrl
+    override func didConnect() {
+        terrain.publish()
+    }
+
+    override func didDisconnect() {
+        terrain.unpublish()
+    }
+}
+
+/// Terrain control backend implementation.
+extension AnafiTerrainControl: TerrainControlBackend {
+    func sendAmsl(elevation: Double, latitude: Double, longitude: Double) {
+        sendCommand(ArsdkFeatureTerrain.setAmslReferenceEncoder(elevation: Float(elevation), latitude: latitude,
+                                                                longitude: longitude))
     }
 }

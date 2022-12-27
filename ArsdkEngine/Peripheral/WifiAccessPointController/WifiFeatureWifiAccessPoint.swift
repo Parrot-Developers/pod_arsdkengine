@@ -224,11 +224,11 @@ extension WifiFeatureWifiAccessPoint: ArsdkFeatureWifiCallback {
         var supportedModes = Set<SecurityMode>()
         ArsdkFeatureWifiSecurityTypeBitField.forAllSet(in: typesBitField) { securityType in
             switch securityType {
-            case .open :
+            case .open:
                 supportedModes.insert(.open)
-            case .wpa2 :
+            case .wpa2:
                 supportedModes.insert(.wpa2Secured)
-            case .sdkCoreUnknown :
+            case .sdkCoreUnknown:
                 fallthrough
             @unknown default:
                 ULog.w(.tag, "Unknown SupportedSecurityType, skipping this event.")

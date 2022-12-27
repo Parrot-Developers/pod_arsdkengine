@@ -29,6 +29,7 @@
 
 import Foundation
 import SdkCore
+import GroundSdk
 
 /// Base controller of stream sink.
 public class SinkController: NSObject {
@@ -37,10 +38,13 @@ public class SinkController: NSObject {
     unowned let streamCtrl: StreamController
 
     /// Sdkcore stream powering this sink, `nil` if unavailable.
-    var sdkcoreStream: ArsdkStream?
+    weak var sdkcoreStream: ArsdkStream?
 
-    /// `true` if close is close() is called else `false`
+    /// `true` if close is close() is called else `false`.
     var closed = false
+
+    /// Stream controller listener handle.
+    private var streamCtrlListener: StreamController.ListenerHandle?
 
     /// Constructor
     ///
@@ -48,7 +52,6 @@ public class SinkController: NSObject {
     public init(streamCtrl: StreamController) {
         self.streamCtrl = streamCtrl
         super.init()
-        streamCtrl.register(sink: self)
     }
 
     /// Closes the sink.
@@ -59,7 +62,19 @@ public class SinkController: NSObject {
         if sdkcoreStream != nil {
             onSdkCoreStreamUnavailable()
         }
-        streamCtrl.unregister(sink: self)
+        // unregister listener
+        streamCtrlListener = nil
+    }
+
+    /// Registers this sink controller as stream controller listener.
+    func register() {
+        streamCtrlListener = streamCtrl.register(streamWouldOpen: {},
+                                                 sdkcoreStreamStateDidChange: sdkcoreStreamStateDidChange,
+                                                 availableMediaDidChange: {})
+        // call streamAvailable if the stream is already opened
+        if streamCtrl.sdkcoreStream.state == .opened {
+            onSdkCoreStreamAvailable(sdkCoreStream: streamCtrl.sdkcoreStream)
+        }
     }
 
     /// Notifies that sdkcoreStream is available.
@@ -72,5 +87,20 @@ public class SinkController: NSObject {
     /// Notifies that sdkcoreStream is unavailable.
     func onSdkCoreStreamUnavailable() {
         sdkcoreStream = nil
+    }
+
+    /// Called on the Sdkcore stream state change.
+    ///
+    /// - Parameter state: new Sdkcore stream state.
+    public func sdkcoreStreamStateDidChange(state: ArsdkStreamState) {
+        switch state {
+        case .opened:
+            let stream = streamCtrl.sdkcoreStream
+            onSdkCoreStreamAvailable(sdkCoreStream: stream)
+        case .closing:
+            onSdkCoreStreamUnavailable()
+        default:
+            break
+        }
     }
 }

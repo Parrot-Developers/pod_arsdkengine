@@ -91,7 +91,8 @@ extension CommonBatteryInfo: ArsdkFeatureBatteryCallback {
     func onDescription(serial: String!, date: String!, design: UInt, cellCount: UInt,
                        cellMinVoltage: UInt, cellMaxVoltage: UInt) {
         batteryInfo
-            .update(batteryDescription: BatteryDescription(date: date, serial: serial,
+            .update(batteryDescription: BatteryDescription(date: DateFormatter.iso8601Base.date(from: date),
+                                                           serial: serial,
                                                            cellCount: cellCount,
                                                            cellMinVoltage: cellMinVoltage,
                                                            cellMaxVoltage: cellMaxVoltage,

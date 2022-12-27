@@ -544,6 +544,8 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
             newKind = .userEmergency
         case .motorCutout:
             newKind = .motorCutOut
+        case .driFailing:
+            newKind = .driFailing
         case .droneInclinationTooHigh:
             newKind = .inclinationTooHigh
         case .magnetoPerturbation:
@@ -575,21 +577,23 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
             break
         }
 
-        guard let kind = newKind, let level = newLevel else {
-            return
-        }
+        // Manage list flags even if the element is unknown.
 
         if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
             resetAlarms()
-            alarms.update(level: level, forAlarm: kind)
+            if let kind = newKind, let level = newLevel {
+                alarms.update(level: level, forAlarm: kind)
+            }
         } else if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
             resetAlarms()
             alarms.notifyUpdated()
-        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField),
+                  let kind = newKind {
             alarms.update(level: .notAvailable, forAlarm: kind).notifyUpdated()
-        } else {
+        } else if let kind = newKind, let level = newLevel {
             alarms.update(level: level, forAlarm: kind)
         }
+
         if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
             alarms.notifyUpdated()
         }
@@ -606,5 +610,6 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
         alarms.update(level: .notAvailable, forAlarm: .verticalGeofenceReached)
         alarms.update(level: .notAvailable, forAlarm: .freeFallDetected)
         alarms.update(level: .notAvailable, forAlarm: .stereoCameraDecalibrated)
+        alarms.update(level: .notAvailable, forAlarm: .driFailing)
     }
 }

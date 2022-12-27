@@ -105,16 +105,19 @@ class MissionUpdaterRestApi {
     /// Upload a mission
     ///
     /// - Parameters:
-    ///   - missionFile: url of the mission file
-    ///   - allowOverwrite: allow overwrite of the mission
-    ///   - postpone: postpone the installation until next reboot
+    ///    - missionFile: URL of the mission file to upload
+    ///    - overwrite: `true` to overwrite any potentially existing mission with the same uid
+    ///    - postpone: `true` to postpone the installation until next reboot
+    ///    - makeDefault: `true` to make the uploaded mission the default one (starts at drone boot)
     /// - Returns:  the update request, nil if it could not start the update.
-    func upload(missionFile: URL, allowOverwrite: Bool, postpone: Bool, progress: @escaping (_ progress: Int) -> Void,
-        completion: @escaping (_ error: MissionUpdaterError?) -> Void) -> CancelableCore? {
+    func upload(missionFile: URL, overwrite: Bool, postpone: Bool, makeDefault: Bool,
+                progress: @escaping (_ progress: Int) -> Void,
+                completion: @escaping (_ error: MissionUpdaterError?) -> Void) -> CancelableCore? {
 
         return server.putFile(api: "\(baseApi)/",
-                              query: ["allow_overwrite": (allowOverwrite ? "yes" : "no"),
-                                      "is_delayed": (postpone ? "yes" : "no")],
+                              query: ["allow_overwrite": (overwrite ? "yes" : "no"),
+                                      "is_delayed": (postpone ? "yes" : "no"),
+                                      "is_default": (makeDefault ? "yes" : "no")],
                               fileUrl: missionFile,
                               progress: { progressValue in
             progress(progressValue)

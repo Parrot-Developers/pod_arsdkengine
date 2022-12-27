@@ -172,9 +172,8 @@ protocol DeviceControllerBackend: AnyObject {
 
     /// Create a video stream instance.
     ///
-    /// - Parameter listener: the listener that should be called for stream events
     /// - Returns: a new instance of a stream
-    func createVideoStream(listener: ArsdkStreamListener) -> ArsdkStream
+    func createVideoStream() -> ArsdkStream
 
     /// List all medias stored in the device
     ///

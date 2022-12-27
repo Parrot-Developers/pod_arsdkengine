@@ -249,8 +249,8 @@ extension AutoLookAtPilotingItf: ArsdkFeatureAutoLookAtCallback {
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
-            ULog.w(.tag, "Unknown mode, skipping this event.")
-            return
+            ULog.w(.tag, "Unknown mode.")
+            // Manage list flags even if the element is unknown.
         }
         if let sdkMode = sdkMode {
             supportedModes.insert(sdkMode)

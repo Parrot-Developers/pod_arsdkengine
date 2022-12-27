@@ -30,69 +30,102 @@
 import Foundation
 import GroundSdk
 
-/// Certificate uploader delegate
-protocol CertificateUploaderDelegate: AnyObject {
+/// Certificate uploader for Anafi drones.
+class AnafiCertificateUploader: CertificateUploaderController {
 
-    /// Configure the uploader
-    func configure()
+    override func upload(certificate filepath: String) -> CancelableCore? {
+        certificateUploader.update(state: .uploading).notifyUpdated()
 
-    /// Reset the uploader
-    func reset()
+        return certificateUploaderApi?.uploadCredential(filepath: filepath, completion: { result in
+            let status: CertificateUploadState
+            switch result {
+            case .success:
+                status = .success
+            case .error:
+                status = .failed
+            case .canceled:
+                status = .canceled
+            }
+            self.certificateUploader.update(state: status).notifyUpdated()
+        })
+    }
 
-    /// Upload a given certificate file on the drone.
-    ///
-    /// - Parameters:
-    ///   - filepath: local path of the certificate file
-    ///   - completion: the completion callback (called on the main thread)
-    ///   - success: true or false if the upload is done with success
-    /// - Returns: a request that can be canceled
-    func upload(certificate
-        filepath: String, completion: @escaping (_ success: Bool) -> Void) -> CancelableCore?
+    override func fetchSignature(completion: @escaping (String?) -> Void) {
+        completion(nil)
+    }
+
+    override func fetchInfo(completion: @escaping (CertificateInfo?) -> Void) {
+        completion(nil)
+    }
+}
+
+/// Certificate uploader for Anafi 2 drones.
+class Anafi2CertificateUploader: CertificateUploaderController {
+
+    override func upload(certificate filepath: String) -> CancelableCore? {
+        certificateUploader.update(state: .uploading).notifyUpdated()
+
+        return certificateUploaderApi?.uploadLicense(filepath: filepath, completion: { result in
+            let status: CertificateUploadState
+            switch result {
+            case .success:
+                status = .success
+            case .error:
+                status = .failed
+            case .canceled:
+                status = .canceled
+            }
+            self.certificateUploader.update(state: status).notifyUpdated()
+        })
+    }
+
+    override func fetchSignature(completion: @escaping (String?) -> Void) {
+        _ = certificateUploaderApi?.fetchSignature(completion: { signature in completion(signature) })
+    }
+
+    override func fetchInfo(completion: @escaping (CertificateInfo?) -> Void) {
+        _ = certificateUploaderApi?.fetchInfo(completion: { info in completion(info) })
+    }
 }
 
 /// Base controller for certificate uploader peripheral
 class CertificateUploaderController: DeviceComponentController, CertificateUploaderBackend {
 
-    /// Certificate uploader component
-    private var certificateUploader: CertificateUploaderCore!
+    /// Certificate uploader component.
+    fileprivate var certificateUploader: CertificateUploaderCore!
 
-    // swiftlint:disable weak_delegate
-    /// Delegate to upload the certificate
-    private var delegate: CertificateUploaderDelegate
+    /// Certificate uploader REST API.
+    fileprivate var certificateUploaderApi: CertificateUploaderRestApi?
 
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
-        self.delegate = HttpCertificateUploaderDelegate(deviceController: deviceController)
         super.init(deviceController: deviceController)
         certificateUploader = CertificateUploaderCore(store: deviceController.device.peripheralStore, backend: self)
     }
 
     /// Drone is connected
     override func didConnect() {
-        super.didConnect()
+        if let droneServer = deviceController.deviceServer {
+            certificateUploaderApi = CertificateUploaderRestApi(server: droneServer)
+        }
         certificateUploader.publish()
-        delegate.configure()
     }
 
     /// Drone is disconnected
     override func didDisconnect() {
-        certificateUploader.unpublish()
-        delegate.reset()
+        certificateUploaderApi = nil
+        certificateUploader.update(state: nil).unpublish()
     }
 
-    /// Drone is about to be forgotten
-    override func willForget() {
-        certificateUploader.unpublish()
-        super.willForget()
+    func upload(certificate filepath: String) -> CancelableCore? {
+        return nil
     }
 
-    func upload(certificate filepath: String) {
-        _ = delegate.upload(certificate: filepath, completion: { success in
-            if !success {
-                ULog.w(.credentialTag, "HTTP - Upload of certificate file failed")
-            }
-        })
+    func fetchSignature(completion: @escaping (String?) -> Void) {
+    }
+
+    func fetchInfo(completion: @escaping (CertificateInfo?) -> Void) {
     }
 }

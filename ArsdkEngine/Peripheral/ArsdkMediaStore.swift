@@ -31,13 +31,104 @@ import Foundation
 import GroundSdk
 
 /// 4Mb thumbnail cache
-private let thumbnailCacheSize = 4 * 1024 * 1024
+private let kThumbnailCacheSize = 4 * 1024 * 1024
 
-/// Media store delegate
-protocol MediaStoreDelegate: AnyObject {
+/// The media store api change event that comes from the `MediaStoreApiDelegate`.
+enum MediaStoreApiChangeEvent {
+    /// The indexing state of the media webserver
+    enum IndexingState: String, Decodable {
+        /// media are not indexed and no indexing is in progress (media requests will result in
+        /// 541 error)
+        case notIndexed = "NOT_INDEXED"
+        /// media indexing is in progress (media requests will result in 541 error)
+        case indexing = "INDEXING"
+        /// media are indexed (media requests are possible)
+        case indexed = "INDEXED"
+    }
+    /// The first resource of a new media has been created.
+    /// - Parameter media: The media that was created
+    case createdMedia(_ media: MediaRestApi.Media)
+    /// A new resource of an existing media has been created.
+    /// - Parameter resource: The resource that was created
+    case createdResource(_ resource: MediaRestApi.MediaResource, mediaId: String)
+    /// The last resource of a media has been removed.
+    /// - Parameter mediaId: The id of the media that was removed
+    case removedMedia(mediaId: String)
+    /// A resource of a media has been removed, the media still has remaining resource
+    /// - Parameter resourceId: The id of the resource that was removed
+    case removedResource(resourceId: String)
+    /// All media were removed
+    case allMediaRemoved
+    /// The indexing state changed
+    /// - Parameters:
+    ///   - oldState: the old indexing state
+    ///   - newState: the new indexing state
+    case indexingStateChanged(oldState: IndexingState, newState: IndexingState)
 
-    /// Media store instance
-    var mediaStore: MediaStoreCore! { get set }
+    enum CodingKeys: String, CodingKey {
+        case oldState = "old_state"
+        case newState = "new_state"
+        case resourceId = "resource_id"
+        case resource
+        case mediaId = "media_id"
+        case media
+    }
+
+    /// The GroundSdk representation of itself.
+    var gsdkEvent: MediaStoreChangeEvent {
+        switch self {
+        case .indexingStateChanged(oldState: let old, newState: let new):
+            let mapper = Mapper<MediaStoreIndexingState, IndexingState>([
+                .unavailable: .notIndexed,
+                .indexing: .indexing,
+                .indexed: .indexed])
+            return .indexingStateChanged(oldState: mapper.reverseMap(from: old)!,
+                                         newState: mapper.reverseMap(from: new)!)
+
+        case .createdMedia(let media):
+            return .createdMedia(MediaItemCore.from(httpMedia: media)!)
+        case .createdResource(let resource, mediaId: let mediaId):
+            return .createdResource(MediaItemResourceCore.from(httpResource: resource)!, mediaId: mediaId)
+        case .removedMedia(mediaId: let mediaId):
+            return .removedMedia(mediaId: mediaId)
+        case .removedResource(resourceId: let resourceId):
+            return .removedResource(resourceId: resourceId)
+        case .allMediaRemoved:
+            return .allMediaRemoved
+        }
+    }
+}
+
+/// The media store api delegate callbacks.
+protocol MediaStoreApiDelegate: AnyObject {
+    /// Invoked when a media store change event occurs.
+    ///
+    /// - Parameters:
+    ///   - event: the event that occurred
+    func receivedMediaStoreChangedEvent(_ event: MediaStoreApiChangeEvent)
+
+    /// Invoked when the indexing state changes.
+    ///
+    /// - Parameters:
+    ///   - indexingState: the new indexing state
+    func indexingStateChanged(_ indexingState: MediaStoreIndexingState)
+
+    /// Invoked when the different counters get updated.
+    ///
+    /// - Parameters:
+    ///   - videoMediaCount: the new video media count
+    ///   - photoMediaCount: the new photo media count
+    ///   - videoResourceCount: the new video resource count
+    ///   - photoResourceCount: the photo video resource count
+    func countersUpdated(videoMediaCount: Int, photoMediaCount: Int,
+                         videoResourceCount: Int, photoResourceCount: Int)
+}
+
+/// Media store API
+protocol MediaStoreApi: AnyObject {
+
+    /// The media store api delegate
+    var delegate: MediaStoreApiDelegate? { get set }
 
     /// Configure the delegate
     func configure()
@@ -47,8 +138,8 @@ protocol MediaStoreDelegate: AnyObject {
 
     /// Start watching media store content.
     ///
-    /// When content watching is started, backend must call `mediaStore.markContentChanged()` when the content of
-    /// the media store changes.
+    /// When content watching is started, backend must call `mediaStore.markContentChanged()`
+    /// when the content of the media store changes.
     func startWatchingContentChanges()
 
     /// Stop watching media store content.
@@ -69,7 +160,8 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - completion: closure that will be called when browsing did finish
     ///   - medias: list of the medias available on the device
     /// - Returns: a request that can be canceled
-    func browse(storage: StorageType?, completion: @escaping (_ medias: [MediaItemCore]) -> Void) -> CancelableCore?
+    func browse(storage: StorageType?,
+                completion: @escaping (_ medias: [MediaItemCore]) -> Void) -> CancelableCore?
 
     /// Download the thumbnail of a given media.
     ///
@@ -79,7 +171,7 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - thumbnailData: the data of the thumbnail image
     /// - Returns: a request that can be canceled
     func downloadThumbnail(for owner: MediaStoreThumbnailCacheCore.ThumbnailOwner,
-                           completion: @escaping (_ thumbnailData: Data?) -> Void) -> CancelableCore?
+                           completion: @escaping (_ thumbnailData: Data?) -> Void) -> IdentifiableCancelableCore?
 
     /// Download a resource.
     ///
@@ -92,10 +184,9 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - completion: completion callback
     ///   - fileUrl: the url of the downloaded file. `nil` if an error occurred
     /// - Returns: a request that can be canceled
-    func download(
-        resource: MediaItemResourceCore, type: DownloadType, destDirectoryPath: String,
-        progress: @escaping (_ progressValue: Int) -> Void,
-        completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore?
+    func download(resource: MediaItemResourceCore, type: DownloadType, destDirectoryPath: String,
+                  progress: @escaping (_ progressValue: Int) -> Void,
+                  completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore?
 
     /// Download a resource signature.
     ///
@@ -105,9 +196,8 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - completion: completion callback
     ///   - signatureUrl: the url of the downloaded signature. `nil` if an error occurred
     /// - Returns: a request that can be canceled
-    func downloadSignature(
-        resource: MediaItemResourceCore, destDirectoryPath: String,
-        completion: @escaping (_ signatureUrl: URL?) -> Void) -> CancelableCore?
+    func downloadSignature(resource: MediaItemResourceCore, destDirectoryPath: String,
+                           completion: @escaping (_ signatureUrl: URL?) -> Void) -> CancelableCore?
 
     /// Uploads a resource.
     ///
@@ -118,9 +208,10 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - progressValue: the progress value, from 0 to 100
     ///   - completion: completion callback
     /// - Returns: a request that can be canceled
-    func upload(
-        resourceUrl: URL, target: MediaItemCore, progress: @escaping (_ progressValue: Int) -> Void,
-        completion: @escaping (_ success: Bool) -> Void) -> CancelableCore?
+    func upload(resourceUrl: URL,
+                target: MediaItemCore,
+                progress: @escaping (_ progressValue: Int) -> Void,
+                completion: @escaping (_ success: Bool) -> Void) -> CancelableCore?
 
     /// Delete a media
     ///
@@ -129,7 +220,8 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - completion: completion callback
     ///   - success: whether the deletion was successful or not
     /// - Returns: a request that can be canceled
-    func delete(media: MediaItemCore, completion: @escaping (_ success: Bool) -> Void) -> CancelableCore?
+    func delete(media: MediaItemCore,
+                completion: @escaping (_ success: Bool) -> Void) -> CancelableCore?
 
     /// Delete a media resource
     ///
@@ -138,7 +230,8 @@ protocol MediaStoreDelegate: AnyObject {
     ///   - completion: completion callback
     ///   - success: whether the deletion was successful or not
     /// - Returns: a request that can be canceled
-    func delete(resource: MediaItemResourceCore, completion: @escaping (_ success: Bool) -> Void) -> CancelableCore?
+    func delete(resource: MediaItemResourceCore,
+                completion: @escaping (_ success: Bool) -> Void) -> CancelableCore?
 
     /// Delete all medias
     ///
@@ -162,57 +255,81 @@ class HttpMediaStore: ArsdkMediaStore {
     /// - Parameter deviceController: device controller owning this component controller (weak)
     init(deviceController: DeviceController) {
         super.init(deviceController: deviceController,
-                   delegate: HttpMediaStoreDelegate(deviceController: deviceController))
+                   api: HttpMediaStoreApi(deviceController: deviceController))
     }
 }
 
 /// Media Store peripheral controller
 ///
-/// This class is abstract. See `FtpMediaStore` or `HttpMediaStore` to create actual instances of this class.
+/// This class is abstract. See `HttpMediaStore` to create actual instances of this class.
 class ArsdkMediaStore: DeviceComponentController {
 
     /// Media store component
     private var mediaStore: MediaStoreCore!
 
-    // swiftlint:disable weak_delegate
     /// The media store delegate.
-    private let delegate: MediaStoreDelegate
-    // swiftlint:enable weak_delegate
+    private let api: MediaStoreApi
 
     /// Constructor
     ///
-    /// Visibility is fileprivate to force creation from `FtpMediaStore` or `HttpMediaStore`.
+    /// Visibility is fileprivate to force creation from `HttpMediaStore`.
     ///
     /// - Parameters:
     ///   - deviceController: device controller owning this component controller (weak)
     ///   - delegate: media access delegate
-    fileprivate init(deviceController: DeviceController, delegate: MediaStoreDelegate) {
-        self.delegate = delegate
+    fileprivate init(deviceController: DeviceController, api: MediaStoreApi) {
+        self.api = api
         super.init(deviceController: deviceController)
-        mediaStore = MediaStoreCore(
+        self.mediaStore = MediaStoreCore(
             store: deviceController.device.peripheralStore,
-            thumbnailCache: MediaStoreThumbnailCacheCore(mediaStoreBackend: self, size: thumbnailCacheSize),
+            thumbnailCache: MediaStoreThumbnailCacheCore(mediaStoreBackend: self,
+                                                         size: kThumbnailCacheSize),
             backend: self)
-        self.delegate.mediaStore = mediaStore
+        self.api.delegate = self
     }
 
     /// Drone is connected
     override func didConnect() {
-        delegate.configure()
-        mediaStore.publish()
+        self.api.configure()
+        self.mediaStore.publish()
     }
 
     /// Drone is disconnected
     override func didDisconnect() {
-        mediaStore.unpublish()
-        delegate.reset()
+        self.mediaStore.unpublish()
+        self.api.reset()
     }
 
     /// A command has been received
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-        delegate.didReceiveCommand(command)
+        self.api.didReceiveCommand(command)
+    }
+}
+
+extension ArsdkMediaStore: MediaStoreApiDelegate {
+    func receivedMediaStoreChangedEvent(_ event: MediaStoreApiChangeEvent) {
+        self.mediaStore
+            .markContentChanged(withEvent: event.gsdkEvent)
+            .notifyUpdated()
+
+    }
+
+    func indexingStateChanged(_ indexingState: MediaStoreIndexingState) {
+        self.mediaStore
+            .update(indexingState: indexingState)
+            .notifyUpdated()
+    }
+
+    func countersUpdated(videoMediaCount: Int, photoMediaCount: Int,
+                         videoResourceCount: Int, photoResourceCount: Int) {
+        self.mediaStore
+            .update(photoMediaCount: photoMediaCount)
+            .update(videoMediaCount: videoMediaCount)
+            .update(photoResourceCount: photoResourceCount)
+            .update(videoResourceCount: videoResourceCount)
+            .notifyUpdated()
     }
 }
 
@@ -221,15 +338,15 @@ extension ArsdkMediaStore: MediaStoreBackend {
 
     /// Start watching media store content.
     ///
-    /// When content watching is started, backend must call `markContentChanged()` when the content of
-    /// the media store changes.
+    /// When content watching is started, backend must call `markContentChanged()` when the content
+    /// of the media store changes.
     func startWatchingContentChanges() {
-        delegate.startWatchingContentChanges()
+        self.api.startWatchingContentChanges()
     }
 
     /// Stop watching media store content.
     func stopWatchingContentChanges() {
-        delegate.stopWatchingContentChanges()
+        self.api.stopWatchingContentChanges()
     }
 
     /// Browse medias.
@@ -237,7 +354,7 @@ extension ArsdkMediaStore: MediaStoreBackend {
     /// - Parameter completion: closure called when the request is terminated
     /// - Returns: browse request, or nil if there is an error
     public func browse(completion: @escaping ([MediaItemCore]) -> Void) -> CancelableCore? {
-        return delegate.browse(completion: completion)
+        self.api.browse(completion: completion)
     }
 
     /// Browse medias using a storage type.
@@ -246,7 +363,7 @@ extension ArsdkMediaStore: MediaStoreBackend {
     /// - Parameter completion: closure called when the request is terminated
     /// - Returns: browse request, or nil if there is an error
     func browse(storage: StorageType?, completion: @escaping ([MediaItemCore]) -> Void) -> CancelableCore? {
-        return delegate.browse(storage: storage, completion: completion)
+        self.api.browse(storage: storage, completion: completion)
     }
 
     /// Download a thumbnail
@@ -257,8 +374,9 @@ extension ArsdkMediaStore: MediaStoreBackend {
     ///   - thumbnailData: downloaded thumbnail data, nil if there is a error
     /// - Returns: download thumbnail request, or nil if the request can't be send
     public func downloadThumbnail(for owner: MediaStoreThumbnailCacheCore.ThumbnailOwner,
-                                  completion: @escaping (_ thumbnailData: Data?) -> Void) -> CancelableCore? {
-        return delegate.downloadThumbnail(for: owner, completion: completion)
+                                  completion: @escaping (_ thumbnailData: Data?) -> Void)
+    -> IdentifiableCancelableCore? {
+        self.api.downloadThumbnail(for: owner, completion: completion)
     }
 
     /// Download a list of media resources
@@ -269,9 +387,10 @@ extension ArsdkMediaStore: MediaStoreBackend {
     ///   - destination: download destination
     ///   - progress: progress callback
     /// - Returns: download task, or nil if the request can't be send
-    public func download(mediaResources: MediaResourceListCore, type: DownloadType, destination: DownloadDestination,
-                         progress: @escaping (MediaDownloader) -> Void) -> CancelableTaskCore? {
-
+    public func download(mediaResources: MediaResourceListCore,
+                         type: DownloadType,
+                         destination: DownloadDestination,
+                         progress: @escaping (MediaDownloader) -> Void) -> CancelableCore? {
         let destDirectoryPath: String
         switch destination {
         case .document(let directoryName):
@@ -310,29 +429,35 @@ extension ArsdkMediaStore: MediaStoreBackend {
         ///
         /// - Parameter percent: current file download %
         func notifyProgress(percent: Float, currentMedia: MediaItem) {
-            progress(MediaDownloaderCore(
-                mediaResourceListIterator: resourcesIterator, currentFileProgress: percent / 100,
-                status: .running, currentMedia: currentMedia))
+            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
+                                         currentFileProgress: percent / 100,
+                                         status: .running,
+                                         currentMedia: currentMedia))
         }
 
         /// Notify progress completion with fileUrl
         func notifyProgressCompletion(currentMedia: MediaItem, fileUrl: URL, signatureUrl: URL? = nil) {
-            progress(MediaDownloaderCore(
-                mediaResourceListIterator: resourcesIterator, currentFileProgress: 1.0, status: .fileDownloaded,
-                currentMedia: currentMedia, fileUrl: fileUrl, signatureUrl: signatureUrl))
+            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
+                                         currentFileProgress: 1.0,
+                                         status: .fileDownloaded,
+                                         currentMedia: currentMedia,
+                                         fileUrl: fileUrl,
+                                         signatureUrl: signatureUrl))
         }
 
         /// Notify progress with an error
         func notifyProgressError(currentMedia: MediaItem) {
-            progress(MediaDownloaderCore(
-                mediaResourceListIterator: resourcesIterator, currentFileProgress: 0.0,
-                status: .error, currentMedia: currentMedia))
+            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
+                                         currentFileProgress: 0.0,
+                                         status: .error,
+                                         currentMedia: currentMedia))
         }
 
         /// Notify download terminated
         func notifyProgressTerminated() {
-            progress(MediaDownloaderCore(
-                mediaResourceListIterator: resourcesIterator, currentFileProgress: 1.0, status: .complete))
+            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
+                                         currentFileProgress: 1.0,
+                                         status: .complete))
         }
 
         /// Process downloaded resource
@@ -363,7 +488,7 @@ extension ArsdkMediaStore: MediaStoreBackend {
             // Move to next resource
             if let mediaResource = resourcesIterator.next() {
                 // request download
-                let req = delegate.download(
+                let req = self.api.download(
                     resource: mediaResource.resource, type: type, destDirectoryPath: destDirectoryPath,
                     progress: { percent in notifyProgress(percent: Float(percent), currentMedia: mediaResource.media) },
                     completion: { fileUrl in
@@ -415,18 +540,19 @@ extension ArsdkMediaStore: MediaStoreBackend {
             }
 
             // request download
-            let req = delegate.downloadSignature(
-                resource: mediaResource.resource, destDirectoryPath: destDirectoryPath,
-                completion: { signatureUrl in
-                    task.request = nil
-                    if signatureUrl == nil {
-                        ULog.w(.ctrlTag, "Error downloading media resource signature")
-                    }
-                    if !task.canceled {
-                        notifyProgressCompletion(currentMedia: mediaResource.media, fileUrl: fileUrl,
-                                                 signatureUrl: signatureUrl)
-                        downloadNextResource()
-                    }
+            let req = self.api.downloadSignature(resource: mediaResource.resource,
+                                                 destDirectoryPath: destDirectoryPath,
+                                                 completion: { signatureUrl in
+                task.request = nil
+                if signatureUrl == nil {
+                    ULog.w(.ctrlTag, "Error downloading media resource signature")
+                }
+                if !task.canceled {
+                    notifyProgressCompletion(currentMedia: mediaResource.media,
+                                                  fileUrl: fileUrl,
+                                                  signatureUrl: signatureUrl)
+                    downloadNextResource()
+                }
             })
             // request created, update client request and notify progress
             if let req = req {
@@ -452,7 +578,7 @@ extension ArsdkMediaStore: MediaStoreBackend {
     ///   - progress: upload progress callback
     /// - Returns: resource upload request, or `nil` if the request can't be send.
     func upload(resources: [URL], target: MediaItemCore,
-                progress: @escaping (ResourceUploader?) -> Void) -> CancelableTaskCore? {
+                progress: @escaping (ResourceUploader?) -> Void) -> CancelableCore? {
 
         /// Upload entry to be processed.
         struct Entry {
@@ -501,7 +627,7 @@ extension ArsdkMediaStore: MediaStoreBackend {
             // Move to next resource entry
             if let entry = entriesIterator.next() {
                 // request upload
-                let req = delegate.upload(
+                let req = self.api.upload(
                     resourceUrl: entry.url, target: target,
                     progress: { percent in
                         notifyProgress(currentEntry: entry, ratio: Float(percent) / 100, status: .running)
@@ -548,7 +674,7 @@ extension ArsdkMediaStore: MediaStoreBackend {
     ///   - progress: progress closure called after each deleted files
     /// - Returns: delete request, or nil if the request can't be send
     func delete(mediaResources: MediaResourceListCore,
-                progress: @escaping (MediaDeleter) -> Void) -> CancelableTaskCore? {
+                progress: @escaping (MediaDeleter) -> Void) -> CancelableCore? {
         // forward declare completion, as it's used in itself
         var completion: ((Bool) -> Void)!
         let entryIterator = mediaResources.makeIterator()
@@ -562,9 +688,9 @@ extension ArsdkMediaStore: MediaStoreBackend {
             // move to next media or resource
             if let entry = entryIterator.nextMediaOrResource() {
                 if let resource = entry.resource {
-                    task.request = delegate.delete(resource: resource, completion: completion)
+                    task.request = self.api.delete(resource: resource, completion: completion)
                 } else {
-                    task.request = delegate.delete(media: entry.media, completion: completion)
+                    task.request = self.api.delete(media: entry.media, completion: completion)
                 }
                 progress(MediaDeleterCore(mediaResourceListIterator: entryIterator, status: .running))
             } else {
@@ -586,14 +712,15 @@ extension ArsdkMediaStore: MediaStoreBackend {
         return task
     }
 
-    func deleteAll(progress: @escaping (AllMediasDeleter) -> Void) -> CancelableTaskCore? {
-        let task = CancelableTaskCore()
+    func deleteAll(progress: @escaping (AllMediasDeleter) -> Void) -> CancelableCore? {
         progress(AllMediasDeleterCore(status: .running))
-        task.request = self.delegate.deleteAll { success in
+        return CancelableTaskCore(request: self.api.deleteAll { success in
             let status: MediaTaskStatus = success ? .complete : .error
             progress(AllMediasDeleterCore(status: status))
-        }
+        })
+    }
 
-        return task
+    var indexingState: MediaStoreIndexingState {
+        self.mediaStore.indexingState
     }
 }

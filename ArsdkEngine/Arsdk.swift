@@ -90,8 +90,6 @@ private class ArsdkDeviceProvider: DeviceProvider {
 
     /// Local device provider, that uses Wifi technology.
     private static let wifi = ArsdkDeviceProvider(connector: LocalDeviceConnectorCore.wifi)
-    /// Local device provider, that uses BLE technology.
-    private static let ble = ArsdkDeviceProvider(connector: LocalDeviceConnectorCore.ble)
     /// Local device provider, that uses usb technology.
     private static let usb = ArsdkDeviceProvider(connector: LocalDeviceConnectorCore.usb)
 
@@ -133,8 +131,6 @@ private class ArsdkDeviceProvider: DeviceProvider {
         switch backendType {
         case .net:
             return ArsdkDeviceProvider.wifi
-        case .ble:
-            return ArsdkDeviceProvider.ble
         case .mux:
             return ArsdkDeviceProvider.usb
         case .unknown:
@@ -257,11 +253,11 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
         return newCommandEncoder
     }
 
-    func createTcpProxy(
-        model: DeviceModel, port: Int,
-        completion: @escaping (_ tcpProxy: ArsdkTcpProxy?, _ proxyAddress: String?, _ proxyPort: Int) -> Void) {
-        arsdk.arsdkCore.createTcpProxy(
-            deviceHandle, deviceType: model.internalId, port: UInt16(port), completion: completion)
+    func createTcpProxy(model: DeviceModel, port: Int,
+                        completion: @escaping (_ tcpProxy: ArsdkTcpProxy?, _ proxyAddress: String?,
+                                               _ proxyPort: Int) -> Void) {
+        arsdk.arsdkCore.createTcpProxy(deviceHandle, deviceType: model.internalId, port: UInt16(port),
+                                       completion: completion)
     }
 
     func createVideoSourceLive(cameraType: ArsdkSourceLiveCameraType) -> ArsdkSourceLive {
@@ -272,8 +268,8 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
         return arsdk.arsdkCore.createVideoSourceMedia(deviceHandle, url: url, trackName: trackName)
     }
 
-    func createVideoStream(listener: ArsdkStreamListener) -> ArsdkStream {
-        return arsdk.arsdkCore.createVideoStream(listener)
+    func createVideoStream() -> ArsdkStream {
+        return arsdk.arsdkCore.createVideoStream()
     }
 
     func browseMedia(model: DeviceModel, completion: @escaping ArsdkMediaListCompletion) -> ArsdkRequest {

@@ -193,10 +193,13 @@ class DriController: DeviceComponentController, DriBackend {
         var arsdkType: ArsdkFeatureDriDriType?
         var arsdkOperatorId = ""
         switch type {
-        case .french:
-            arsdkType = .french
         case .en4709_002(let operatorId):
             arsdkType = .en4709_002
+            arsdkOperatorId = operatorId
+        case .french:
+            arsdkType = .french
+        case .astmF3411(let operatorId):
+            arsdkType = .astmF3411
             arsdkOperatorId = operatorId
         }
         if let arsdkType = arsdkType {
@@ -385,6 +388,8 @@ extension DriController: ArsdkFeatureDriCallback {
             typeConfig = .en4709_002(operatorId: id)
         case .french:
             typeConfig = .french
+        case .astmF3411:
+            typeConfig = .astmF3411(operatorId: id)
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -425,6 +430,10 @@ extension DriController: ArsdkFeatureDriCallback {
                                                               inBitField: supportedCapabilitiesBitField) {
             supportedTypes.insert(.en4709_002)
         }
+        if ArsdkFeatureDriSupportedCapabilitiesBitField.isSet(.astmF3411Regulation,
+                                                              inBitField: supportedCapabilitiesBitField) {
+            supportedTypes.insert(.astmF3411)
+        }
         capabilitiesDidChange(.type(supportedTypes))
         dri.notifyUpdated()
     }
@@ -441,7 +450,8 @@ extension DriIdType: StorableEnum {
 extension DriType: StorableEnum {
     static var storableMapper = Mapper<DriType, String>([
         .en4709_002: "en4709_002",
-        .french: "french"])
+        .french: "french",
+        .astmF3411: "astmF3411"])
 }
 /// Extension to make DriCore.DroneIdentifier storable.
 extension DriCore.DroneIdentifier: StorableType {
@@ -492,6 +502,8 @@ extension DriTypeConfig: StorableType {
             switch type {
             case "en4709_002":
                 self = .en4709_002(operatorId: operatorId)
+            case "astmF3411":
+                self = .astmF3411(operatorId: operatorId)
             case "french":
                 self = .french
             default:
@@ -514,6 +526,9 @@ extension DriTypeConfig: StorableType {
             operatorId = id
         case .french:
             type = "french"
+        case .astmF3411(let id):
+            type = "astmF3411"
+            operatorId = id
         }
         return StorableDict([
             Key.type.rawValue: AnyStorable(type),

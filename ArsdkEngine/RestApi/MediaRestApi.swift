@@ -71,22 +71,21 @@ class MediaRestApi {
             switch result {
             case .success:
                 // listing medias is successful
-                if let data = data {
-                    let decoder = JSONDecoder()
-                    // need to override the way date are parsed because default format is iso8601 extended
-                    decoder.dateDecodingStrategy = .formatted(.iso8601Base)
-                    do {
-                        // decode the media list, failed media will be ignored
-                        let throwables = try decoder.decode([Throwable<Media>].self, from: data)
-                        let mediaList = throwables.compactMap { try? $0.result.get() }
-                        // transform the json object media list into a `MediaItemCore` list
-                        let medias = mediaList.map { MediaItemCore.from(httpMedia: $0) }.compactMap { $0 }
-                        completion(medias)
-                    } catch let error {
-                        ULog.w(.mediaTag, "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                            error.localizedDescription)
-                        completion(nil)
-                    }
+                guard let data = data else { return }
+                let decoder = JSONDecoder()
+                // need to override the way date are parsed because default format is iso8601 extended
+                decoder.dateDecodingStrategy = .formatted(.iso8601Base)
+                do {
+                    // decode the media list, failed media will be ignored
+                    let throwables = try decoder.decode([Throwable<Media>].self, from: data)
+                    let mediaList = throwables.compactMap { try? $0.result.get() }
+                    // transform the json object media list into a `MediaItemCore` list
+                    let medias = mediaList.map { MediaItemCore.from(httpMedia: $0) }.compactMap { $0 }
+                    completion(medias)
+                } catch let error {
+                    ULog.w(.mediaTag, "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
+                           error.localizedDescription)
+                    completion(nil)
                 }
             default:
                 completion(nil)
@@ -321,7 +320,7 @@ class MediaRestApi {
 
     /// An object representing the media as the REST api describes it.
     /// This object has all the field of the json object given by the REST api.
-    fileprivate struct Media: Decodable {
+    internal struct Media: Decodable {
         enum CodingKeys: String, CodingKey {
             case mediaId = "media_id"
             case type
@@ -409,13 +408,13 @@ class MediaRestApi {
     }
 
     /// MediaTypes as described by the REST api.
-    fileprivate enum MediaType: String, Decodable {
+    internal enum MediaType: String, Decodable {
         case photo = "PHOTO"
         case video = "VIDEO"
     }
 
     /// Media resource as described by the REST api.
-    fileprivate struct MediaResource: Decodable {
+    internal struct MediaResource: Decodable {
         enum CodingKeys: String, CodingKey {
             case resId = "resource_id"
             case type
@@ -470,34 +469,34 @@ class MediaRestApi {
     }
 
     /// Resource storage as described by the REST api
-    fileprivate enum ResourceStorageType: String, Decodable {
+    internal enum ResourceStorageType: String, Decodable {
         case `internal` = "internal_storage"
         case sdcard = "removable_storage"
     }
 
     /// Resource type as described by the REST api
-    fileprivate enum ResourceType: String, Decodable {
+    internal enum ResourceType: String, Decodable {
         case photo = "PHOTO"
         case video = "VIDEO"
         case panorama = "PANO"
     }
 
     /// Resource format as described by the REST api
-    fileprivate enum ResourceFormat: String, Decodable {
+    internal enum ResourceFormat: String, Decodable {
         case jpg = "JPG"
         case dng = "DNG"
         case mp4 = "MP4"
     }
 
     /// Location as described by the REST api
-    fileprivate struct Location: Decodable {
+    internal struct Location: Decodable {
         let latitude: Double
         let longitude: Double
         let altitude: Double
     }
 
     /// Photo mode as described by the REST api
-    fileprivate enum PhotoMode: String, Decodable {
+    internal enum PhotoMode: String, Decodable {
         case single = "SINGLE"
         case bracketing = "BRACKETING"
         case burst = "BURST"
@@ -507,7 +506,7 @@ class MediaRestApi {
     }
 
     /// Panorama Type as described by the REST api
-    fileprivate enum PanoramaType: String, Decodable {
+    internal enum PanoramaType: String, Decodable {
         case horizontal_180 = "HORIZONTAL_180"
         case vertical_180 = "VERTICAL_180"
         case spherical = "SPHERICAL"
@@ -516,7 +515,7 @@ class MediaRestApi {
 }
 
 /// Extension of MediaItemCore that adds creation from http media objects
-fileprivate extension MediaItemCore {
+internal extension MediaItemCore {
     /// Creates a media from an http media
     ///
     /// - Parameter httpMedia: the http media
@@ -568,7 +567,7 @@ fileprivate extension MediaItemCore {
 }
 
 /// Extension of MediaItemResourceCore that adds creation from http resource objects
-fileprivate extension MediaItemResourceCore {
+internal extension MediaItemResourceCore {
     /// Creates a resource from an http resource
     ///
     /// - Parameter httpResource: the http resource

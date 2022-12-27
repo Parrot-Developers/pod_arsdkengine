@@ -33,13 +33,16 @@ import GroundSdk
 /// Controller of GlRenderSink.
 public class GlRenderSinkController: SinkController, GlRenderSinkBackend {
 
+    /// Gsdk renderer sink.
+    var gsdkRenderSink: GlRenderSinkCore!
+
     /// Rendered stream.
-    private unowned var stream: ArsdkStream?
+    private weak var stream: ArsdkStream?
 
-    /// Internal renderer.
-    private weak var gsdkRenderSink: GlRenderSinkCore?
+    /// GL renderer sink configuration.
+    private let config: GlRenderSinkCore.Config
 
-    /// Internal renderer.
+    /// Sdkcore renderer sink.
     private var sdkcoreRenderer: SdkCoreRenderer?
 
     /// Rendering area.
@@ -116,10 +119,16 @@ public class GlRenderSinkController: SinkController, GlRenderSinkBackend {
     /// Overlay context backend.
     private var overlayContextBackend: OverlayContextBackendCore?
 
-    public init(gsdkRenderSink: GlRenderSinkCore, streamCtrl: StreamController) {
+    /// Constructor
+    ///
+    /// - Parameters:
+    ///    - streamCtrl: stream controller
+    ///    - config: GL renderer sink configuration
+    public init(streamCtrl: StreamController, config: GlRenderSinkCore.Config) {
+        self.config = config
         textureFrame = TextureLoaderFrameCore(backend: textureFrameBackend)
-        self.gsdkRenderSink = gsdkRenderSink
         super.init(streamCtrl: streamCtrl)
+        gsdkRenderSink = GlRenderSinkCore(config: config, backend: self)
     }
 
     /// Start renderer.
@@ -171,12 +180,12 @@ public class GlRenderSinkController: SinkController, GlRenderSinkBackend {
 
     override func onSdkCoreStreamAvailable(sdkCoreStream: ArsdkStream) {
         super.onSdkCoreStreamAvailable(sdkCoreStream: sdkCoreStream)
-        gsdkRenderSink?.onRenderingMayStart()
+        gsdkRenderSink.onRenderingMayStart()
     }
 
     override func onSdkCoreStreamUnavailable() {
         super.onSdkCoreStreamUnavailable()
-        gsdkRenderSink?.onRenderingMustStop()
+        gsdkRenderSink.onRenderingMustStop()
     }
 }
 
@@ -211,17 +220,26 @@ extension GlRenderSinkController {
 extension GlRenderSinkController: SdkCoreRendererListener {
 
     public func onFrameReady() {
-        gsdkRenderSink?.onFrameReady()
+        gsdkRenderSink.onFrameReady()
     }
 
     public func contentZoneDidUpdate(_ zone: CGRect) {
-        gsdkRenderSink?.onContentZoneChange(zone)
+        gsdkRenderSink.onContentZoneChange(zone)
     }
 }
 
 /// Implementation of texture loader listener protocol.
 extension GlRenderSinkController: SdkCoreTextureLoaderListener {
 
+    /// Called back to load custom GL texture.
+    /// Called back on the render thread.
+    ///
+    /// - Parameters:
+    ///    - width: texture width
+    ///    - height: texture height
+    ///    - frame: frame data, non-persistent data, should not be used after the return of the callback.
+    ///
+    /// - Returns `true` on success, otherwise `false`.
     public func loadTexture(_ width: Int32, height: Int32, frame: SdkCoreTextureLoaderFrame) -> Bool {
         if let textureLoader = textureLoader {
             textureFrameBackend.data = frame
@@ -234,6 +252,11 @@ extension GlRenderSinkController: SdkCoreTextureLoaderListener {
 /// Implementation of overlay rendering listener protocol.
 extension GlRenderSinkController: SdkCoreRendererOverlayListener {
 
+    /// Called back to render an overlay.
+    /// Called back on the render thread.
+    ///
+    /// - Parameter context: overlay context.
+    ///             Non-persistent data, should not be used after the return of the callback.
     public func overlay(_ context: SdkCoreOverlayContext) {
 
         if let overlayer = overlayer {
@@ -257,6 +280,7 @@ class TextureLoaderFrameBackendCore: TextureLoaderFrameBackend {
     /// Texture loader data core.
     var data: SdkCoreTextureLoaderFrame?
 
+    /// Handle on the frame.
     var frame: UnsafeRawPointer? {
         if let data = data {
             return data.frame
@@ -265,6 +289,7 @@ class TextureLoaderFrameBackendCore: TextureLoaderFrameBackend {
         }
     }
 
+    /// Handle on the frame user data.
     var userData: UnsafeRawPointer? {
         if let data = data {
             return data.userData
@@ -273,6 +298,7 @@ class TextureLoaderFrameBackendCore: TextureLoaderFrameBackend {
         }
     }
 
+    /// Length of the frame user data.
     var userDataLen: Int {
         if let data = data {
             return data.userDataLen
@@ -288,6 +314,7 @@ class HistogramBackendCore: HistogramBackend {
     /// Histogram core
     var data: SdkCoreHistogram?
 
+    /// Histogram channel red.
     var histogramRed: [Float32]? {
         if let histogram = data?.histogramRed, let len = data?.histogramRedLen, len > 0 {
             return Array(UnsafeBufferPointer(start: histogram, count: len))
@@ -296,6 +323,7 @@ class HistogramBackendCore: HistogramBackend {
         }
     }
 
+    /// Histogram channel green.
     var histogramGreen: [Float32]? {
         if let histogram = data?.histogramGreen, let len = data?.histogramGreenLen, len > 0 {
             return Array(UnsafeBufferPointer(start: histogram, count: len))
@@ -304,6 +332,7 @@ class HistogramBackendCore: HistogramBackend {
         }
     }
 
+    /// Histogram channel blue.
     var histogramBlue: [Float32]? {
         if let histogram = data?.histogramBlue, let len = data?.histogramBlueLen, len > 0 {
             return Array(UnsafeBufferPointer(start: histogram, count: len))
@@ -312,6 +341,7 @@ class HistogramBackendCore: HistogramBackend {
         }
     }
 
+    /// Histogram channel luma.
     var histogramLuma: [Float32]? {
         if let histogram = data?.histogramLuma, let len = data?.histogramLumaLen, len > 0 {
             return Array(UnsafeBufferPointer(start: histogram, count: len))

@@ -204,7 +204,7 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
                     if let remoteFilepath = remoteFlightPlanUid, !playedFile.hasSuffix(remoteFilepath) {
                         remoteFlightPlanUid = nil
                     }
-                case is HttpFlightPlanUploader :
+                case is HttpFlightPlanUploader:
                     if playedFile != remoteFlightPlanUid {
                         remoteFlightPlanUid = nil
                     }
@@ -437,6 +437,9 @@ extension FlightPlanPilotingItfController: ArsdkFeatureCommonFlightplanstateCall
             }
         case .cameraavailable:
             modifyDroneUnavailabilityReasons(reason: .cameraUnavailable, isPresent: state == 0)
+            updateUnavailabilityReasons()
+        case .firstwaypointtoofar:
+            modifyDroneUnavailabilityReasons(reason: .firstWaypointTooFar, isPresent: state == 0)
             updateUnavailabilityReasons()
         case .sdkCoreUnknown:
             break

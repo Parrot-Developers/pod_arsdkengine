@@ -175,11 +175,10 @@ class DroneController: DeviceController {
 
     /// Create a video stream instance.
     ///
-    /// - Parameter listener: the listener that should be called for stream events
     /// - Returns: a new instance of a stream
-    func createVideoStream(listener: ArsdkStreamListener) -> ArsdkStream? {
+    func createVideoStream() -> ArsdkStream? {
         if let backend = backend {
-            return backend.createVideoStream(listener: listener)
+            return backend.createVideoStream()
         } else {
             ULog.w(.ctrlTag, "createVideoStream called without backend")
         }

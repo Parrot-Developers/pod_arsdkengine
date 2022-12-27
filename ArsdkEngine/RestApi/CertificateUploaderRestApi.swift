@@ -30,12 +30,12 @@
 import Foundation
 import GroundSdk
 
-/// Rest api for certificate upload on http server.
+/// REST API for certificate upload to an HTTP server.
 class CertificateUploaderRestApi {
 
-    /// Result of an upload request
+    /// Result of an upload request.
     enum Result: CustomStringConvertible {
-        /// The request succeed
+        /// The request succeeded
         case success
         /// The request failed
         case error
@@ -52,8 +52,11 @@ class CertificateUploaderRestApi {
         }
     }
 
-    /// Drone server
+    /// Drone server.
     private let server: DeviceServer
+
+    /// Base address to access the license certificate API.
+    private let baseApi = "/api/v1/upload-ol-certs"
 
     /// Constructor
     ///
@@ -62,29 +65,150 @@ class CertificateUploaderRestApi {
         self.server = server
     }
 
-    /// Upload a SecurityEdition certificate to the device with a local file
+    /// Uploads a security edition certificate to the drone.
     ///
     /// - Parameters:
     ///   - filepath: certificate's filepath to upload
     ///   - completion: the completion callback (called on the main thread)
-    ///   - success: true or false if the upload is done with success
-    /// - Returns: The request.
-    func upload(filepath: String,
-                completion: @escaping (_ success: Bool) -> Void) -> CancelableCore {
+    ///   - result: the completion result
+    /// - Returns: the request
+    func uploadCredential(filepath: String, completion: @escaping (_ result: Result) -> Void) -> CancelableCore {
         return server.putFile(
-            api: "/api/v1/credential/certificate", fileUrl: URL(fileURLWithPath: filepath),
-            progress: { _ in }, completion: { result, _ in
+            api: "/api/v1/credential/certificate",
+            fileUrl: URL(fileURLWithPath: filepath),
+            progress: { _ in },
+            completion: { result, _ in
                 switch result {
                 case .success:
-                    ULog.w(.credentialTag, "certificate upload success upload")
-                    completion(true)
+                    completion(.success)
                 case .error, .httpError:
-                    ULog.w(.credentialTag, "certificate upload error upload")
-                    completion(false)
+                    completion(.error)
                 case .canceled:
-                    ULog.w(.credentialTag, "certificate upload canceled upload")
-                    completion(false)
+                    completion(.canceled)
                 }
-        })
+            })
+    }
+
+    /// Uploads a license certificate to the drone.
+    ///
+    /// - Parameters:
+    ///   - filepath: certificate's filepath to upload
+    ///   - completion: the completion callback (called on the main thread)
+    ///   - result: the completion result
+    /// - Returns: the request
+    func uploadLicense(filepath: String, completion: @escaping (_ result: Result) -> Void) -> CancelableCore {
+        return server.putFile(
+            api: "\(baseApi)/license",
+            query: ["persist_level": "user"],
+            fileUrl: URL(fileURLWithPath: filepath),
+            progress: { _ in },
+            completion: { result, _ in
+                switch result {
+                case .success:
+                    completion(.success)
+                case .error, .httpError:
+                    completion(.error)
+                case .canceled:
+                    completion(.canceled)
+                }
+            })
+    }
+
+    /// Fetches the signature of the current license certificate installed on the drone.
+    ///
+    /// - Parameters:
+    ///   - completion: the completion callback (called on the main thread)
+    ///   - signature: the retrieved signature
+    /// - Returns: the request
+    func fetchSignature(completion: @escaping (_ signature: String?) -> Void) -> CancelableCore {
+        return server.getData(
+            api: "\(baseApi)/license",
+            query: ["persist_level": "user", "format": "json"],
+            completion: { result, data in
+                switch result {
+                case .success:
+                    if let data = data {
+                        let decoder = JSONDecoder()
+                        do {
+                            let certificate = try decoder.decode(CertificateDecodable.self, from: data)
+                            completion(certificate.signature)
+                        } catch let error {
+                            ULog.e(.certificateTag, "Failed to decode data "
+                                   + "\(String(data: data, encoding: .utf8) ?? ""): \(error.localizedDescription)")
+                            completion(nil)
+                        }
+                    } else {
+                        completion(nil)
+                    }
+                default:
+                    completion(nil)
+                }
+            })
+    }
+
+    /// Fetches the information of the current license certificate installed on the drone.
+    ///
+    /// - Parameters:
+    ///   - completion: the completion callback (called on the main thread)
+    ///   - info: the retrieved information
+    /// - Returns: the request
+    func fetchInfo(completion: @escaping (_ info: CertificateInfo?) -> Void) -> CancelableCore {
+        return server.getData(
+            api: "\(baseApi)/info",
+            completion: { result, data in
+                switch result {
+                case .success:
+                    if let data = data {
+                        let decoder = JSONDecoder()
+                        do {
+                            let info = try decoder.decode(InfoDecodable.self, from: data)
+                            completion(CertificateInfo(debugFeatures: info.features.debug,
+                                                       premiumFeatures: info.features.premium))
+                        } catch let error {
+                            ULog.e(.certificateTag, "Failed to decode data "
+                                   + "\(String(data: data, encoding: .utf8) ?? ""): \(error.localizedDescription)")
+                            completion(nil)
+                        }
+                    } else {
+                        completion(nil)
+                    }
+                default:
+                    completion(nil)
+                }
+            })
+    }
+
+    /// An object representing the certificate as the REST API describes it.
+    private struct CertificateDecodable: Decodable {
+        enum CodingKeys: String, CodingKey {
+            case signature
+        }
+
+        /// Signature
+        let signature: String
+    }
+
+    /// An object representing the certificate information as the REST API describes it.
+    private struct InfoDecodable: Decodable {
+        enum CodingKeys: String, CodingKey {
+            case features
+        }
+
+        /// Features
+        let features: FeaturesDecodable
+    }
+
+    /// Certificate features as described by the REST API.
+    private struct FeaturesDecodable: Decodable {
+        enum CodingKeys: String, CodingKey {
+            case debug
+            case premium
+        }
+
+        /// Debug features
+        let debug: [String]
+
+        /// Premium features
+        let premium: [String]
     }
 }

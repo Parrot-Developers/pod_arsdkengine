@@ -76,6 +76,12 @@ struct Arsdk_Netdebuglog_Event {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Netdebuglog_Event: @unchecked Sendable {}
+extension Arsdk_Netdebuglog_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Netdebuglog_Event.Log: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.netdebuglog"

@@ -312,6 +312,20 @@ struct Arsdk_Antiflicker_Capabilities {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Antiflicker_Mode: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Frequency: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Command: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Command.GetState: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Command.SetMode: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Event: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Event.State: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Event.State.OneOf_Mode: @unchecked Sendable {}
+extension Arsdk_Antiflicker_Capabilities: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.antiflicker"

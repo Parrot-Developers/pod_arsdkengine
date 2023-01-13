@@ -140,6 +140,15 @@ struct Arsdk_Led_Event {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Led_Command: @unchecked Sendable {}
+extension Arsdk_Led_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Led_Command.SetLuminosity: @unchecked Sendable {}
+extension Arsdk_Led_Event: @unchecked Sendable {}
+extension Arsdk_Led_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Led_Event.Luminosity: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.led"

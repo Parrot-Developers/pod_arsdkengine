@@ -97,6 +97,13 @@ struct Arsdk_Security_Command {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Security_Command: @unchecked Sendable {}
+extension Arsdk_Security_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Security_Command.RegisterApcToken: @unchecked Sendable {}
+extension Arsdk_Security_Command.RegisterApcDroneList: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.security"

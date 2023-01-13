@@ -928,6 +928,45 @@ struct Arsdk_Devicemanager_DiscoveredDevice {
   fileprivate var _cellularVisibility: Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Devicemanager_ConnectionFailureReason: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Transport: @unchecked Sendable {}
+extension Arsdk_Devicemanager_WifiSecurity: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.GetState: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ConnectDevice: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ConnectDevice.OneOf_Transport: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ConnectDevice.Wifi: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ConnectDevice.Cellular: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ConnectDevice.Microhard: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ForgetDevice: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.DiscoverDevices: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Event: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Event.State: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Event.State.OneOf_ConnectionState: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Event.State.KnownDevices: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Event.ConnectionFailure: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Event.DiscoveredDevices: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Capabilities: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Capabilities.Microhard: @unchecked Sendable {}
+extension Arsdk_Devicemanager_ConnectionState: @unchecked Sendable {}
+extension Arsdk_Devicemanager_ConnectionState.Idle: @unchecked Sendable {}
+extension Arsdk_Devicemanager_ConnectionState.Searching: @unchecked Sendable {}
+extension Arsdk_Devicemanager_ConnectionState.Connecting: @unchecked Sendable {}
+extension Arsdk_Devicemanager_ConnectionState.Connected: @unchecked Sendable {}
+extension Arsdk_Devicemanager_ConnectionState.Disconnecting: @unchecked Sendable {}
+extension Arsdk_Devicemanager_DeviceInfo: @unchecked Sendable {}
+extension Arsdk_Devicemanager_WifiInfo: @unchecked Sendable {}
+extension Arsdk_Devicemanager_CellularInfo: @unchecked Sendable {}
+extension Arsdk_Devicemanager_MicrohardInfo: @unchecked Sendable {}
+extension Arsdk_Devicemanager_KnownDevice: @unchecked Sendable {}
+extension Arsdk_Devicemanager_DiscoveredDevice: @unchecked Sendable {}
+extension Arsdk_Devicemanager_DiscoveredDevice.WifiVisibility: @unchecked Sendable {}
+extension Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.devicemanager"

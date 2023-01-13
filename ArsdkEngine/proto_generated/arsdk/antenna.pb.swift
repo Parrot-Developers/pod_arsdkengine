@@ -237,6 +237,19 @@ struct Arsdk_Antenna_Capabilities {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Antenna_AntennaType: @unchecked Sendable {}
+extension Arsdk_Antenna_Command: @unchecked Sendable {}
+extension Arsdk_Antenna_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Antenna_Command.GetState: @unchecked Sendable {}
+extension Arsdk_Antenna_Command.SetAntennaType: @unchecked Sendable {}
+extension Arsdk_Antenna_Event: @unchecked Sendable {}
+extension Arsdk_Antenna_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Antenna_Event.State: @unchecked Sendable {}
+extension Arsdk_Antenna_Event.State.OneOf_OptionalAntennaType: @unchecked Sendable {}
+extension Arsdk_Antenna_Capabilities: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.antenna"

@@ -277,6 +277,19 @@ struct Arsdk_Privacy_Capabilities {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Privacy_LogConfigPersistence: @unchecked Sendable {}
+extension Arsdk_Privacy_LogStorage: @unchecked Sendable {}
+extension Arsdk_Privacy_Command: @unchecked Sendable {}
+extension Arsdk_Privacy_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Privacy_Command.GetState: @unchecked Sendable {}
+extension Arsdk_Privacy_Command.SetLogMode: @unchecked Sendable {}
+extension Arsdk_Privacy_Event: @unchecked Sendable {}
+extension Arsdk_Privacy_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Privacy_Event.State: @unchecked Sendable {}
+extension Arsdk_Privacy_Capabilities: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.privacy"

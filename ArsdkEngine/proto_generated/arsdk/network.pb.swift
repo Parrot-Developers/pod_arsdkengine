@@ -883,6 +883,31 @@ struct Arsdk_Network_CellularMaxBitrate {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Network_RoutingPolicy: @unchecked Sendable {}
+extension Arsdk_Network_RoutingLink: @unchecked Sendable {}
+extension Arsdk_Network_LinkStatus: @unchecked Sendable {}
+extension Arsdk_Network_LinkType: @unchecked Sendable {}
+extension Arsdk_Network_LinkError: @unchecked Sendable {}
+extension Arsdk_Network_DirectConnectionMode: @unchecked Sendable {}
+extension Arsdk_Network_CellularStatus: @unchecked Sendable {}
+extension Arsdk_Network_Command: @unchecked Sendable {}
+extension Arsdk_Network_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Network_Command.GetState: @unchecked Sendable {}
+extension Arsdk_Network_Command.SetRoutingPolicy: @unchecked Sendable {}
+extension Arsdk_Network_Command.SetCellularMaxBitrate: @unchecked Sendable {}
+extension Arsdk_Network_Command.SetDirectConnection: @unchecked Sendable {}
+extension Arsdk_Network_Event: @unchecked Sendable {}
+extension Arsdk_Network_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Network_Event.State: @unchecked Sendable {}
+extension Arsdk_Network_Capabilities: @unchecked Sendable {}
+extension Arsdk_Network_RoutingInfo: @unchecked Sendable {}
+extension Arsdk_Network_GlobalLinkQuality: @unchecked Sendable {}
+extension Arsdk_Network_LinksStatus: @unchecked Sendable {}
+extension Arsdk_Network_LinksStatus.LinkInfo: @unchecked Sendable {}
+extension Arsdk_Network_CellularMaxBitrate: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.network"

@@ -780,6 +780,39 @@ struct Arsdk_Microhard_PairingStatus {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Microhard_Bandwidth: @unchecked Sendable {}
+extension Arsdk_Microhard_Encryption: @unchecked Sendable {}
+extension Arsdk_Microhard_HardwareErrorCause: @unchecked Sendable {}
+extension Arsdk_Microhard_PairingFailureReason: @unchecked Sendable {}
+extension Arsdk_Microhard_Command: @unchecked Sendable {}
+extension Arsdk_Microhard_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Microhard_Command.GetState: @unchecked Sendable {}
+extension Arsdk_Microhard_Command.PowerOn: @unchecked Sendable {}
+extension Arsdk_Microhard_Command.ShutDown: @unchecked Sendable {}
+extension Arsdk_Microhard_Command.PairDevice: @unchecked Sendable {}
+extension Arsdk_Microhard_Event: @unchecked Sendable {}
+extension Arsdk_Microhard_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Microhard_Event.State: @unchecked Sendable {}
+extension Arsdk_Microhard_Event.State.OneOf_State: @unchecked Sendable {}
+extension Arsdk_Microhard_Event.HardwareError: @unchecked Sendable {}
+extension Arsdk_Microhard_Event.Pairing: @unchecked Sendable {}
+extension Arsdk_Microhard_Event.Pairing.OneOf_Status: @unchecked Sendable {}
+extension Arsdk_Microhard_Capabilities: @unchecked Sendable {}
+extension Arsdk_Microhard_ConnectionParameters: @unchecked Sendable {}
+extension Arsdk_Microhard_State: @unchecked Sendable {}
+extension Arsdk_Microhard_State.Offline: @unchecked Sendable {}
+extension Arsdk_Microhard_State.Booting: @unchecked Sendable {}
+extension Arsdk_Microhard_State.Idle: @unchecked Sendable {}
+extension Arsdk_Microhard_State.Pairing: @unchecked Sendable {}
+extension Arsdk_Microhard_State.Connecting: @unchecked Sendable {}
+extension Arsdk_Microhard_State.Connected: @unchecked Sendable {}
+extension Arsdk_Microhard_PairingParameters: @unchecked Sendable {}
+extension Arsdk_Microhard_PairingStatus: @unchecked Sendable {}
+extension Arsdk_Microhard_PairingStatus.Failure: @unchecked Sendable {}
+extension Arsdk_Microhard_PairingStatus.Success: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.microhard"

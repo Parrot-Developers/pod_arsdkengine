@@ -3625,6 +3625,81 @@ struct Arsdk_Camera_MediaMetadata {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Arsdk_Camera_AudioRecordingMode: @unchecked Sendable {}
+extension Arsdk_Camera_AutoRecordMode: @unchecked Sendable {}
+extension Arsdk_Camera_BracketingPreset: @unchecked Sendable {}
+extension Arsdk_Camera_BurstValue: @unchecked Sendable {}
+extension Arsdk_Camera_CameraMode: @unchecked Sendable {}
+extension Arsdk_Camera_CameraModel: @unchecked Sendable {}
+extension Arsdk_Camera_DigitalSignature: @unchecked Sendable {}
+extension Arsdk_Camera_DynamicRange: @unchecked Sendable {}
+extension Arsdk_Camera_EvCompensation: @unchecked Sendable {}
+extension Arsdk_Camera_ExposureLockMode: @unchecked Sendable {}
+extension Arsdk_Camera_ExposureMetering: @unchecked Sendable {}
+extension Arsdk_Camera_ExposureMode: @unchecked Sendable {}
+extension Arsdk_Camera_Framerate: @unchecked Sendable {}
+extension Arsdk_Camera_ImageStyle: @unchecked Sendable {}
+extension Arsdk_Camera_IsoSensitivity: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoState: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoEvent: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoFileFormat: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoFormat: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoMode: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoResolution: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoStopReason: @unchecked Sendable {}
+extension Arsdk_Camera_PhotoStreamingMode: @unchecked Sendable {}
+extension Arsdk_Camera_RecordingEvent: @unchecked Sendable {}
+extension Arsdk_Camera_RecordingState: @unchecked Sendable {}
+extension Arsdk_Camera_RecordingStopReason: @unchecked Sendable {}
+extension Arsdk_Camera_VideoRecordingMode: @unchecked Sendable {}
+extension Arsdk_Camera_ShutterSpeed: @unchecked Sendable {}
+extension Arsdk_Camera_StoragePolicy: @unchecked Sendable {}
+extension Arsdk_Camera_StorageType: @unchecked Sendable {}
+extension Arsdk_Camera_VideoCodec: @unchecked Sendable {}
+extension Arsdk_Camera_VideoResolution: @unchecked Sendable {}
+extension Arsdk_Camera_WhiteBalanceLockMode: @unchecked Sendable {}
+extension Arsdk_Camera_WhiteBalanceMode: @unchecked Sendable {}
+extension Arsdk_Camera_WhiteBalanceTemperature: @unchecked Sendable {}
+extension Arsdk_Camera_ZoomControlMode: @unchecked Sendable {}
+extension Arsdk_Camera_ZoomVelocityControlQualityMode: @unchecked Sendable {}
+extension Arsdk_Camera_Command: @unchecked Sendable {}
+extension Arsdk_Camera_Command.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Camera_Command.ListCameras: @unchecked Sendable {}
+extension Arsdk_Camera_Command.GetState: @unchecked Sendable {}
+extension Arsdk_Camera_Command.Configure: @unchecked Sendable {}
+extension Arsdk_Camera_Command.SetZoomTarget: @unchecked Sendable {}
+extension Arsdk_Camera_Command.ResetZoom: @unchecked Sendable {}
+extension Arsdk_Camera_Command.StartPhoto: @unchecked Sendable {}
+extension Arsdk_Camera_Command.StopPhoto: @unchecked Sendable {}
+extension Arsdk_Camera_Command.StartRecording: @unchecked Sendable {}
+extension Arsdk_Camera_Command.StopRecording: @unchecked Sendable {}
+extension Arsdk_Camera_Command.LockExposure: @unchecked Sendable {}
+extension Arsdk_Camera_Command.LockWhiteBalance: @unchecked Sendable {}
+extension Arsdk_Camera_Command.SetMediaMetadata: @unchecked Sendable {}
+extension Arsdk_Camera_Event: @unchecked Sendable {}
+extension Arsdk_Camera_Event.OneOf_ID: @unchecked Sendable {}
+extension Arsdk_Camera_Event.CameraList: @unchecked Sendable {}
+extension Arsdk_Camera_Event.State: @unchecked Sendable {}
+extension Arsdk_Camera_Event.State.Photo: @unchecked Sendable {}
+extension Arsdk_Camera_Event.State.Recording: @unchecked Sendable {}
+extension Arsdk_Camera_Event.State.WhiteBalanceLock: @unchecked Sendable {}
+extension Arsdk_Camera_Event.State.ExposureLock: @unchecked Sendable {}
+extension Arsdk_Camera_Event.State.Zoom: @unchecked Sendable {}
+extension Arsdk_Camera_Event.Exposure: @unchecked Sendable {}
+extension Arsdk_Camera_Event.ZoomLevel: @unchecked Sendable {}
+extension Arsdk_Camera_Event.NextPhotoInterval: @unchecked Sendable {}
+extension Arsdk_Camera_Event.Photo: @unchecked Sendable {}
+extension Arsdk_Camera_Event.Recording: @unchecked Sendable {}
+extension Arsdk_Camera_Capabilities: @unchecked Sendable {}
+extension Arsdk_Camera_Capabilities.Rule: @unchecked Sendable {}
+extension Arsdk_Camera_Config: @unchecked Sendable {}
+extension Arsdk_Camera_DoubleRange: @unchecked Sendable {}
+extension Arsdk_Camera_ExposureRoi: @unchecked Sendable {}
+extension Arsdk_Camera_ExposureRoi.Center: @unchecked Sendable {}
+extension Arsdk_Camera_MediaMetadata: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.camera"

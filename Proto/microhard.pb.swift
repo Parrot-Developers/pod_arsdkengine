@@ -200,6 +200,62 @@ extension Arsdk_Microhard_PairingFailureReason: CaseIterable {
 
 #endif  // swift(>=4.2)
 
+enum Arsdk_Microhard_Model: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case pDdl900 // = 0
+  case pMddl900 // = 1
+  case pMddl1624 // = 2
+  case pDdl1800 // = 3
+  case pDdl2400 // = 4
+  case pMddl2400 // = 5
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .pDdl900
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .pDdl900
+    case 1: self = .pMddl900
+    case 2: self = .pMddl1624
+    case 3: self = .pDdl1800
+    case 4: self = .pDdl2400
+    case 5: self = .pMddl2400
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .pDdl900: return 0
+    case .pMddl900: return 1
+    case .pMddl1624: return 2
+    case .pDdl1800: return 3
+    case .pDdl2400: return 4
+    case .pMddl2400: return 5
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Microhard_Model: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Microhard_Model] = [
+    .pDdl900,
+    .pMddl900,
+    .pMddl1624,
+    .pDdl1800,
+    .pDdl2400,
+    .pMddl2400,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 /// This is the entry point to send messages to the device
 struct Arsdk_Microhard_Command {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -610,6 +666,8 @@ struct Arsdk_Microhard_Capabilities {
 
   var encryptionAlgorithms: [Arsdk_Microhard_Encryption] = []
 
+  var model: Arsdk_Microhard_Model = .pDdl900
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -785,6 +843,7 @@ extension Arsdk_Microhard_Bandwidth: @unchecked Sendable {}
 extension Arsdk_Microhard_Encryption: @unchecked Sendable {}
 extension Arsdk_Microhard_HardwareErrorCause: @unchecked Sendable {}
 extension Arsdk_Microhard_PairingFailureReason: @unchecked Sendable {}
+extension Arsdk_Microhard_Model: @unchecked Sendable {}
 extension Arsdk_Microhard_Command: @unchecked Sendable {}
 extension Arsdk_Microhard_Command.OneOf_ID: @unchecked Sendable {}
 extension Arsdk_Microhard_Command.GetState: @unchecked Sendable {}
@@ -847,6 +906,17 @@ extension Arsdk_Microhard_PairingFailureReason: SwiftProtobuf._ProtoNameProvidin
     2: .same(proto: "PAIRING_FAILURE_REASON_DEVICE_NOT_REACHABLE"),
     3: .same(proto: "PAIRING_FAILURE_REASON_INVALID_STATE"),
     4: .same(proto: "PAIRING_FAILURE_REASON_INVALID_CONFIG"),
+  ]
+}
+
+extension Arsdk_Microhard_Model: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "MODEL_P_DDL_900"),
+    1: .same(proto: "MODEL_P_MDDL_900"),
+    2: .same(proto: "MODEL_P_MDDL_1624"),
+    3: .same(proto: "MODEL_P_DDL_1800"),
+    4: .same(proto: "MODEL_P_DDL_2400"),
+    5: .same(proto: "MODEL_P_MDDL_2400"),
   ]
 }
 
@@ -1433,6 +1503,7 @@ extension Arsdk_Microhard_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Me
     4: .standard(proto: "power_max"),
     5: .same(proto: "bandwidths"),
     6: .standard(proto: "encryption_algorithms"),
+    7: .same(proto: "model"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1447,6 +1518,7 @@ extension Arsdk_Microhard_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Me
       case 4: try { try decoder.decodeSingularUInt32Field(value: &self.powerMax) }()
       case 5: try { try decoder.decodeRepeatedEnumField(value: &self.bandwidths) }()
       case 6: try { try decoder.decodeRepeatedEnumField(value: &self.encryptionAlgorithms) }()
+      case 7: try { try decoder.decodeSingularEnumField(value: &self.model) }()
       default: break
       }
     }
@@ -1471,6 +1543,9 @@ extension Arsdk_Microhard_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Me
     if !self.encryptionAlgorithms.isEmpty {
       try visitor.visitPackedEnumField(value: self.encryptionAlgorithms, fieldNumber: 6)
     }
+    if self.model != .pDdl900 {
+      try visitor.visitSingularEnumField(value: self.model, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1481,6 +1556,7 @@ extension Arsdk_Microhard_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Me
     if lhs.powerMax != rhs.powerMax {return false}
     if lhs.bandwidths != rhs.bandwidths {return false}
     if lhs.encryptionAlgorithms != rhs.encryptionAlgorithms {return false}
+    if lhs.model != rhs.model {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

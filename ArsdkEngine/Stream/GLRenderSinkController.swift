@@ -219,6 +219,10 @@ extension GlRenderSinkController {
 /// Implementation of renderer listener protocol.
 extension GlRenderSinkController: SdkCoreRendererListener {
 
+    public func onPreferredFpsChanged(_ fps: Float) {
+        gsdkRenderSink.onPreferredFpsChanged(fps)
+    }
+
     public func onFrameReady() {
         gsdkRenderSink.onFrameReady()
     }

@@ -34,7 +34,7 @@ import GroundSdk
 class DeviceServer {
 
     /// Base Http URL of this session
-    private let baseHttpUrl: URL
+    let baseHttpUrl: URL
 
     /// Base WebSocket URL of this session
     private let baseWsUrl: URL

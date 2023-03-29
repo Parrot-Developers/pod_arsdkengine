@@ -560,6 +560,8 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
             newKind = .freeFallDetected
         case .fstcamDecalibrated:
             newKind = .stereoCameraDecalibrated
+        case .videoDspFault:
+            newKind = .videoPipeline
         case .sdkCoreUnknown:
             break
         @unknown default:
@@ -611,5 +613,6 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
         alarms.update(level: .notAvailable, forAlarm: .freeFallDetected)
         alarms.update(level: .notAvailable, forAlarm: .stereoCameraDecalibrated)
         alarms.update(level: .notAvailable, forAlarm: .driFailing)
+        alarms.update(level: .notAvailable, forAlarm: .videoPipeline)
     }
 }

@@ -172,6 +172,7 @@ extension Arsdk_Microhard_Capabilities {
     static var powerMaxFieldNumber: Int32 { 4 }
     static var bandwidthsFieldNumber: Int32 { 5 }
     static var encryptionAlgorithmsFieldNumber: Int32 { 6 }
+    static var modelFieldNumber: Int32 { 7 }
 }
 extension Arsdk_Microhard_ConnectionParameters {
     static var channelFieldNumber: Int32 { 1 }

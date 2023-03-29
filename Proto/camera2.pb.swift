@@ -2889,8 +2889,6 @@ struct Arsdk_Camera_Event {
 
       var state: Arsdk_Camera_PhotoState = .unavailable
 
-      var startTimestamp: UInt64 = 0
-
       var photoCount: UInt32 = 0
 
       var storage: Arsdk_Camera_StorageType = .internal
@@ -2918,8 +2916,6 @@ struct Arsdk_Camera_Event {
       // methods supported on all messages.
 
       var state: Arsdk_Camera_RecordingState = .unavailable
-
-      var startTimestamp: UInt64 = 0
 
       var videoBitrate: UInt32 = 0
 
@@ -5202,7 +5198,6 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
   static let protoMessageName: String = Arsdk_Camera_Event.State.protoMessageName + ".Photo"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "state"),
-    2: .standard(proto: "start_timestamp"),
     3: .standard(proto: "photo_count"),
     4: .same(proto: "storage"),
     5: .same(proto: "duration"),
@@ -5215,7 +5210,6 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.state) }()
-      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.startTimestamp) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.photoCount) }()
       case 4: try { try decoder.decodeSingularEnumField(value: &self.storage) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._duration) }()
@@ -5232,9 +5226,6 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
     if self.state != .unavailable {
       try visitor.visitSingularEnumField(value: self.state, fieldNumber: 1)
     }
-    if self.startTimestamp != 0 {
-      try visitor.visitSingularUInt64Field(value: self.startTimestamp, fieldNumber: 2)
-    }
     if self.photoCount != 0 {
       try visitor.visitSingularUInt32Field(value: self.photoCount, fieldNumber: 3)
     }
@@ -5249,7 +5240,6 @@ extension Arsdk_Camera_Event.State.Photo: SwiftProtobuf.Message, SwiftProtobuf._
 
   static func ==(lhs: Arsdk_Camera_Event.State.Photo, rhs: Arsdk_Camera_Event.State.Photo) -> Bool {
     if lhs.state != rhs.state {return false}
-    if lhs.startTimestamp != rhs.startTimestamp {return false}
     if lhs.photoCount != rhs.photoCount {return false}
     if lhs.storage != rhs.storage {return false}
     if lhs._duration != rhs._duration {return false}
@@ -5262,7 +5252,6 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
   static let protoMessageName: String = Arsdk_Camera_Event.State.protoMessageName + ".Recording"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "state"),
-    2: .standard(proto: "start_timestamp"),
     3: .standard(proto: "video_bitrate"),
     4: .same(proto: "storage"),
     5: .same(proto: "duration"),
@@ -5275,7 +5264,6 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.state) }()
-      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.startTimestamp) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.videoBitrate) }()
       case 4: try { try decoder.decodeSingularEnumField(value: &self.storage) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._duration) }()
@@ -5292,9 +5280,6 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
     if self.state != .unavailable {
       try visitor.visitSingularEnumField(value: self.state, fieldNumber: 1)
     }
-    if self.startTimestamp != 0 {
-      try visitor.visitSingularUInt64Field(value: self.startTimestamp, fieldNumber: 2)
-    }
     if self.videoBitrate != 0 {
       try visitor.visitSingularUInt32Field(value: self.videoBitrate, fieldNumber: 3)
     }
@@ -5309,7 +5294,6 @@ extension Arsdk_Camera_Event.State.Recording: SwiftProtobuf.Message, SwiftProtob
 
   static func ==(lhs: Arsdk_Camera_Event.State.Recording, rhs: Arsdk_Camera_Event.State.Recording) -> Bool {
     if lhs.state != rhs.state {return false}
-    if lhs.startTimestamp != rhs.startTimestamp {return false}
     if lhs.videoBitrate != rhs.videoBitrate {return false}
     if lhs.storage != rhs.storage {return false}
     if lhs._duration != rhs._duration {return false}

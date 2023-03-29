@@ -151,11 +151,13 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
         guard let flyingState = flyingState else { return }
 
         switch flyingState {
-        case .landed,
-             .landing:
+        case .landed:
 
             let canTakeOff = takeoffAlarmsOn?.isEmpty ?? true
             manualCopterPilotingItf.update(canTakeOff: canTakeOff).update(canLand: false).notifyUpdated()
+        case .landing:
+
+            manualCopterPilotingItf.update(canTakeOff: true).update(canLand: false).notifyUpdated()
         case .takingoff,
              .hovering,
              .motorRamping,

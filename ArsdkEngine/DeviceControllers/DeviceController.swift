@@ -962,6 +962,15 @@ extension DeviceController {
     }
 
     final func linkDidConnect(provider: DeviceProvider, backend: DeviceControllerBackend) {
+        // connectionSession.state can be set to .connecting before linkWillConnect call
+        guard connectionSession.state == .connecting ||
+              connectionSession.state == .disconnecting ||
+              connectionSession.state == .disconnected else {
+            // a  proxy device controller may callback multiple times here in bad states, ignore.
+            ULog.w(.ctrlTag, "Bad connection session state : \(connectionSession.state)")
+            return
+        }
+
         self.backend = backend
 
         // a proxy device controller may callback directly here (without calling linkWillConnect), so make sure to

@@ -639,21 +639,18 @@ extension Camera2Controller {
         photoStateReceived = true
         switch photo.state {
         case .active:
-            let now = Date(timeIntervalSinceReferenceDate: TimeProvider.timeInterval)
-            let startTimeFromDrone = Date(timeIntervalSince1970: Double(photo.startTimestamp) / 1000.0)
-            let duration = photo.hasDuration
-                            ? Double(photo.duration.value) / 1000.0
-                            : now.timeIntervalSince(startTimeFromDrone)
-            let startTimeOnSystemClock = TimeProvider.dispatchTime.uptimeSeconds - duration
-            let durationClosure = {
-                TimeProvider.dispatchTime.uptimeSeconds - startTimeOnSystemClock
+            if case .stopping(_, _) = camera.photoCapture.state {
+                return
             }
-            let photoCount = Int(photo.photoCount)
-            camera.photoCapture.update(state: .started(startTime: Date(timeInterval: -duration, since: now),
-                                                       startTimeOnSystemClock: startTimeOnSystemClock,
-                                                       duration: durationClosure,
-                                                       photoCount: photoCount,
-                                                       mediaStorage: StorageType(fromArsdk: photo.storage)))
+            let startTime = TimeProvider.dispatchTime.uptimeSeconds - Double(photo.duration.value) / 1000.0
+            camera.photoCapture.update(state: .started(
+                startTimeOnSystemClock: startTime,
+                duration: {
+                  TimeProvider.dispatchTime.uptimeSeconds - startTime
+                },
+                photoCount: Int(photo.photoCount),
+                mediaStorage: StorageType(fromArsdk: photo.storage)
+            ))
             if active {
                 camera.photoCapture.publish()
             }
@@ -681,20 +678,15 @@ extension Camera2Controller {
         recordingStateReceived = true
         switch recording.state {
         case .active:
-            let now = Date(timeIntervalSinceReferenceDate: TimeProvider.timeInterval)
-            let startTimeFromDrone = Date(timeIntervalSince1970: Double(recording.startTimestamp) / 1000.0)
-            let duration = recording.hasDuration
-                            ? Double(recording.duration.value) / 1000.0
-                            : now.timeIntervalSince(startTimeFromDrone)
-            let startTimeOnSystemClock = TimeProvider.dispatchTime.uptimeSeconds - duration
-            let durationClosure = {
-                TimeProvider.dispatchTime.uptimeSeconds - startTimeOnSystemClock
-            }
-            camera.recording.update(state: .started(startTime: Date(timeInterval: -duration, since: now),
-                                                    startTimeOnSystemClock: startTimeOnSystemClock,
-                                                    duration: durationClosure,
-                                                    videoBitrate: UInt(recording.videoBitrate),
-                                                    mediaStorage: StorageType(fromArsdk: recording.storage)))
+            let startTime = TimeProvider.dispatchTime.uptimeSeconds - Double(recording.duration.value) / 1000.0
+            camera.recording.update(state: .started(
+                startTimeOnSystemClock: startTime,
+                duration: {
+                    TimeProvider.dispatchTime.uptimeSeconds - startTime
+                },
+                videoBitrate: UInt(recording.videoBitrate),
+                mediaStorage: StorageType(fromArsdk: recording.storage)
+            ))
             if active {
                 camera.recording.publish()
             }

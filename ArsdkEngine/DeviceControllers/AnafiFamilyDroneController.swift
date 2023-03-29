@@ -61,6 +61,8 @@ class AnafiFamilyDroneController: DroneController {
             activationController: pilotingItfActivationController))
         componentControllers.append(AnafiPoiPilotingItf(
             activationController: pilotingItfActivationController))
+        componentControllers.append(AnafiPointAndFlyPilotingItf(
+            activationController: pilotingItfActivationController))
 
         componentControllers.append(AutoLookAtPilotingItf(
             activationController: pilotingItfActivationController))
@@ -168,11 +170,18 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(FlightCameraRecorderController(deviceController: self))
         componentControllers.append(SecureElementController(deviceController: self))
         componentControllers.append(AnafiPrivacy(deviceController: self))
+        componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
+        componentControllers.append(HttpServerController(deviceController: self))
         if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
             componentControllers.append(DebugShellController(deviceController: self))
             componentControllers.append(AnafiTerrainControl(deviceController: self))
         }
-        componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
+        if model == .anafi3 || model == .anafi3Usa {
+            componentControllers.append(Anafi3KillSwitch(deviceController: self))
+            componentControllers.append(Anafi3Messenger(deviceController: self))
+            componentControllers.append(Anafi3SleepMode(deviceController: self))
+        }
+
         sendDateAndTime = { [weak self] in
             let dateFormatter = DateFormatter()
             dateFormatter.timeZone = NSTimeZone.system

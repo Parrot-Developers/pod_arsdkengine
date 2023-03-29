@@ -86,6 +86,7 @@ class SkyControllerFamilyController: RCController {
         if !useFtp {
             componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
         }
+        componentControllers.append(HttpServerController(deviceController: self))
         sendDateAndTime = { [weak self] in
             let dateFormatter = DateFormatter()
             dateFormatter.timeZone = NSTimeZone.system

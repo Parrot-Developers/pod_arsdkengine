@@ -128,6 +128,10 @@ class AutoLookAtPilotingItf: ActivablePilotingItfController {
         supportedModes.removeAll()
     }
 
+    override func willConnect() {
+        trackingIsRunning = false
+    }
+
     override func didConnect() {
         if !supportedModes.isEmpty {
             lookAtPilotingItf.update(supportedLookAtModes: supportedModes)

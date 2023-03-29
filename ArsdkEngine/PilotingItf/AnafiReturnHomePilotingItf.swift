@@ -135,6 +135,7 @@ class AnafiReturnHomePilotingItf: ReturnHomePilotingItfController {
 extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
     func onState(state: ArsdkFeatureRthState, reason: ArsdkFeatureRthStateReason) {
         ULog.d(.tag, "ReturnHome: onState: state=\(state.rawValue) reason=\(reason.rawValue)")
+        returnHomePilotingItf.update(suspended: state == .pending)
         switch state {
         case .available:
             let availabilityReason: ReturnHomeReason

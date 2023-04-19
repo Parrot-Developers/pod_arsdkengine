@@ -125,6 +125,7 @@ extension Arsdk_Devicemanager_Command.OneOf_ID {
         case .connectDevice: return 17
         case .forgetDevice: return 18
         case .discoverDevices: return 19
+        case .changeConnectionParameters: return 20
         }
     }
 }
@@ -146,11 +147,23 @@ extension Arsdk_Devicemanager_Command.ConnectDevice {
 extension Arsdk_Devicemanager_Command.ForgetDevice {
     static var uidFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard {
+    static var powerFieldNumber: Int32 { 1 }
+    static var channelFieldNumber: Int32 { 2 }
+    static var bandwidthFieldNumber: Int32 { 3 }
+}
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters {
+    static var uidFieldNumber: Int32 { 1 }
+    static var wifiFieldNumber: Int32 { 2 }
+    static var cellularFieldNumber: Int32 { 3 }
+    static var microhardFieldNumber: Int32 { 4 }
+}
 extension Arsdk_Devicemanager_Command {
     static var getStateFieldNumber: Int32 { 16 }
     static var connectDeviceFieldNumber: Int32 { 17 }
     static var forgetDeviceFieldNumber: Int32 { 18 }
     static var discoverDevicesFieldNumber: Int32 { 19 }
+    static var changeConnectionParametersFieldNumber: Int32 { 20 }
 }
 extension Arsdk_Devicemanager_Event.State.KnownDevices {
     static var devicesFieldNumber: Int32 { 2 }

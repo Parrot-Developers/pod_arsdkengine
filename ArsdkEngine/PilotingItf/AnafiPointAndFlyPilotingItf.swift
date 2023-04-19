@@ -218,8 +218,8 @@ extension AnafiPointAndFlyPilotingItf: ArsdkPointnflyEventDecoderListener {
         pointAndFlyPilotingItf.publish()
     }
 
-    func onExecution(_ execution: Arsdk_Pointnfly_ExecutionStatus) {
-        pointAndFlyPilotingItf.update(executionStatus: PointAndFlyExecutionStatus(fromArsdk: execution)).notifyUpdated()
+    func onExecution(_ execution: Arsdk_Pointnfly_Event.Execution) {
+        pointAndFlyPilotingItf.update(executionStatus: PointAndFlyExecutionStatus(fromArsdk: execution.status)).notifyUpdated()
         pointAndFlyPilotingItf.update(executionStatus: nil).notifyUpdated()
     }
 }
@@ -235,6 +235,7 @@ extension PointAndFlyGimbalControlMode: ArsdkMappableEnum {
 /// Extension that adds conversion from/to arsdk enum.
 extension PointAndFlyIssue: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<PointAndFlyIssue, Arsdk_Pointnfly_UnavailabilityReason>([
+        .droneNotFlying: .droneNotFlying,
         .droneNotCalibrated: .droneNotCalibrated,
         .droneGpsInfoInaccurate: .droneGpsInfoInaccurate,
         .droneOutOfGeofence: .droneOutGeofence,

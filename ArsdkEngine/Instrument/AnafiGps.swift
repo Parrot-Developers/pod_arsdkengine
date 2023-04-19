@@ -79,6 +79,7 @@ class AnafiGps: DeviceComponentController {
 
     /// Drone is disconnected
     override func didDisconnect() {
+        useOnGpsLocationChanged = false
         // clear all non saved settings
         gps.update(fixed: false).update(satelliteCount: 0).notifyUpdated()
         // unpublish if offline settings are disabled

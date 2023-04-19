@@ -12,10 +12,10 @@ protocol ArsdkPointnflyEventDecoderListener: AnyObject {
     /// - Parameter state: event to process
     func onState(_ state: Arsdk_Pointnfly_Event.State)
 
-    /// Processes a `Arsdk_Pointnfly_ExecutionStatus` event.
+    /// Processes a `Arsdk_Pointnfly_Event.Execution` event.
     ///
     /// - Parameter execution: event to process
-    func onExecution(_ execution: Arsdk_Pointnfly_ExecutionStatus)
+    func onExecution(_ execution: Arsdk_Pointnfly_Event.Execution)
 }
 
 /// Decoder for arsdk.pointnfly.Event events.

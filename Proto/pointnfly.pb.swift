@@ -122,6 +122,7 @@ enum Arsdk_Pointnfly_UnavailabilityReason: SwiftProtobuf.Enum {
   case droneTooCloseToGround // = 3
   case droneAboveMaxAltitude // = 4
   case droneInsufficientBattery // = 5
+  case droneNotFlying // = 6
   case UNRECOGNIZED(Int)
 
   init() {
@@ -136,6 +137,7 @@ enum Arsdk_Pointnfly_UnavailabilityReason: SwiftProtobuf.Enum {
     case 3: self = .droneTooCloseToGround
     case 4: self = .droneAboveMaxAltitude
     case 5: self = .droneInsufficientBattery
+    case 6: self = .droneNotFlying
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -148,6 +150,7 @@ enum Arsdk_Pointnfly_UnavailabilityReason: SwiftProtobuf.Enum {
     case .droneTooCloseToGround: return 3
     case .droneAboveMaxAltitude: return 4
     case .droneInsufficientBattery: return 5
+    case .droneNotFlying: return 6
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -165,6 +168,7 @@ extension Arsdk_Pointnfly_UnavailabilityReason: CaseIterable {
     .droneTooCloseToGround,
     .droneAboveMaxAltitude,
     .droneInsufficientBattery,
+    .droneNotFlying,
   ]
 }
 
@@ -466,10 +470,10 @@ struct Arsdk_Pointnfly_Event {
     set {id = .state(newValue)}
   }
 
-  var execution: Arsdk_Pointnfly_ExecutionStatus {
+  var execution: Arsdk_Pointnfly_Event.Execution {
     get {
       if case .execution(let v)? = id {return v}
-      return .success
+      return Arsdk_Pointnfly_Event.Execution()
     }
     set {id = .execution(newValue)}
   }
@@ -478,7 +482,7 @@ struct Arsdk_Pointnfly_Event {
 
   enum OneOf_ID: Equatable {
     case state(Arsdk_Pointnfly_Event.State)
-    case execution(Arsdk_Pointnfly_ExecutionStatus)
+    case execution(Arsdk_Pointnfly_Event.Execution)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Pointnfly_Event.OneOf_ID, rhs: Arsdk_Pointnfly_Event.OneOf_ID) -> Bool {
@@ -722,6 +726,7 @@ extension Arsdk_Pointnfly_UnavailabilityReason: SwiftProtobuf._ProtoNameProvidin
     3: .same(proto: "UNAVAILABILITY_REASON_DRONE_TOO_CLOSE_TO_GROUND"),
     4: .same(proto: "UNAVAILABILITY_REASON_DRONE_ABOVE_MAX_ALTITUDE"),
     5: .same(proto: "UNAVAILABILITY_REASON_DRONE_INSUFFICIENT_BATTERY"),
+    6: .same(proto: "UNAVAILABILITY_REASON_DRONE_NOT_FLYING"),
   ]
 }
 
@@ -1149,10 +1154,15 @@ extension Arsdk_Pointnfly_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
         }
       }()
       case 17: try {
-        var v: Arsdk_Pointnfly_ExecutionStatus?
-        try decoder.decodeSingularEnumField(value: &v)
+        var v: Arsdk_Pointnfly_Event.Execution?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .execution(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
-          if self.id != nil {try decoder.handleConflictingOneOf()}
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.id = .execution(v)
         }
       }()
@@ -1173,7 +1183,7 @@ extension Arsdk_Pointnfly_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     }()
     case .execution?: try {
       guard case .execution(let v)? = self.id else { preconditionFailure() }
-      try visitor.visitSingularEnumField(value: v, fieldNumber: 17)
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
     case nil: break
     }

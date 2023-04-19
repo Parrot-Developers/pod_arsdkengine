@@ -202,3 +202,6 @@ extension Arsdk_Microhard_PairingStatus.Failure {
 extension Arsdk_Microhard_PairingStatus.Success {
     static var deviceUidFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Microhard_BandwidthValue {
+    static var valueFieldNumber: Int32 { 1 }
+}

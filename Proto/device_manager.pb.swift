@@ -184,6 +184,14 @@ struct Arsdk_Devicemanager_Command {
     set {id = .discoverDevices(newValue)}
   }
 
+  var changeConnectionParameters: Arsdk_Devicemanager_Command.ChangeConnectionParameters {
+    get {
+      if case .changeConnectionParameters(let v)? = id {return v}
+      return Arsdk_Devicemanager_Command.ChangeConnectionParameters()
+    }
+    set {id = .changeConnectionParameters(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
@@ -191,6 +199,7 @@ struct Arsdk_Devicemanager_Command {
     case connectDevice(Arsdk_Devicemanager_Command.ConnectDevice)
     case forgetDevice(Arsdk_Devicemanager_Command.ForgetDevice)
     case discoverDevices(Arsdk_Devicemanager_Command.DiscoverDevices)
+    case changeConnectionParameters(Arsdk_Devicemanager_Command.ChangeConnectionParameters)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Devicemanager_Command.OneOf_ID, rhs: Arsdk_Devicemanager_Command.OneOf_ID) -> Bool {
@@ -212,6 +221,10 @@ struct Arsdk_Devicemanager_Command {
       }()
       case (.discoverDevices, .discoverDevices): return {
         guard case .discoverDevices(let l) = lhs, case .discoverDevices(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.changeConnectionParameters, .changeConnectionParameters): return {
+        guard case .changeConnectionParameters(let l) = lhs, case .changeConnectionParameters(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -361,6 +374,140 @@ struct Arsdk_Devicemanager_Command {
     // methods supported on all messages.
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct ChangeConnectionParameters {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var uid: String = String()
+
+    var transport: Arsdk_Devicemanager_Command.ChangeConnectionParameters.OneOf_Transport? = nil
+
+    var wifi: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi {
+      get {
+        if case .wifi(let v)? = transport {return v}
+        return Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi()
+      }
+      set {transport = .wifi(newValue)}
+    }
+
+    var cellular: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular {
+      get {
+        if case .cellular(let v)? = transport {return v}
+        return Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular()
+      }
+      set {transport = .cellular(newValue)}
+    }
+
+    var microhard: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard {
+      get {
+        if case .microhard(let v)? = transport {return v}
+        return Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard()
+      }
+      set {transport = .microhard(newValue)}
+    }
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    enum OneOf_Transport: Equatable {
+      case wifi(Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi)
+      case cellular(Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular)
+      case microhard(Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard)
+
+    #if !swift(>=4.1)
+      static func ==(lhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.OneOf_Transport, rhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.OneOf_Transport) -> Bool {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch (lhs, rhs) {
+        case (.wifi, .wifi): return {
+          guard case .wifi(let l) = lhs, case .wifi(let r) = rhs else { preconditionFailure() }
+          return l == r
+        }()
+        case (.cellular, .cellular): return {
+          guard case .cellular(let l) = lhs, case .cellular(let r) = rhs else { preconditionFailure() }
+          return l == r
+        }()
+        case (.microhard, .microhard): return {
+          guard case .microhard(let l) = lhs, case .microhard(let r) = rhs else { preconditionFailure() }
+          return l == r
+        }()
+        default: return false
+        }
+      }
+    #endif
+    }
+
+    struct Wifi {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      init() {}
+    }
+
+    struct Cellular {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      init() {}
+    }
+
+    struct Microhard {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      /// This parameter can only be changed if currently connected to the device
+      /// through Microhard
+      var power: SwiftProtobuf.Google_Protobuf_UInt32Value {
+        get {return _power ?? SwiftProtobuf.Google_Protobuf_UInt32Value()}
+        set {_power = newValue}
+      }
+      /// Returns true if `power` has been explicitly set.
+      var hasPower: Bool {return self._power != nil}
+      /// Clears the value of `power`. Subsequent reads from it will return its default value.
+      mutating func clearPower() {self._power = nil}
+
+      /// This parameter can only be changed if currently connected to the device
+      /// through Microhard
+      var channel: SwiftProtobuf.Google_Protobuf_UInt32Value {
+        get {return _channel ?? SwiftProtobuf.Google_Protobuf_UInt32Value()}
+        set {_channel = newValue}
+      }
+      /// Returns true if `channel` has been explicitly set.
+      var hasChannel: Bool {return self._channel != nil}
+      /// Clears the value of `channel`. Subsequent reads from it will return its default value.
+      mutating func clearChannel() {self._channel = nil}
+
+      /// This parameter can only be changed if currently connected to the device
+      /// through Microhard
+      var bandwidth: Arsdk_Microhard_BandwidthValue {
+        get {return _bandwidth ?? Arsdk_Microhard_BandwidthValue()}
+        set {_bandwidth = newValue}
+      }
+      /// Returns true if `bandwidth` has been explicitly set.
+      var hasBandwidth: Bool {return self._bandwidth != nil}
+      /// Clears the value of `bandwidth`. Subsequent reads from it will return its default value.
+      mutating func clearBandwidth() {self._bandwidth = nil}
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      init() {}
+
+      fileprivate var _power: SwiftProtobuf.Google_Protobuf_UInt32Value? = nil
+      fileprivate var _channel: SwiftProtobuf.Google_Protobuf_UInt32Value? = nil
+      fileprivate var _bandwidth: Arsdk_Microhard_BandwidthValue? = nil
+    }
 
     init() {}
   }
@@ -942,6 +1089,11 @@ extension Arsdk_Devicemanager_Command.ConnectDevice.Cellular: @unchecked Sendabl
 extension Arsdk_Devicemanager_Command.ConnectDevice.Microhard: @unchecked Sendable {}
 extension Arsdk_Devicemanager_Command.ForgetDevice: @unchecked Sendable {}
 extension Arsdk_Devicemanager_Command.DiscoverDevices: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.OneOf_Transport: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular: @unchecked Sendable {}
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard: @unchecked Sendable {}
 extension Arsdk_Devicemanager_Event: @unchecked Sendable {}
 extension Arsdk_Devicemanager_Event.OneOf_ID: @unchecked Sendable {}
 extension Arsdk_Devicemanager_Event.State: @unchecked Sendable {}
@@ -1000,6 +1152,7 @@ extension Arsdk_Devicemanager_Command: SwiftProtobuf.Message, SwiftProtobuf._Mes
     17: .standard(proto: "connect_device"),
     18: .standard(proto: "forget_device"),
     19: .standard(proto: "discover_devices"),
+    20: .standard(proto: "change_connection_parameters"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1060,6 +1213,19 @@ extension Arsdk_Devicemanager_Command: SwiftProtobuf.Message, SwiftProtobuf._Mes
           self.id = .discoverDevices(v)
         }
       }()
+      case 20: try {
+        var v: Arsdk_Devicemanager_Command.ChangeConnectionParameters?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .changeConnectionParameters(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .changeConnectionParameters(v)
+        }
+      }()
       default: break
       }
     }
@@ -1086,6 +1252,10 @@ extension Arsdk_Devicemanager_Command: SwiftProtobuf.Message, SwiftProtobuf._Mes
     case .discoverDevices?: try {
       guard case .discoverDevices(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+    }()
+    case .changeConnectionParameters?: try {
+      guard case .changeConnectionParameters(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     case nil: break
     }
@@ -1358,6 +1528,186 @@ extension Arsdk_Devicemanager_Command.DiscoverDevices: SwiftProtobuf.Message, Sw
   }
 
   static func ==(lhs: Arsdk_Devicemanager_Command.DiscoverDevices, rhs: Arsdk_Devicemanager_Command.DiscoverDevices) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Command.protoMessageName + ".ChangeConnectionParameters"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "uid"),
+    2: .same(proto: "wifi"),
+    3: .same(proto: "cellular"),
+    4: .same(proto: "microhard"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.uid) }()
+      case 2: try {
+        var v: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi?
+        var hadOneofValue = false
+        if let current = self.transport {
+          hadOneofValue = true
+          if case .wifi(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.transport = .wifi(v)
+        }
+      }()
+      case 3: try {
+        var v: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular?
+        var hadOneofValue = false
+        if let current = self.transport {
+          hadOneofValue = true
+          if case .cellular(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.transport = .cellular(v)
+        }
+      }()
+      case 4: try {
+        var v: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard?
+        var hadOneofValue = false
+        if let current = self.transport {
+          hadOneofValue = true
+          if case .microhard(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.transport = .microhard(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.uid.isEmpty {
+      try visitor.visitSingularStringField(value: self.uid, fieldNumber: 1)
+    }
+    switch self.transport {
+    case .wifi?: try {
+      guard case .wifi(let v)? = self.transport else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .cellular?: try {
+      guard case .cellular(let v)? = self.transport else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .microhard?: try {
+      guard case .microhard(let v)? = self.transport else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters, rhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters) -> Bool {
+    if lhs.uid != rhs.uid {return false}
+    if lhs.transport != rhs.transport {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Command.ChangeConnectionParameters.protoMessageName + ".Wifi"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi, rhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Command.ChangeConnectionParameters.protoMessageName + ".Cellular"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular, rhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Command.ChangeConnectionParameters.protoMessageName + ".Microhard"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "power"),
+    2: .same(proto: "channel"),
+    3: .same(proto: "bandwidth"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._power) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._channel) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._bandwidth) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._power {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._channel {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._bandwidth {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard, rhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard) -> Bool {
+    if lhs._power != rhs._power {return false}
+    if lhs._channel != rhs._channel {return false}
+    if lhs._bandwidth != rhs._bandwidth {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

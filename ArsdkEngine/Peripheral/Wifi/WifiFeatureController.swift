@@ -30,8 +30,8 @@
 import Foundation
 import GroundSdk
 
-/// Wifi access point base class and wifi scanner component controller for ArDrone3 message based drones
-class WifiAccessPointController: DeviceComponentController {
+/// Wifi feature component controller for Anafi message based drones.
+class WifiFeatureController: DeviceComponentController {
 
     /// Wifi access point component
     var wifiAccessPoint: WifiAccessPointCore!
@@ -39,8 +39,8 @@ class WifiAccessPointController: DeviceComponentController {
     /// Wifi scanner component
     var wifiScanner: WifiScannerCore!
 
-    /// Map of occupation rate, by channel
-    var scannedChannels = [WifiChannel: Int]()
+    /// Current scan results
+    var scanResults: [ScanResult] = []
 
     /// Current access point environment
     var environment: Environment?
@@ -58,14 +58,17 @@ class WifiAccessPointController: DeviceComponentController {
                 // reduce the available country list (only the current country must be present)
                 availableCountries = Set([country])
             }
-            wifiAccessPoint.update(isoCountryCode: country)
+            if let countryValue = Country(rawValue: country) {
+                wifiAccessPoint.update(country: countryValue)
+            }
         }
     }
 
     /// Set of available countries
-    var availableCountries =  Set<String>() {
+    var availableCountries = Set<String>() {
         didSet {
-            wifiAccessPoint.update(availableCountries: availableCountries)
+            let countries = Set(availableCountries.compactMap { Country(rawValue: $0) })
+            wifiAccessPoint.update(supportedCountries: countries)
             checkDefaultCountryUsed()
         }
     }
@@ -77,8 +80,15 @@ class WifiAccessPointController: DeviceComponentController {
         }
     }
 
+    /// Whether this implementation of the access point is supported by the device.
+    ///
+    /// In case we have not received any `wifi.xml` event by the time the connection phase ends, we consider the
+    /// feature unsupported.
+    var isSupported = false
+
     /// Reverse geocoder monitor
     private var reverseGeocoderMonitor: MonitorCore?
+
     /// Reverse geocoder Utility
     private var reverseGeocoderUtility: ReverseGeocoderUtilityCore?
 
@@ -93,6 +103,11 @@ class WifiAccessPointController: DeviceComponentController {
 
     /// Drone is connected
     override func didConnect() {
+        guard isSupported else { return }
+
+        // Activation is unsupported on this implementation. Component is always active.
+        wifiAccessPoint.update(active: true)
+
         wifiScanner.publish()
         wifiAccessPoint.publish()
         // Checks if the App is in the autoSelectWifiCountry mode :
@@ -104,7 +119,7 @@ class WifiAccessPointController: DeviceComponentController {
             if environment != .outdoor {
                 _ = sendOutdoorCommand(outdoor: true)
             }
-            wifiAccessPoint.update(environmentMutability: false)
+            wifiAccessPoint.update(supportedEnvironments: [.outdoor])
 
             // reduce the available country list (only the current country must be present)
             availableCountries = Set([country])
@@ -131,9 +146,10 @@ class WifiAccessPointController: DeviceComponentController {
         availableCountries = []
         automaticCountrySelectionEnabled = false
         environment = nil
-        scannedChannels = [:]
+        scanResults = []
         outdoorChannels = []
         indoorChannels = []
+        isSupported = false
     }
 
     /// Checks if a country has been selected automatically and can be edited. The flag `defaultCountryUsed` is updated
@@ -142,7 +158,7 @@ class WifiAccessPointController: DeviceComponentController {
     /// - Note: It is not possible to change the country in some cases to comply with local legislation. Depending on
     /// the class of the device, the list is constrained by code at the engine level (see `countriesWithLockRule`
     /// for ARDrone3) or restricted directly by the drone in the received list of available countries
-    /// (see `WifiFeatureWifiAccessPoint`).
+    /// (see `AnafiWifiFeature`).
     private func checkDefaultCountryUsed() {
         let defaultCountryUsed =  automaticCountrySelectionEnabled && availableCountries.count > 1
         wifiAccessPoint.update(defaultCountryUsed: defaultCountryUsed)
@@ -188,7 +204,12 @@ class WifiAccessPointController: DeviceComponentController {
 }
 
 /// Wifi access point backend implementation.
-extension WifiAccessPointController: WifiAccessPointBackend {
+extension WifiFeatureController: WifiAccessPointBackend {
+
+    func set(active: Bool) -> Bool {
+        // Not supported on this implementation. Considered always active.
+        return false
+    }
 
     func set(environment: Environment) -> Bool {
         switch environment {
@@ -199,16 +220,21 @@ extension WifiAccessPointController: WifiAccessPointBackend {
         }
     }
 
-    func set(country: String) -> Bool {
-        return sendSetCountryCommand(isoCountry: country)
+    func set(country: Country) -> Bool {
+        return sendSetCountryCommand(isoCountry: country.rawValue)
     }
 
     func set(ssid: String) -> Bool {
         return sendProductNameCommand(name: ssid)
     }
 
-    func set(security: SecurityMode, password: String?) -> Bool {
-        return sendSetSecurityCommand(security: security, password: password)
+    func set(ssidBroadcast: Bool) -> Bool {
+        // Not supported on this implementation.
+        return false
+    }
+
+    func set(security: Set<SecurityMode>, password: String?) -> Bool {
+        return sendSetSecurityCommand(security: security.contains(.open) ? .open : .wpa2Secured, password: password)
     }
 
     func select(channel: WifiChannel) -> Bool {
@@ -222,12 +248,12 @@ extension WifiAccessPointController: WifiAccessPointBackend {
 
 /// Wifi scanner backend implementation.
 /// Can be overriden in the wifiAccess drone class.
-extension WifiAccessPointController: WifiScannerBackend {
+extension WifiFeatureController: WifiScannerBackend {
     func startScan() {
         if !wifiScanner.scanning {
-            scannedChannels.removeAll()
+            scanResults.removeAll()
             _ = sendStartScanCommand()
-            wifiScanner.update(scannedChannels: scannedChannels)
+            wifiScanner.update(scanResults: scanResults)
                 .update(scanning: true)
                 .notifyUpdated()
         }
@@ -235,8 +261,8 @@ extension WifiAccessPointController: WifiScannerBackend {
 
     func stopScan() {
         if wifiScanner.scanning {
-            scannedChannels.removeAll()
-            wifiScanner.update(scannedChannels: scannedChannels)
+            scanResults.removeAll()
+            wifiScanner.update(scanResults: scanResults)
                 .update(scanning: false)
                 .notifyUpdated()
         }

@@ -100,10 +100,10 @@ extension DroneManagerDroneFinder: DroneFinderBackend {
 /// DroneManager events dispatcher
 extension DroneManagerDroneFinder: ArsdkFeatureDroneManagerCallback {
 
-    func onDroneListItem(serial: String!, model: UInt, name: String!, connectionOrder: UInt, active: UInt,
+    func onDroneListItem(serial: String, model: UInt, name: String, connectionOrder: UInt, active: UInt,
                          visibleBitField: UInt, security: ArsdkFeatureDroneManagerSecurity, hasSavedKey: UInt,
                          rssi: Int, listFlagsBitField: UInt) {
-        ULog.d(.ctrlTag, "DroneManagerDroneFinder: onDroneListItem: \(serial ?? "nil") \(name ?? "nil")" +
+        ULog.d(.ctrlTag, "DroneManagerDroneFinder: onDroneListItem: \(serial) \(name)" +
             " \(connectionOrder)")
         if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
             // remove all

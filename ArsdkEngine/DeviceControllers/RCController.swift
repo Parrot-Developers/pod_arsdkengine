@@ -221,7 +221,7 @@ extension RCController: ArsdkFeatureSkyctrlSettingsstateCallback {
         }
     }
 
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         if let firmwareVersion = FirmwareVersion.parse(versionStr: software) {
             device.firmwareVersionHolder.update(version: firmwareVersion)
             deviceStore.write(key: PersistentStore.deviceFirmwareVersion, value: software).commit()

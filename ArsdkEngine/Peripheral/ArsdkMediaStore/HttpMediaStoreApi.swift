@@ -54,8 +54,10 @@ class HttpMediaStoreApi: NSObject, MediaStoreApi {
 
     func startWatchingContentChanges() {
         if let droneServer = deviceController.deviceServer {
-            mediaWsApi = MediaWsApi(server: droneServer) { [unowned self] event in
+            mediaWsApi = MediaWsApi(server: droneServer) { [unowned self] event  in
                 self.delegate?.receivedMediaStoreChangedEvent(event)
+            } onFailure: {
+                self.delegate?.receivedMediaStoreChangedEvent(.webSocketDisconnected)
             }
         }
     }

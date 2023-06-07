@@ -70,26 +70,26 @@ class CameraFeatureCameraRouter: DeviceComponentController {
     private class CameraController: CameraControllerBase {
 
         /// List of received recording capabilities collected when receiving list items
-        public var recordingCapabilitiesList: ([UInt: CameraCore.RecordingCapabilitiesEntry])?
+        var recordingCapabilitiesList: ([UInt: CameraCore.RecordingCapabilitiesEntry])?
 
         /// List of received photo capabilities collected when receiving list items
-        public var photoCapabilitiesList: ([UInt: CameraCore.PhotoCapabilitiesEntry])?
+        var photoCapabilitiesList: ([UInt: CameraCore.PhotoCapabilitiesEntry])?
 
         /// Encoder of the zoom control command
         private var zoomControlEncoder: ZoomControlCommandEncoder!
-        public var zoomControlEncoderRegistration: RegisteredNoAckCmdEncoder?
+        var zoomControlEncoderRegistration: RegisteredNoAckCmdEncoder?
 
         /// Lock mode that has been requested by GroundSdk.
         /// This is kept because drone exposure lock mode event is non acknowledged so it might be received right
         /// after a changed has been requested but before this change has been applied. Hence, thanks to this variable,
         /// we can skip such an event an avoid updating the component with an outdated lock mode.
-        public var requestedExposureLockMode: CameraExposureLockMode?
+        var requestedExposureLockMode: CameraExposureLockMode?
 
         /// White balance lock supported
-        public var supportedWhiteBalanceLock: Bool = false
+        var supportedWhiteBalanceLock: Bool = false
 
         /// Camera unique identifier
-        public let cameraId: UInt
+        let cameraId: UInt
 
         /// Camera Feature Camera Router
         var router: CameraFeatureCameraRouter
@@ -539,15 +539,15 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
                 cameraController.recordingCapabilitiesList = [:]
             }
             if !ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
-                cameraController.recordingCapabilitiesList![id & 0x00FF] = CameraCore.RecordingCapabilitiesEntry(
+                cameraController.recordingCapabilitiesList?[id & 0x00FF] = CameraCore.RecordingCapabilitiesEntry(
                     modes: CameraRecordingMode.createSetFrom(bitField: recordingModesBitField),
                     resolutions: CameraRecordingResolution.createSetFrom(bitField: resolutionsBitField),
                     framerates: CameraRecordingFramerate.createSetFrom(bitField: frameratesBitField),
                     hdrAvailable: hdr == .supported)
             }
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-                cameraController.capabilitiesDidChange(
-                    .recording(Array(cameraController.recordingCapabilitiesList!.values)))
+            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField),
+               let capabilities = cameraController.recordingCapabilitiesList {
+                cameraController.capabilitiesDidChange(.recording(Array(capabilities.values)))
                 cameraController.recordingCapabilitiesList = nil
             }
             self.cameraControllers[id>>8] = cameraController
@@ -565,14 +565,15 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
                 cameraController.photoCapabilitiesList = [:]
             }
             if !ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
-                cameraController.photoCapabilitiesList![id & 0x00FF] = CameraCore.PhotoCapabilitiesEntry(
+                cameraController.photoCapabilitiesList?[id & 0x00FF] = CameraCore.PhotoCapabilitiesEntry(
                     modes: CameraPhotoMode.createSetFrom(bitField: photoModesBitField),
                     formats: CameraPhotoFormat.createSetFrom(bitField: photoFormatsBitField),
                     fileFormats: CameraPhotoFileFormat.createSetFrom(bitField: photoFileFormatsBitField),
                     hdrAvailable: hdr == .supported)
             }
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-                cameraController.capabilitiesDidChange(.photo(Array(cameraController.photoCapabilitiesList!.values)))
+            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField),
+               let capabilities = cameraController.photoCapabilitiesList {
+                cameraController.capabilitiesDidChange(.photo(Array(capabilities.values)))
                 cameraController.photoCapabilitiesList = nil
             }
             self.cameraControllers[id>>8] = cameraController
@@ -901,7 +902,7 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
         }
     }
 
-    func onRecordingProgress(camId: UInt, result: ArsdkFeatureCameraRecordingResult, mediaId: String!) {
+    func onRecordingProgress(camId: UInt, result: ArsdkFeatureCameraRecordingResult, mediaId: String) {
         if let cameraController = self.cameraControllers[camId] {
             switch result {
             case .started:
@@ -953,7 +954,7 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
         }
     }
 
-    func onPhotoProgress(camId: UInt, result: ArsdkFeatureCameraPhotoResult, photoCount: UInt, mediaId: String!) {
+    func onPhotoProgress(camId: UInt, result: ArsdkFeatureCameraPhotoResult, photoCount: UInt, mediaId: String) {
         if let cameraController = self.cameraControllers[camId] {
             switch result {
             case .takingPhoto:

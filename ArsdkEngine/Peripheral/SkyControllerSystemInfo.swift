@@ -65,12 +65,12 @@ extension SkyControllerSystemInfo: ArsdkSystemInfoBackend {
 
 /// SkyCtrl settings state decode callback implementation
 extension SkyControllerSystemInfo: ArsdkFeatureSkyctrlSettingsstateCallback {
-    func onProductSerialChanged(serialnumber: String!) {
+    func onProductSerialChanged(serialnumber: String) {
         systemInfo.update(serial: serialnumber).notifyUpdated()
         deviceStore.write(key: PersistedDataKey.serial, value: serialnumber).commit()
     }
 
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         systemInfo.update(hardwareVersion: hardware)
         firmwareVersionDidChange(versionStr: software)
         systemInfo.notifyUpdated()

@@ -67,7 +67,7 @@ class AnafiFlightInfo: DeviceComponentController {
 
 /// Anafi State decode callback implementation
 extension AnafiFlightInfo: ArsdkFeatureCommonCommonstateCallback {
-    func onFlightId(flightid: String!) {
+    func onFlightId(flightid: String) {
         flightInfo.update(flightId: flightid).notifyUpdated()
     }
 }

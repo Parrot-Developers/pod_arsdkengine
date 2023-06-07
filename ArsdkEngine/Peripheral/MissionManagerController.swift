@@ -185,8 +185,8 @@ class MissionManagerController: DeviceComponentController, MissionManagerBackend
 /// Mission manager decode callback implementation
 extension MissionManagerController: ArsdkFeatureMissionCallback {
 
-    func onCapabilities(uid: String!, name: String!, desc: String!, version: String!, recipientId: UInt,
-        targetModelId: UInt, targetMinVersion: String!, targetMaxVersion: String!, listFlagsBitField: UInt) {
+    func onCapabilities(uid: String, name: String, desc: String, version: String, recipientId: UInt,
+        targetModelId: UInt, targetMinVersion: String, targetMaxVersion: String, listFlagsBitField: UInt) {
         let targetModel = DeviceModel.from(internalId: Int(targetModelId))
         switch targetModel {
         case .drone(let model):
@@ -210,7 +210,7 @@ extension MissionManagerController: ArsdkFeatureMissionCallback {
         }
     }
 
-    func onState(uid: String!, state: ArsdkFeatureMissionState,
+    func onState(uid: String, state: ArsdkFeatureMissionState,
         unavailabilityReason: ArsdkFeatureMissionUnavailabilityReason) {
         guard missions[uid] != nil else {
             return
@@ -249,7 +249,7 @@ extension MissionManagerController: ArsdkFeatureMissionCallback {
         missionManager.update(uid: uid, state: stateMission, unavailabilityReason: reason).notifyUpdated()
     }
 
-    func onCustomEvt(recipientId: UInt, serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(recipientId: UInt, serviceId: UInt, msgNum: UInt, payload: Data) {
         for mission in missions where mission.value.recipientId == recipientId {
             missionManager.update(message: MissionMessageCore(
                 missionUid: mission.value.uid, serviceUid: serviceId,
@@ -259,7 +259,7 @@ extension MissionManagerController: ArsdkFeatureMissionCallback {
         }
     }
 
-    func onSuggestedActivation(uid: String!) {
+    func onSuggestedActivation(uid: String) {
         missionManager.update(suggestedActivation: uid).notifyUpdated()
         missionManager.update(suggestedActivation: nil).notifyUpdated()
     }

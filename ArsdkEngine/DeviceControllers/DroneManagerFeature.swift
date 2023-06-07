@@ -80,28 +80,26 @@ class DroneManagerFeature: NSObject {
 
 /// DroneManager events dispatcher
 extension DroneManagerFeature: ArsdkFeatureDroneManagerCallback {
-    func onConnectionState(state: ArsdkFeatureDroneManagerConnectionState, serial: String!, model: UInt,
-                           name: String!) {
+    func onConnectionState(state: ArsdkFeatureDroneManagerConnectionState, serial: String, model: UInt,
+                           name: String) {
         switch state {
         case .idle,
              .searching:
             ULog.d(.ctrlTag, "DroneManagerFeature: onConnectionState: Idle or Searching")
             arsdkProxy.remoteDeviceDidDisconnect()
         case .connecting:
-            ULog.d(.ctrlTag, "DroneManagerFeature: onConnectionState: Connecting \(serial ?? "nil") \(model)" +
-                " \(name ?? "nil")")
+            ULog.d(.ctrlTag, "DroneManagerFeature: onConnectionState: Connecting \(serial) \(model)" +
+                " \(name)")
             if let model = DeviceModel.from(internalId: Int(model)) {
                 arsdkProxy.remoteDeviceWillConnect(uid: serial, model: model, name: name)
             }
         case .connected:
-            ULog.d(.ctrlTag, "DroneManagerFeature: onConnectionState: Connected \(serial ?? "nil") \(model)" +
-                " \(name ?? "nil")")
+            ULog.d(.ctrlTag, "DroneManagerFeature: onConnectionState: Connected \(serial) \(model) \(name)")
             if let model = DeviceModel.from(internalId: Int(model)) {
                 arsdkProxy.remoteDeviceDidConnect(uid: serial, model: model, name: name)
             }
         case .disconnecting:
-            ULog.d(.ctrlTag, "DroneManagerFeature: onConnectionState: Disconnecting \(serial ?? "nil")" +
-                " \(model) \(name ?? "nil")")
+            ULog.d(.ctrlTag, "DroneManagerFeature: onConnectionState: Disconnecting \(serial) \(model) \(name)")
             if let model = DeviceModel.from(internalId: Int(model)) {
                 arsdkProxy.remoteDeviceWillDisconnect(uid: serial, model: model, name: name)
             }
@@ -114,20 +112,20 @@ extension DroneManagerFeature: ArsdkFeatureDroneManagerCallback {
         }
     }
 
-    func onAuthenticationFailed(serial: String!, model: UInt, name: String!) {
-        ULog.d(.ctrlTag, "DroneManagerFeature onAuthenticationFailed: \(serial ?? "nil") \(name ?? "nil")")
+    func onAuthenticationFailed(serial: String, model: UInt, name: String) {
+        ULog.d(.ctrlTag, "DroneManagerFeature onAuthenticationFailed: \(serial) \(name)")
         arsdkProxy.remoteDeviceAutheticationFailed(uid: serial)
     }
 
-    func onConnectionRefused(serial: String!, model: UInt, name: String!) {
-        ULog.d(.ctrlTag, "DroneManagerFeature onConnectionRefused: \(serial ?? "nil") \(name ?? "nil")")
+    func onConnectionRefused(serial: String, model: UInt, name: String) {
+        ULog.d(.ctrlTag, "DroneManagerFeature onConnectionRefused: \(serial) \(name)")
         arsdkProxy.remoteDeviceConnectionRefused(uid: serial)
     }
 
-    func onKnownDroneItem(serial: String!, model: UInt, name: String!, security: ArsdkFeatureDroneManagerSecurity,
+    func onKnownDroneItem(serial: String, model: UInt, name: String, security: ArsdkFeatureDroneManagerSecurity,
                           hasSavedKey: UInt, listFlagsBitField: UInt) {
-        ULog.d(.ctrlTag, "DroneManagerFeature: onKnownDroneItem \(serial ?? "nil") \(model) " +
-            "\(name ?? "nil") security = \(security.rawValue) listFlags = \(listFlagsBitField)")
+        ULog.d(.ctrlTag, "DroneManagerFeature: onKnownDroneItem \(serial) \(model) " +
+            "\(name) security = \(security.rawValue) listFlags = \(listFlagsBitField)")
         if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
             // remove all
             arsdkProxy.removeAllRemoteDevices()

@@ -66,12 +66,12 @@ class RCEventLogger: DeviceEventLogger {
 
 /// Callbacks called when a command of the feature ArsdkFeatureSkyctrlSettingsstate is decoded.
 extension RCEventLogger: ArsdkFeatureSkyctrlSettingsstateCallback {
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         self.softwareVersion = software
         self.hardwareVersion = hardware
     }
 
-    func onProductSerialChanged(serialnumber: String!) {
+    func onProductSerialChanged(serialnumber: String) {
         self.serialNumber = serialnumber
     }
 }

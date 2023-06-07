@@ -101,7 +101,7 @@ class BlackBoxRcSession: NSObject, BlackBoxSession {
 }
 
 extension BlackBoxRcSession: ArsdkFeatureSkyctrlSettingsstateCallback {
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         rcData.hardwareVersion = hardware
         rcData.softwareVersion = software
     }

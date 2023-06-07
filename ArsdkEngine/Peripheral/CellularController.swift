@@ -613,7 +613,7 @@ extension CellularController: ArsdkFeatureCellularCallback {
         settingDidChange(.networkMode(newNetworkMode))
     }
 
-    func onApnInformation(modemId: UInt, mode: UInt, url: String!, username: String!, password: String!) {
+    func onApnInformation(modemId: UInt, mode: UInt, url: String, username: String, password: String) {
         if modemId != MODEM_ID_MAIN {
             return
         }
@@ -621,7 +621,7 @@ extension CellularController: ArsdkFeatureCellularCallback {
     }
 
     func onRegistrationInformation(modemId: UInt, status: ArsdkFeatureCellularRegistrationStatus,
-                                   operator: String!, technology: ArsdkFeatureCellularTechnology) {
+                                   operator: String, technology: ArsdkFeatureCellularTechnology) {
         if modemId != MODEM_ID_MAIN {
             return
         }
@@ -680,7 +680,7 @@ extension CellularController: ArsdkFeatureCellularCallback {
             .notifyUpdated()
     }
 
-    func onModemInformation(modemId: UInt, status: ArsdkFeatureCellularModemStatus, imei: String!) {
+    func onModemInformation(modemId: UInt, status: ArsdkFeatureCellularModemStatus, imei: String) {
         if modemId != MODEM_ID_MAIN {
             return
         }

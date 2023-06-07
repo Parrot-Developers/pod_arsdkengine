@@ -350,7 +350,7 @@ class DriController: DeviceComponentController, DriBackend {
 /// Dri decode callback implementation
 extension DriController: ArsdkFeatureDriCallback {
 
-    func onDroneId(type: ArsdkFeatureDriIdType, value: String!) {
+    func onDroneId(type: ArsdkFeatureDriIdType, value: String) {
         var newType: DriIdType
         switch type {
         case .fr30Octets:
@@ -381,7 +381,7 @@ extension DriController: ArsdkFeatureDriCallback {
         }
     }
 
-    func onDriType(id: String!, type: ArsdkFeatureDriDriType, status: ArsdkFeatureDriStatus) {
+    func onDriType(id: String, type: ArsdkFeatureDriDriType, status: ArsdkFeatureDriStatus) {
         var typeConfig: DriTypeConfig?
         switch type {
         case .en4709_002:

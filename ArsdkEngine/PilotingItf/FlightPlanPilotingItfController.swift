@@ -359,6 +359,11 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
 extension FlightPlanPilotingItfController {
     /// Sends command to start flight plan.
     private func sendStartFlightPlan() {
+        guard let remoteFlightPlanUid = remoteFlightPlanUid else {
+            ULog.e(.tag, "remoteFlightPlanUid is nil")
+            return
+        }
+
         if flightPlanPilotingItf.activateAtMissionItemV2Supported,
            let missionItem = startAtMissionItem {
             let type: ArsdkFeatureFlightPlanMavlinkType = flightPlanInterpreter == .legacy
@@ -453,7 +458,7 @@ extension FlightPlanPilotingItfController: ArsdkFeatureCommonFlightplanstateCall
 extension FlightPlanPilotingItfController: ArsdkFeatureCommonMavlinkstateCallback {
     func onMavlinkFilePlayingStateChanged(
         state: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState,
-        filepath: String!, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
+        filepath: String, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
             isPlaying = state == .playing
             updateFileIsKnown(playingState: state, playedFile: filepath)
             updateUnavailabilityReasons()
@@ -537,8 +542,8 @@ extension FlightPlanPilotingItfController: ArsdkFeatureFlightPlanCallback {
         flightPlanPilotingItf.notifyUpdated()
     }
 
-    func onRecoveryInfo(flightplanId: String!, customId: String!, item: UInt, runningTime: UInt,
-                        resourceId: String!) {
+    func onRecoveryInfo(flightplanId: String, customId: String, item: UInt, runningTime: UInt,
+                        resourceId: String) {
         var flightPlanInfo: RecoveryInfo?
         if !flightplanId.isEmpty {
             flightPlanInfo = RecoveryInfo(id: flightplanId, customId: customId,

@@ -77,7 +77,7 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
         }
     }
 
-    func onInfo(storageId: UInt, name: String!, capacity: UInt64, listFlagsBitField: UInt) {
+    func onInfo(storageId: UInt, name: String, capacity: UInt64, listFlagsBitField: UInt) {
         if userStorageId == storageId {
             internalUserStorage.update(name: name, capacity: Int64(capacity)).notifyUpdated()
         }
@@ -91,7 +91,7 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
 
     func onState(storageId: UInt, physicalState: ArsdkFeatureUserStorageV2PhyState,
         fileSystemState: ArsdkFeatureUserStorageV2FsState, attributeBitField: UInt, monitorEnabled: UInt,
-        monitorPeriod: UInt, fstype: String!, listFlagsBitField: UInt) {
+        monitorPeriod: UInt, fstype: String, listFlagsBitField: UInt) {
         if userStorageId == storageId {
             isEncrypted(isEncrypted: ArsdkFeatureUserStorageV2AttributeBitField.isSet(.encrypted,
                                                                                       inBitField: attributeBitField))
@@ -123,7 +123,7 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
         }
     }
 
-    func onStorageUuid(storageId: UInt, uuid: String!, listFlagsBitField: UInt) {
+    func onStorageUuid(storageId: UInt, uuid: String, listFlagsBitField: UInt) {
         if userStorageId == storageId {
             sdcardUuid(uuid: uuid)
         }

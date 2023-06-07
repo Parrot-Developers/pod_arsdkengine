@@ -33,6 +33,8 @@ import Foundation
 public enum Camera2Model: String, CustomStringConvertible, CaseIterable {
     /// Main, usually front, camera.
     case main
+    /// Blended thermal camera
+    case blendedThermal
 
     /// Debug description.
     public var description: String { rawValue }
@@ -40,6 +42,7 @@ public enum Camera2Model: String, CustomStringConvertible, CaseIterable {
     static func from(model: Arsdk_Camera_CameraModel) -> Camera2Model? {
         switch model {
         case .main: return .main
+        case .thermalBlended: return .blendedThermal
         case .UNRECOGNIZED:
             fallthrough
         @unknown default:

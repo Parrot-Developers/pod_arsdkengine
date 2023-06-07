@@ -55,6 +55,9 @@ extension ULogTag {
     /// Logging tag of arsdk engine camera
     static let cameraTag = ULogTag(name: "arsdkengine.camera")
 
+    /// Logging tag of arsdk engine connectivity
+    static let connectivityTag = ULogTag(name: "arsdkengine.connectivity")
+
     /// Logging tag of arsdk CrashML
     static let crashMLTag = ULogTag(name: "arsdkengine.crashml")
 

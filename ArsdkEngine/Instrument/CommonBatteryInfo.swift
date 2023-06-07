@@ -84,11 +84,11 @@ extension CommonBatteryInfo: ArsdkFeatureBatteryCallback {
         batteryInfo.update(cycleCount: Int(count)).notifyUpdated()
     }
 
-    func onSerial(serial: String!) {
+    func onSerial(serial: String) {
         batteryInfo.update(serial: serial).notifyUpdated()
     }
 
-    func onDescription(serial: String!, date: String!, design: UInt, cellCount: UInt,
+    func onDescription(serial: String, date: String, design: UInt, cellCount: UInt,
                        cellMinVoltage: UInt, cellMaxVoltage: UInt) {
         batteryInfo
             .update(batteryDescription: BatteryDescription(date: DateFormatter.iso8601Base.date(from: date),
@@ -115,7 +115,7 @@ extension CommonBatteryInfo: ArsdkFeatureBatteryCallback {
         batteryInfo.update(cellVoltage: cellVoltage, at: Int(index)).notifyUpdated()
     }
 
-    func onVersion(hwRevision: UInt, fwVersion: String!, gaugeVersion: String!, usbVersion: String!) {
+    func onVersion(hwRevision: UInt, fwVersion: String, gaugeVersion: String, usbVersion: String) {
         batteryInfo
             .update(version: BatteryVersion(hardwareRevision: hwRevision,
                                             firmwareVersion: fwVersion,

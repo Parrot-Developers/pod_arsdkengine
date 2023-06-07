@@ -407,19 +407,19 @@ extension DroneController: ArsdkFeatureCommonSettingsstateCallback {
         }
     }
 
-    func onProductNameChanged(name: String!) {
+    func onProductNameChanged(name: String) {
         device.nameHolder.update(name: name)
         deviceStore.write(key: PersistentStore.deviceName, value: name).commit()
     }
 
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         if let firmwareVersion = FirmwareVersion.parse(versionStr: software) {
             device.firmwareVersionHolder.update(version: firmwareVersion)
             deviceStore.write(key: PersistentStore.deviceFirmwareVersion, value: software).commit()
         }
     }
 
-    func onBoardIdChanged(id: String!) {
+    func onBoardIdChanged(id: String) {
         device.boardIdHolder.update(boardId: id)
         deviceStore.write(key: PersistentStore.deviceBoardId, value: id).commit()
     }
@@ -433,7 +433,7 @@ extension DroneController: ArsdkFeatureCommonCommonstateCallback {
         }
     }
 
-    func onBootId(bootid: String!) {
+    func onBootId(bootid: String) {
         if let eventLogger = engine.utilities.getUtility(Utilities.eventLogger) {
             eventLogger.update(bootId: bootid)
         }

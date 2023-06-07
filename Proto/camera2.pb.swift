@@ -273,6 +273,7 @@ extension Arsdk_Camera_CameraMode: CaseIterable {
 enum Arsdk_Camera_CameraModel: SwiftProtobuf.Enum {
   typealias RawValue = Int
   case main // = 0
+  case thermalBlended // = 1
   case UNRECOGNIZED(Int)
 
   init() {
@@ -282,6 +283,7 @@ enum Arsdk_Camera_CameraModel: SwiftProtobuf.Enum {
   init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .main
+    case 1: self = .thermalBlended
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -289,6 +291,7 @@ enum Arsdk_Camera_CameraModel: SwiftProtobuf.Enum {
   var rawValue: Int {
     switch self {
     case .main: return 0
+    case .thermalBlended: return 1
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -301,6 +304,7 @@ extension Arsdk_Camera_CameraModel: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   static var allCases: [Arsdk_Camera_CameraModel] = [
     .main,
+    .thermalBlended,
   ]
 }
 
@@ -649,6 +653,7 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
   case framerate96 // = 6
   case framerate100 // = 7
   case framerate120 // = 8
+  case framerate9 // = 9
   case UNRECOGNIZED(Int)
 
   init() {
@@ -666,6 +671,7 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
     case 6: self = .framerate96
     case 7: self = .framerate100
     case 8: self = .framerate120
+    case 9: self = .framerate9
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -681,6 +687,7 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
     case .framerate96: return 6
     case .framerate100: return 7
     case .framerate120: return 8
+    case .framerate9: return 9
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -701,6 +708,7 @@ extension Arsdk_Camera_Framerate: CaseIterable {
     .framerate96,
     .framerate100,
     .framerate120,
+    .framerate9,
   ]
 }
 
@@ -3750,6 +3758,7 @@ extension Arsdk_Camera_CameraMode: SwiftProtobuf._ProtoNameProviding {
 extension Arsdk_Camera_CameraModel: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "CAMERA_MODEL_MAIN"),
+    1: .same(proto: "CAMERA_MODEL_THERMAL_BLENDED"),
   ]
 }
 
@@ -3829,6 +3838,7 @@ extension Arsdk_Camera_Framerate: SwiftProtobuf._ProtoNameProviding {
     6: .same(proto: "FRAMERATE_96"),
     7: .same(proto: "FRAMERATE_100"),
     8: .same(proto: "FRAMERATE_120"),
+    9: .same(proto: "FRAMERATE_9"),
   ]
 }
 

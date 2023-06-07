@@ -98,9 +98,9 @@ class AnafiDevToolbox: DeviceComponentController, DevToolboxBackend {
     ///   - step: setting value step
     ///   - value: setting value
     /// - Returns: a new debug setting or `nil`
-    func createDebugSetting(id: UInt, label: String!, type: ArsdkFeatureDebugSettingType,
-                            mode: ArsdkFeatureDebugSettingMode, min: String!, max: String!, step: String!,
-                            value: String!) -> DebugSettingCore? {
+    func createDebugSetting(id: UInt, label: String, type: ArsdkFeatureDebugSettingType,
+                            mode: ArsdkFeatureDebugSettingMode, min: String, max: String, step: String,
+                            value: String) -> DebugSettingCore? {
         var debugSetting: DebugSettingCore?
         let readOnly = mode == .readOnly
         switch type {
@@ -128,9 +128,9 @@ class AnafiDevToolbox: DeviceComponentController, DevToolboxBackend {
 
 /// Debug feature decode callback implementation.
 extension AnafiDevToolbox: ArsdkFeatureDebugCallback {
-    func onSettingsInfo(listFlagsBitField: UInt, id: UInt, label: String!, type: ArsdkFeatureDebugSettingType,
-                        mode: ArsdkFeatureDebugSettingMode, rangeMin: String!, rangeMax: String!,
-                        rangeStep: String!, value: String!) {
+    func onSettingsInfo(listFlagsBitField: UInt, id: UInt, label: String, type: ArsdkFeatureDebugSettingType,
+                        mode: ArsdkFeatureDebugSettingMode, rangeMin: String, rangeMax: String,
+                        rangeStep: String, value: String) {
         if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
             // remove all settings
             settings.removeAll()
@@ -153,7 +153,7 @@ extension AnafiDevToolbox: ArsdkFeatureDebugCallback {
         }
     }
 
-    func onSettingsList(id: UInt, value: String!) {
+    func onSettingsList(id: UInt, value: String) {
         let debugSetting = settings[id]
         switch debugSetting {
         case let debugSetting as BoolDebugSettingCore:
@@ -170,7 +170,7 @@ extension AnafiDevToolbox: ArsdkFeatureDebugCallback {
         }
     }
 
-    func onTagNotify(id: String!) {
+    func onTagNotify(id: String) {
         ULog.d(.tag, "Debug tag notified by drone \(String(describing: id))")
         devToolbox.update(debugTagId: id).notifyUpdated()
     }

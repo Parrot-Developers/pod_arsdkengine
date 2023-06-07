@@ -138,7 +138,7 @@ class AnafiFamilyDroneController: DroneController {
                 HttpFlightCameraRecordDownloader(deviceController: self,
                                         flightCameraRecordStorage: flightCameraRecordStorage))
         }
-        componentControllers.append(WifiFeatureWifiAccessPoint(deviceController: self))
+        componentControllers.append(AnafiWifiFeature(deviceController: self))
         componentControllers.append(RemovableUserStorageController(deviceController: self))
         componentControllers.append(InternalUserStorageController(deviceController: self))
         componentControllers.append(AnafiBeeper(deviceController: self))
@@ -172,6 +172,8 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(AnafiPrivacy(deviceController: self))
         componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
         componentControllers.append(HttpServerController(deviceController: self))
+        componentControllers.append(Anafi2ConnectivityRouter(deviceController: self))
+
         if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
             componentControllers.append(DebugShellController(deviceController: self))
             componentControllers.append(AnafiTerrainControl(deviceController: self))

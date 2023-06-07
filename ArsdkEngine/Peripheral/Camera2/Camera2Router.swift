@@ -345,7 +345,7 @@ extension Camera2Router: ArsdkCameraEventDecoderListener {
 extension Camera2Router: ArsdkFeatureCommonMavlinkstateCallback {
     func onMavlinkFilePlayingStateChanged(
         state: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState,
-        filepath: String!, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
+        filepath: String, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
         cameraControllers.forEach { $0.value.onMavlinkFilePlayingStateChanged(state: state) }
     }
 }

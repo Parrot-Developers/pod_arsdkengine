@@ -187,7 +187,7 @@ extension BlackBoxDroneSession: ArsdkFeatureWifiCallback {
         environmentData.rssi = rssi
     }
 
-    func onCountryChanged(selectionMode: ArsdkFeatureWifiCountrySelection, code: String!) {
+    func onCountryChanged(selectionMode: ArsdkFeatureWifiCountrySelection, code: String) {
         blackBox.add(event: BlackBoxEvent.countryChange(countryCode: code))
     }
 }
@@ -255,11 +255,11 @@ extension BlackBoxDroneSession: ArsdkFeatureArdrone3PilotingstateCallback {
 }
 
 extension BlackBoxDroneSession: ArsdkFeatureArdrone3SettingsstateCallback {
-    func onProductGPSVersionChanged(software: String!, hardware: String!) {
+    func onProductGPSVersionChanged(software: String, hardware: String) {
         blackBox.set(gpsSoftwareVersion: software)
     }
 
-    func onMotorSoftwareVersionChanged(version: String!) {
+    func onMotorSoftwareVersionChanged(version: String) {
         blackBox.set(motorSoftwareVersion: version)
     }
 
@@ -296,7 +296,7 @@ extension BlackBoxDroneSession: ArsdkFeatureCommonCommonstateCallback {
         blackBox.add(event: BlackBoxEvent.batteryLevelChange(Int(percent)))
     }
 
-    func onBootId(bootid: String!) {
+    func onBootId(bootid: String) {
         blackBox.set(bootId: bootid)
     }
 }
@@ -304,17 +304,17 @@ extension BlackBoxDroneSession: ArsdkFeatureCommonCommonstateCallback {
 extension BlackBoxDroneSession: ArsdkFeatureCommonMavlinkstateCallback {
     func onMavlinkFilePlayingStateChanged(
         state: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState,
-        filepath: String!, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
+        filepath: String, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
         blackBox.add(event: BlackBoxEvent.flightPlanStateChange(state: state.rawValue))
     }
 }
 extension BlackBoxDroneSession: ArsdkFeatureCommonRunstateCallback {
-    func onRunIdChanged(runid: String!) {
+    func onRunIdChanged(runid: String) {
         blackBox.add(event: BlackBoxEvent.runIdChange(runid))
     }
 }
 extension BlackBoxDroneSession: ArsdkFeatureCommonSettingsstateCallback {
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         blackBox.setProductVersion(software: software, hardware: hardware)
     }
 }

@@ -64,6 +64,8 @@ enum MediaStoreApiChangeEvent {
     ///   - oldState: the old indexing state
     ///   - newState: the new indexing state
     case indexingStateChanged(oldState: IndexingState, newState: IndexingState)
+    /// The websocket disconnected
+    case webSocketDisconnected
 
     enum CodingKeys: String, CodingKey {
         case oldState = "old_state"
@@ -95,6 +97,8 @@ enum MediaStoreApiChangeEvent {
             return .removedResource(resourceId: resourceId)
         case .allMediaRemoved:
             return .allMediaRemoved
+        case .webSocketDisconnected:
+            return .webSocketDisconnected
         }
     }
 }

@@ -89,18 +89,18 @@ extension AnafiSystemInfo: ArsdkSystemInfoBackend {
 
 /// Common settings state decode callback implementation
 extension AnafiSystemInfo: ArsdkFeatureCommonSettingsstateCallback {
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         systemInfo.update(hardwareVersion: hardware)
         firmwareVersionDidChange(versionStr: software)
         systemInfo.notifyUpdated()
         deviceStore.write(key: PersistedDataKey.hardwareVersion, value: hardware).commit()
     }
 
-    func onProductSerialHighChanged(high: String!) {
+    func onProductSerialHighChanged(high: String) {
         serialHigh = high
     }
 
-    func onProductSerialLowChanged(low: String!) {
+    func onProductSerialLowChanged(low: String) {
         serialLow = low
     }
 
@@ -108,7 +108,7 @@ extension AnafiSystemInfo: ArsdkFeatureCommonSettingsstateCallback {
         systemInfo.resetSettingsEnded().notifyUpdated()
     }
 
-    func onBoardIdChanged(id: String!) {
+    func onBoardIdChanged(id: String) {
         systemInfo.update(boardId: id).notifyUpdated()
         deviceStore.write(key: PersistedDataKey.boardId, value: id).commit()
     }

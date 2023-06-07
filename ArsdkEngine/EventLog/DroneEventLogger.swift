@@ -72,16 +72,16 @@ class DroneEventLogger: DeviceEventLogger {
 
 /// Callbacks called when a command of the feature ArsdkFeatureCommonSettingsstate is decoded
 extension DroneEventLogger: ArsdkFeatureCommonSettingsstateCallback {
-    func onProductVersionChanged(software: String!, hardware: String!) {
+    func onProductVersionChanged(software: String, hardware: String) {
         self.softwareVersion = software
         self.hardwareVersion = hardware
     }
 
-    func onProductSerialLowChanged(low: String!) {
+    func onProductSerialLowChanged(low: String) {
         self.serialLow = low
     }
 
-    func onProductSerialHighChanged(high: String!) {
+    func onProductSerialHighChanged(high: String) {
         self.serialHigh = high
     }
 }

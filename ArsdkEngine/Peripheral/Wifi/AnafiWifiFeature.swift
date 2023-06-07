@@ -30,14 +30,15 @@
 import Foundation
 import GroundSdk
 
-/// Wifi access point and wifi scanner component controller for Wifi feature based drones
-class WifiFeatureWifiAccessPoint: WifiAccessPointController {
+/// Wifi access point and wifi scanner component controller for Anafi message based drones.
+class AnafiWifiFeature: WifiFeatureController {
 
     /// A command has been received
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureWifiUid {
+            isSupported = true
             ArsdkFeatureWifi.decode(command, callback: self)
         } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureCommonSettingsstateUid {
             ArsdkFeatureCommonSettingsstate.decode(command, callback: self)
@@ -71,6 +72,9 @@ class WifiFeatureWifiAccessPoint: WifiAccessPointController {
         case .wpa2Secured:
             // can force unwrapp because password is not nil when security is wpa2 secured
             sendCommand(ArsdkFeatureWifi.setSecurityEncoder(type: .wpa2, key: password!, keyType: .plain))
+        case .wepSecured, .wpaSecured, .wpa3Secured:
+            // Not supported on this implementation.
+            return false
         }
         return true
     }
@@ -108,29 +112,31 @@ class WifiFeatureWifiAccessPoint: WifiAccessPointController {
 }
 
 /// Wifi feature decode callback implementation
-extension WifiFeatureWifiAccessPoint: ArsdkFeatureWifiCallback {
-    func onScannedItem(ssid: String!, rssi: Int, band: ArsdkFeatureWifiBand, channel: UInt, listFlagsBitField: UInt) {
+extension AnafiWifiFeature: ArsdkFeatureWifiCallback {
+    func onScannedItem(ssid: String, rssi: Int, band: ArsdkFeatureWifiBand, channel: UInt, listFlagsBitField: UInt) {
         if wifiScanner.scanning {
             let clearList = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
             if clearList {
-                scannedChannels.removeAll()
+                scanResults.removeAll()
             } else {
                 if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
-                    scannedChannels.removeAll()
+                    scanResults.removeAll()
                 }
 
                 if let channel = WifiChannel(failableFromArsdkBand: band, channelId: Int(channel)) {
-                    let currentCount = scannedChannels[channel] ?? 0
+                    let result = ScanResult(ssid: ssid, channel: channel)
                     if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
-                        scannedChannels[channel] = max(currentCount - 1, 0)
+                        if let index = scanResults.firstIndex(of: result) {
+                            scanResults.remove(at: index)
+                        }
                     } else {
-                        scannedChannels[channel] = currentCount + 1
+                        scanResults.append(result)
                     }
                 }
             }
 
             if clearList || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-                wifiScanner.update(scannedChannels: scannedChannels).notifyUpdated()
+                wifiScanner.update(scanResults: scanResults).notifyUpdated()
 
                 // send again the scan command
                 sendCommand(
@@ -205,12 +211,12 @@ extension WifiFeatureWifiAccessPoint: ArsdkFeatureWifiCallback {
             .notifyUpdated()
     }
 
-    func onSecurityChanged(type: ArsdkFeatureWifiSecurityType, key: String!, keyType: ArsdkFeatureWifiSecurityKeyType) {
+    func onSecurityChanged(type: ArsdkFeatureWifiSecurityType, key: String, keyType: ArsdkFeatureWifiSecurityKeyType) {
         switch type {
         case .open:
-            wifiAccessPoint.update(security: .open).notifyUpdated()
+            wifiAccessPoint.update(security: [.open]).notifyUpdated()
         case .wpa2:
-            wifiAccessPoint.update(security: .wpa2Secured).notifyUpdated()
+            wifiAccessPoint.update(security: [.wpa2Secured]).notifyUpdated()
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -234,10 +240,10 @@ extension WifiFeatureWifiAccessPoint: ArsdkFeatureWifiCallback {
                 ULog.w(.tag, "Unknown SupportedSecurityType, skipping this event.")
             }
         }
-        wifiAccessPoint.update(supportedModes: supportedModes).notifyUpdated()
+        wifiAccessPoint.update(supportedSecurityModes: supportedModes).notifyUpdated()
     }
 
-    func onCountryChanged(selectionMode: ArsdkFeatureWifiCountrySelection, code: String!) {
+    func onCountryChanged(selectionMode: ArsdkFeatureWifiCountrySelection, code: String) {
         country = code
         automaticCountrySelectionEnabled = (selectionMode == .auto)
         sendCommand(ArsdkFeatureWifi.updateAuthorizedChannelsEncoder())
@@ -265,7 +271,7 @@ extension WifiFeatureWifiAccessPoint: ArsdkFeatureWifiCallback {
         }
     }
 
-    func onSupportedCountries(countries: String!) {
+    func onSupportedCountries(countries: String) {
         // force all codes in uppercase and check thant each code is valid
         let acceptedIso = Locale.isoRegionCodes
         let trimCharSet = CharacterSet.whitespacesAndNewlines
@@ -284,9 +290,9 @@ extension WifiFeatureWifiAccessPoint: ArsdkFeatureWifiCallback {
 }
 
 /// Common wifi state decode callback implementation
-extension WifiFeatureWifiAccessPoint: ArsdkFeatureCommonSettingsstateCallback {
+extension AnafiWifiFeature: ArsdkFeatureCommonSettingsstateCallback {
 
-    func onProductNameChanged(name: String!) {
+    func onProductNameChanged(name: String) {
         wifiAccessPoint.update(ssid: name).notifyUpdated()
     }
 }

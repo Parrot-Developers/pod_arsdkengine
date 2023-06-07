@@ -345,6 +345,9 @@ class Camera2Controller {
         case .main:
             camera = MainCamera2Core(store: store, backend: self,
                                      initialConfig: currentConfig, capabilities: emptyCapabilities)
+        case .blendedThermal:
+            camera = BlendedThermalCamera2Core(store: store, backend: self,
+                                        initialConfig: currentConfig, capabilities: emptyCapabilities)
         }
 
         // load settings
@@ -419,22 +422,16 @@ class Camera2Controller {
 
     /// Applies presets.
     private func applyPresets() {
-        // iterate settings received during the connection
-        for setting in droneSettings {
-            switch setting {
-            case .model:
-                break
-            case .config(let config):
-                // send camera presets only if flight plan is not playing
-                if flightPlanState != .playing,
-                   let preset: Camera2ConfigCore.Config = presetStore?.read(key: setting.key) {
-                    if preset != config {
-                        _ = backend.configure(id: id, config: preset.diffFrom(config))
-                    }
-                    camera.update(config: preset)
-                } else {
-                    camera.update(config: config)
+        if droneConfig != Camera2Controller.emptyConfig {
+            // send camera presets only if flight plan is not playing
+            if flightPlanState != .playing,
+               let preset: Camera2ConfigCore.Config = presetStore?.read(key: SettingKey.configKey) {
+                if preset != droneConfig {
+                    _ = backend.configure(id: id, config: preset.diffFrom(droneConfig))
                 }
+                camera.update(config: preset)
+            } else {
+                camera.update(config: currentConfig)
             }
         }
     }
@@ -445,13 +442,13 @@ class Camera2Controller {
     func settingDidChange(_ setting: Setting) {
         droneSettings.update(with: setting)
 
-        switch setting {
-        case .model:
-            break
-        case .config(let config):
-            ULog.d(.cameraTag, "Current camera config \(config.description)")
-            currentConfig = config
-            camera.update(config: currentConfig)
+        if stateReceived {
+            switch setting {
+            case .model:
+                break
+            case .config(let config):
+                camera.update(config: config)
+            }
         }
     }
 
@@ -478,6 +475,7 @@ class Camera2Controller {
 
     /// Drone is disconnected.
     func didDisconnect() {
+        droneSettings.removeAll()
         connected = false
         stateReceived = false
         photoStateReceived = false
@@ -488,7 +486,6 @@ class Camera2Controller {
         photoProgressReceived = false
         exposureReceived = false
         zoomReceived = false
-        currentConfig = Camera2Controller.emptyConfig
         droneConfig = Camera2Controller.emptyConfig
         flightPlanState = nil
         // set camera as inactive, this will unpublish components
@@ -599,7 +596,9 @@ extension Camera2Controller {
             droneConfig = state.config.toGsdkConfig(defaultConfig: droneConfig)
             ULog.d(.cameraTag, "Drone camera config \(droneConfig.description)")
             // update current camera configuration, presets merged with updates from the drone
-            settingDidChange(.config(state.config.toGsdkConfig(defaultConfig: currentConfig)))
+            currentConfig = state.config.toGsdkConfig(defaultConfig: currentConfig)
+            ULog.d(.cameraTag, "Current camera config \(currentConfig.description)")
+            settingDidChange(.config(currentConfig))
         }
         if state.activeSelected {
             active = state.active
@@ -623,6 +622,7 @@ extension Camera2Controller {
             onZoomState(state.zoom)
         }
 
+        // check connection state because we have to know flight plan state to apply presets
         if !stateReceived && connected {
             storeNewPresets()
             applyPresets()
@@ -639,7 +639,7 @@ extension Camera2Controller {
         photoStateReceived = true
         switch photo.state {
         case .active:
-            if case .stopping(_, _) = camera.photoCapture.state {
+            if case .stopping = camera.photoCapture.state {
                 return
             }
             let startTime = TimeProvider.dispatchTime.uptimeSeconds - Double(photo.duration.value) / 1000.0
@@ -1436,6 +1436,7 @@ extension Camera2RecordingResolution: ArsdkMappableEnum {
 /// Extension that adds conversion from/to arsdk enum.
 extension Camera2RecordingFramerate: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2RecordingFramerate, Arsdk_Camera_Framerate>([
+        .fps9: .framerate9,
         .fps24: .framerate24,
         .fps25: .framerate25,
         .fps30: .framerate30,
@@ -1750,7 +1751,8 @@ extension StorageType: ArsdkMappableEnum {
 /// Extension to make Camera2Model storable.
 extension Camera2Model: StorableEnum {
     static var storableMapper = Mapper<Camera2Model, String>([
-        .main: "main"])
+        .main: "main",
+        .blendedThermal: "blendedThermal"])
 }
 
 /// Extension to make Camera2Mode storable.
@@ -1863,6 +1865,7 @@ extension Camera2RecordingResolution: StorableEnum {
 /// Extension to make Camera2RecordingFramerate storable.
 extension Camera2RecordingFramerate: StorableEnum {
     static let storableMapper = Mapper<Camera2RecordingFramerate, String>([
+        .fps9: "9",
         .fps24: "24",
         .fps25: "25",
         .fps30: "30",

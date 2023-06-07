@@ -67,7 +67,6 @@ class WebSocketClient: WebSocket {
 
 /// A basic websocket session implementation
 /// This implementation is not compliant with the spec. Only text messages are supported
-/// Binary, Ping, Pong messages are not implemented.
 /// Messages split in multiple frames are not supported
 class WebSocketClientSession: WebSocketSession {
 
@@ -167,9 +166,16 @@ class WebSocketClientSession: WebSocketSession {
             frame = Frame(data: inputBuffer)
             if let frame = frame {
                 inputBuffer = inputBuffer.subdata(in: frame.len..<inputBuffer.count)
-                // only supports complete text frames
-                if frame.opCode == .text {
+
+                switch frame.opCode {
+                case .text:
                     delegate?.webSocketSessionDidReceiveMessage(frame.payload)
+                case .ping:
+                    // send pong
+                    let pongFrame = Frame(opCode: Frame.OpCode.pong, payload: frame.payload)
+                    connection.write(data: pongFrame.data)
+                default:
+                    break
                 }
             }
         } while frame != nil
@@ -185,6 +191,7 @@ class WebSocketClientSession: WebSocketSession {
     }
 
     /// A Web socket frame
+    /// According to rfc6455
     private struct Frame {
         /// Frane opCode
         enum OpCode: UInt8 {
@@ -206,6 +213,37 @@ class WebSocketClientSession: WebSocketSession {
         let mask: UInt16?
         /// Frame payload
         let payload: Data
+
+        /// Creates a frame to send.
+        ///
+        /// - Parameters:
+        ///   - opCode: frame opCode.
+        ///   - payload: frame payload.
+        ///   - fin: `true` if it is the last frame of the message to send,
+        ///          `false` if the following frame completes this frame.
+        init(opCode: OpCode, payload: Data, fin: Bool = true) {
+            self.fin = fin
+            self.opCode = opCode
+            self.mask = nil
+            self.payload = payload
+
+            // calculate frame length
+            var len = 2
+            // Add size of the payload length extention
+            if payload.count > 0xFFFF {
+                len += 8
+            } else if payload.count >= 126 {
+                len += 2
+            }
+            // Add mask size
+            if mask != nil {
+                len += 2
+            }
+            // Add payload lenght
+            len += payload.count
+
+            self.len = len
+        }
 
         /// Create a frame from received data
         ///
@@ -257,6 +295,62 @@ class WebSocketClientSession: WebSocketSession {
             } else {
                 return nil
             }
+        }
+
+        /// Encodes frame to data
+        ///
+        /// - Returns: frame data
+        var data: Data {
+            var data = Data(capacity: len)
+
+            // encode fin
+            if fin {
+                data.append(0x80)
+            } else {
+                data.append(0x00)
+            }
+
+            // encode opcode
+            data[0] |= opCode.rawValue
+
+            // encode mask flag
+            if mask != nil {
+                data.append(0x80)
+            } else {
+                data.append(0x00)
+            }
+
+            // encode payload len
+            if payload.count < 126 {
+                data[1] |= UInt8(payload.count)
+            } else if payload.count <= 0xFFFF {
+                data[1] |= 126
+
+                withUnsafeBytes(of: UInt16(payload.count).bigEndian) {
+                    $0.forEach { b in
+                        data.append(UInt8(b))
+                    }
+                }
+            } else {
+                data[1] |= 127
+
+                withUnsafeBytes(of: UInt64(payload.count).bigEndian) {
+                    $0.forEach { b in
+                        data.append(UInt8(b))
+                    }
+                }
+            }
+
+            // encode mask
+            if let mask = mask {
+                data.append(UInt8(mask >> 4))
+                data.append(UInt8(mask))
+            }
+
+            // append Data
+            data.append(payload)
+
+            return data
         }
     }
 }

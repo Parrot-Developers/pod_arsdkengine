@@ -37,6 +37,7 @@ public class MediaWsApi {
     private let server: DeviceServer
     /// closure called when the websocket notify changes of media store content
     private let eventOccured: (MediaStoreApiChangeEvent) -> Void
+    private let errorOccured: (() -> Void)
     /// Active websocket session
     private var webSocketSession: WebSocketSession?
 
@@ -49,9 +50,11 @@ public class MediaWsApi {
     ///   - server: the drone server from which medias should be accessed
     ///   - onEvent: callback called when media store content has changed
     ///   - event: the event that occured
-    init(server: DeviceServer, onEvent: @escaping (_ event: MediaStoreApiChangeEvent) -> Void) {
+    init(server: DeviceServer, onEvent: @escaping (_ event: MediaStoreApiChangeEvent) -> Void,
+         onFailure: @escaping (() -> Void)) {
         self.server = server
         self.eventOccured = onEvent
+        self.errorOccured = onFailure
         startSession()
     }
 
@@ -151,6 +154,8 @@ extension MediaWsApi: WebSocketSessionDelegate {
         webSocketSession = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(1)) { [weak self] in
             self?.startSession()
+            // Trigger the failure
+            self?.errorOccured()
         }
     }
 

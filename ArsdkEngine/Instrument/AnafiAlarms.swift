@@ -58,6 +58,9 @@ class AnafiAlarms: DeviceComponentController {
     /// Disctionary of battery alarms.
     private var batteryAlarms: [Alarm.Kind: Alarm.Level] = [:]
 
+    /// Decoder for Navigation events.
+    private var arsdkNavigationDecoder: ArsdkNavigationEventDecoder!
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
@@ -65,24 +68,26 @@ class AnafiAlarms: DeviceComponentController {
         super.init(deviceController: deviceController)
         self.alarms = AlarmsCore(store: deviceController.device.instrumentStore,
                                  supportedAlarms: [.threeMotorsFlight])
+        arsdkNavigationDecoder = ArsdkNavigationEventDecoder(listener: self)
     }
 
-    /// Drone is connected
+    override func willConnect() {
+        alarms.update(level: .off, forAlarm: .backupLink).notifyUpdated()
+    }
+
     override func didConnect() {
-        super.didConnect()
         alarms.publish()
     }
 
-    /// Drone is disconnected
-    override func didDisconnect() {
-        super.didDisconnect()
-        alarms.update(level: .off, forAlarm: .threeMotorsFlight)
-        alarms.unpublish()
+    override func backupLinkDidActivate() {
+        alarms.update(level: .critical, forAlarm: .backupLink).publish()
     }
 
-    /// A command has been received
-    ///
-    /// - Parameter command: received command
+    override func didDisconnect() {
+        alarms.update(level: .off, forAlarm: .threeMotorsFlight)
+            .unpublish()
+    }
+
     override func didReceiveCommand(_ command: OpaquePointer) {
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureArdrone3PilotingstateUid {
             ArsdkFeatureArdrone3Pilotingstate.decode(command, callback: self)
@@ -100,6 +105,8 @@ class AnafiAlarms: DeviceComponentController {
             ArsdkFeatureObstacleAvoidance.decode(command, callback: self)
         } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureAlarmsUid {
             ArsdkFeatureAlarms.decode(command, callback: self)
+        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureGenericUid {
+            arsdkNavigationDecoder.decode(command)
         }
     }
 
@@ -132,7 +139,7 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
             }
             alarms.update(level: .off, forAlarm: .motorCutOut)
                 .update(level: .off, forAlarm: .userEmergency)
-                .update(level: .off, forAlarm: .magnetometerPertubation)
+                .update(level: .off, forAlarm: .magnetometerPerturbation)
                 .update(level: .off, forAlarm: .magnetometerLowEarthField)
                 .update(level: .off, forAlarm: .inclinationTooHigh)
                 .notifyUpdated()
@@ -140,7 +147,7 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
             // remove only non-persistent alarms
             alarms.update(level: .critical, forAlarm: .motorCutOut)
                 .update(level: .off, forAlarm: .userEmergency)
-                .update(level: .off, forAlarm: .magnetometerPertubation)
+                .update(level: .off, forAlarm: .magnetometerPerturbation)
                 .update(level: .off, forAlarm: .magnetometerLowEarthField)
                 .update(level: .off, forAlarm: .inclinationTooHigh)
                 .notifyUpdated()
@@ -149,14 +156,14 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
             alarms.update(level: .critical, forAlarm: .inclinationTooHigh)
                 .update(level: .off, forAlarm: .motorCutOut)
                 .update(level: .off, forAlarm: .userEmergency)
-                .update(level: .off, forAlarm: .magnetometerPertubation)
+                .update(level: .off, forAlarm: .magnetometerPerturbation)
                 .update(level: .off, forAlarm: .magnetometerLowEarthField)
                 .notifyUpdated()
         case .user:
             // remove only non-persistent alarms
             alarms.update(level: .off, forAlarm: .motorCutOut)
                 .update(level: .critical, forAlarm: .userEmergency)
-                .update(level: .off, forAlarm: .magnetometerPertubation)
+                .update(level: .off, forAlarm: .magnetometerPerturbation)
                 .update(level: .off, forAlarm: .magnetometerLowEarthField)
                 .update(level: .off, forAlarm: .inclinationTooHigh)
                 .notifyUpdated()
@@ -165,7 +172,7 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
                 alarms.update(level: .critical, forAlarm: .power)
                     .update(level: .off, forAlarm: .motorCutOut)
                     .update(level: .off, forAlarm: .userEmergency)
-                    .update(level: .off, forAlarm: .magnetometerPertubation)
+                    .update(level: .off, forAlarm: .magnetometerPerturbation)
                     .update(level: .off, forAlarm: .magnetometerLowEarthField)
                     .update(level: .off, forAlarm: .inclinationTooHigh)
                     .notifyUpdated()
@@ -175,25 +182,25 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
                 alarms.update(level: .warning, forAlarm: .power)
                     .update(level: .off, forAlarm: .motorCutOut)
                     .update(level: .off, forAlarm: .userEmergency)
-                    .update(level: .off, forAlarm: .magnetometerPertubation)
+                    .update(level: .off, forAlarm: .magnetometerPerturbation)
                     .update(level: .off, forAlarm: .magnetometerLowEarthField)
                     .update(level: .off, forAlarm: .inclinationTooHigh)
                     .notifyUpdated()
             }
         case .magnetoPertubation:
-            alarms.update(level: .critical, forAlarm: .magnetometerPertubation)
+            alarms.update(level: .critical, forAlarm: .magnetometerPerturbation)
             alarms.update(level: .off, forAlarm: .magnetometerLowEarthField)
-            .update(level: .off, forAlarm: .motorCutOut)
-            .update(level: .off, forAlarm: .userEmergency)
-            .update(level: .off, forAlarm: .inclinationTooHigh)
-            .notifyUpdated()
+                .update(level: .off, forAlarm: .motorCutOut)
+                .update(level: .off, forAlarm: .userEmergency)
+                .update(level: .off, forAlarm: .inclinationTooHigh)
+                .notifyUpdated()
         case .magnetoLowEarthField:
             alarms.update(level: .critical, forAlarm: .magnetometerLowEarthField)
-            alarms.update(level: .off, forAlarm: .magnetometerPertubation)
-            .update(level: .off, forAlarm: .motorCutOut)
-            .update(level: .off, forAlarm: .userEmergency)
-            .update(level: .off, forAlarm: .inclinationTooHigh)
-            .notifyUpdated()
+            alarms.update(level: .off, forAlarm: .magnetometerPerturbation)
+                .update(level: .off, forAlarm: .motorCutOut)
+                .update(level: .off, forAlarm: .userEmergency)
+                .update(level: .off, forAlarm: .inclinationTooHigh)
+                .notifyUpdated()
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -217,6 +224,10 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
         alarms.update(level: .off, forAlarm: .automaticLandingPropellerIcingIssue)
         alarms.update(level: .off, forAlarm: .automaticLandingBatteryTooHot)
         alarms.update(level: .off, forAlarm: .automaticLandingBatteryTooCold)
+        alarms.update(level: .off, forAlarm: .automaticLandingMotorTooHot)
+        alarms.update(level: .off, forAlarm: .automaticLandingCellVoltageTooLow)
+        alarms.update(level: .off, forAlarm: .automaticLandingDefectiveSensor)
+        alarms.update(level: .off, forAlarm: .automaticLandingFlyawayDetected)
         alarms.update(automaticLandingDelay: 0)
         switch reason {
         case .none:
@@ -224,20 +235,35 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
         case .batteryCriticalSoon:
             alarms.update(level: delay > autoLandingCriticalDelay ? .warning : .critical,
                           forAlarm: .automaticLandingBatteryIssue)
-                .update(automaticLandingDelay: Double(delay))
+            .update(automaticLandingDelay: Double(delay))
         case .propellerIcingCritical:
             alarms.update(level: .critical,
                           forAlarm: .automaticLandingPropellerIcingIssue)
-                  .update(automaticLandingDelay: Double(delay))
+            .update(automaticLandingDelay: Double(delay))
         case .batteryTooHot:
             alarms.update(level: .critical,
                           forAlarm: .automaticLandingBatteryTooHot)
-                  .update(automaticLandingDelay: Double(delay))
-
+            .update(automaticLandingDelay: Double(delay))
         case .batteryTooCold:
             alarms.update(level: .critical,
                           forAlarm: .automaticLandingBatteryTooCold)
-                  .update(automaticLandingDelay: Double(delay))
+            .update(automaticLandingDelay: Double(delay))
+        case .escTooHot:
+            alarms.update(level: .critical,
+                          forAlarm: .automaticLandingMotorTooHot)
+            .update(automaticLandingDelay: Double(delay))
+        case .cellVoltageTooLow:
+            alarms.update(level: .critical,
+                          forAlarm: .automaticLandingCellVoltageTooLow)
+            .update(automaticLandingDelay: Double(delay))
+        case .defectiveSensor:
+            alarms.update(level: .critical,
+                          forAlarm: .automaticLandingDefectiveSensor)
+            .update(automaticLandingDelay: Double(delay))
+        case .flyawayDetected:
+            alarms.update(level: .critical,
+                          forAlarm: .automaticLandingFlyawayDetected)
+            .update(automaticLandingDelay: Double(delay))
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -280,7 +306,7 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
         case .critical:
             level = .critical
         case .warning:
-           level = .warning
+            level = .warning
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -295,7 +321,7 @@ extension AnafiAlarms: ArsdkFeatureArdrone3PilotingstateCallback {
         case .ok:
             level = .off
         case .warning:
-           level = .warning
+            level = .warning
         case .critical:
             level = .critical
         case .sdkCoreUnknown:
@@ -461,6 +487,8 @@ extension AnafiAlarms: ArsdkFeatureObstacleAvoidanceCallback {
                isSetIn: alertsBitField)
         update(level: .critical, forAlarm: .obstacleAvoidanceDisabledStereoLensFailure, ifAlert: .stereoLensFailure,
                isSetIn: alertsBitField)
+        update(level: .critical, forAlarm: .obstacleAvoidanceDisabledStereoUnavailable, ifAlert: .stereoUnavailable,
+               isSetIn: alertsBitField)
         update(level: .critical, forAlarm: .obstacleAvoidanceDisabledGimbalFailure, ifAlert: .gimbalFailure,
                isSetIn: alertsBitField)
         update(level: .critical, forAlarm: .obstacleAvoidanceDisabledTooDark, ifAlert: .tooDark,
@@ -505,6 +533,8 @@ extension AnafiAlarms: ArsdkFeatureObstacleAvoidanceCallback {
             newAlert = .obstacleAvoidanceDisabledStereoFailure
         case .stereoLensFailure:
             newAlert = .obstacleAvoidanceDisabledStereoLensFailure
+        case .stereoUnavailable:
+            newAlert = .obstacleAvoidanceDisabledStereoUnavailable
         case .gimbalFailure:
             newAlert = .obstacleAvoidanceDisabledGimbalFailure
         case .tooDark:
@@ -544,12 +574,10 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
             newKind = .userEmergency
         case .motorCutout:
             newKind = .motorCutOut
-        case .driFailing:
-            newKind = .driFailing
         case .droneInclinationTooHigh:
             newKind = .inclinationTooHigh
         case .magnetoPerturbation:
-            newKind = .magnetometerPertubation
+            newKind = .magnetometerPerturbation
         case .magnetoLowEarthField:
             newKind = .magnetometerLowEarthField
         case .horizontalGeofenceReached:
@@ -560,8 +588,16 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
             newKind = .freeFallDetected
         case .fstcamDecalibrated:
             newKind = .stereoCameraDecalibrated
+        case .driFailing:
+            newKind = .driFailing
         case .videoDspFault:
             newKind = .videoPipeline
+        case .pitotDefective:
+            newKind = .pitotDefective
+        case .autopilotInternalError:
+            newKind = .autopilotInternalError
+        case .externalAutopilotError:
+            newKind = .externalAutopilotError
         case .sdkCoreUnknown:
             break
         @unknown default:
@@ -605,8 +641,7 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
         alarms.update(level: .notAvailable, forAlarm: .userEmergency)
         alarms.update(level: .notAvailable, forAlarm: .motorCutOut)
         alarms.update(level: .notAvailable, forAlarm: .inclinationTooHigh)
-
-        alarms.update(level: .notAvailable, forAlarm: .magnetometerPertubation)
+        alarms.update(level: .notAvailable, forAlarm: .magnetometerPerturbation)
         alarms.update(level: .notAvailable, forAlarm: .magnetometerLowEarthField)
         alarms.update(level: .notAvailable, forAlarm: .horizontalGeofenceReached)
         alarms.update(level: .notAvailable, forAlarm: .verticalGeofenceReached)
@@ -614,5 +649,47 @@ extension AnafiAlarms: ArsdkFeatureAlarmsCallback {
         alarms.update(level: .notAvailable, forAlarm: .stereoCameraDecalibrated)
         alarms.update(level: .notAvailable, forAlarm: .driFailing)
         alarms.update(level: .notAvailable, forAlarm: .videoPipeline)
+        alarms.update(level: .notAvailable, forAlarm: .pitotDefective)
+        alarms.update(level: .notAvailable, forAlarm: .autopilotInternalError)
+        alarms.update(level: .notAvailable, forAlarm: .externalAutopilotError)
     }
+}
+
+extension AnafiAlarms: ArsdkNavigationEventDecoderListener {
+    func onState(_ state: Arsdk_Navigation_Event.State) {
+        if state.hasRaisedAlarms {
+            let raisedAlarmTypes = state.raisedAlarms.alarms.map { alarm in alarm.type }
+            for type in Arsdk_Navigation_AlarmType.allCases {
+                if let kind = Alarm.Kind(fromArsdk: type) {
+                    if raisedAlarmTypes.contains(type) {
+                        self.alarms.update(level: .critical, forAlarm: kind)
+                    } else {
+                        self.alarms.update(level: .off, forAlarm: kind)
+                    }
+                }
+            }
+            self.alarms.notifyUpdated()
+        }
+    }
+
+    func onLocation(_ location: Arsdk_Navigation_Event.Location) {
+        // nothing to do
+    }
+
+    func onRawGnssLocation(_ rawGnssLocation: Arsdk_Navigation_Event.RawGnssLocation) {
+        // nothing to do
+    }
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension Alarm.Kind: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<Alarm.Kind, Arsdk_Navigation_AlarmType>([
+
+        .visionMapMissingSector: .visionMapMissingSector,
+        .visionMapfailedToLoadData: .visionMapFailedToLoadData,
+        .visionMapFrontierArea: .visionMapFrontierArea,
+        .gnssSpoofingDetected: .gnssSpoofingDetected,
+        .visionMapLowAltitude: .visionMapLowAltitude,
+        .opticalNavigationTooDark: .opticalNavigationTooDark
+        ])
 }

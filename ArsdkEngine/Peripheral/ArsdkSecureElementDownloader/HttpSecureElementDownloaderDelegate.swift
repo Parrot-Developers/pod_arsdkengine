@@ -45,8 +45,8 @@ class HttpSecureElementDownloaderDelegate: ArsdkSecureElementDownloaderDelegate 
     /// - Note: this request can change during the overall download task .
     private var currentRequestForImg: CancelableCore?
 
-    func configure(downloader: SecureElementController) {
-        if let droneServer = downloader.deviceController.deviceServer {
+    func configure(deviceServer: DeviceServer?) {
+        if let droneServer = deviceServer {
             secureElementApi = SecureElementRestApi(server: droneServer)
         }
     }
@@ -56,18 +56,13 @@ class HttpSecureElementDownloaderDelegate: ArsdkSecureElementDownloaderDelegate 
     }
 
     func sign(challenge: String, with operation: SecureElementSignatureOperation,
-              downloader: SecureElementController) -> Bool {
+              completion: @escaping (_ token: String?) -> Void) -> Bool {
         guard currentRequestForSign == nil else {
             return false
         }
 
         currentRequestForSign = secureElementApi?.sign(challenge: challenge, with: operation, completion: { token in
-            if let token = token {
-                downloader.secureElement.update(
-                    newChallengeState: .success(challenge: challenge, token: token)).notifyUpdated()
-            } else {
-                downloader.secureElement.update(newChallengeState: .failure(challenge: challenge)).notifyUpdated()
-            }
+            completion(token)
             self.currentRequestForSign = nil
         })
 
@@ -93,7 +88,7 @@ class HttpSecureElementDownloaderDelegate: ArsdkSecureElementDownloaderDelegate 
                         .notifyUpdated()
                 }
                 self.currentRequestForImg = nil
-        })
+            })
 
         return currentRequestForImg != nil
     }

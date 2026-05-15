@@ -85,19 +85,22 @@ extension CameraFeatureExposureValues: ArsdkFeatureCameraCallback {
         camId: UInt, shutterSpeed: ArsdkFeatureCameraShutterSpeed, isoSensitivity: ArsdkFeatureCameraIsoSensitivity,
         lock: ArsdkFeatureCameraState, lockRoiX: Float, lockRoiY: Float, lockRoiWidth: Float, lockRoiHeight: Float) {
 
-        guard let gsdkShutterSpeed = CameraShutterSpeed(fromArsdk: shutterSpeed),
-            let gsdkIsoSensitivity = CameraIso(fromArsdk: isoSensitivity) else {
-            return
-        }
+            guard let gsdkShutterSpeed = CameraShutterSpeed(fromArsdk: shutterSpeed),
+                  let gsdkIsoSensitivity = CameraIso(fromArsdk: isoSensitivity) else {
+                return
+            }
 
-        exposureValues.update(shutterSpeed: gsdkShutterSpeed).update(isoSensitivity: gsdkIsoSensitivity).notifyUpdated()
-        if !hasReceivedValues {
-            hasReceivedValues = true
-            // if it is the first time that we receive the values and we are connected, publish the component.
-            // (if we are not connected, the publish will be done in the didConnect callback)
-            if connected {
-                exposureValues.publish()
+            exposureValues
+                .update(shutterSpeed: gsdkShutterSpeed)
+                .update(isoSensitivity: gsdkIsoSensitivity)
+                .notifyUpdated()
+            if !hasReceivedValues {
+                hasReceivedValues = true
+                // if it is the first time that we receive the values and we are connected, publish the component.
+                // (if we are not connected, the publish will be done in the didConnect callback)
+                if connected {
+                    exposureValues.publish()
+                }
             }
         }
-    }
 }

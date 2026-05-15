@@ -46,6 +46,9 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
     /// Preset store for this component.
     private var presetStore: SettingsStore?
 
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { deviceStore?.new == false }
+
     /// Keys for stored settings and capabilities.
     enum SettingKey: String, StoreKey {
         case routingPolicyKey = "routingPolicy"
@@ -83,6 +86,18 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
         }
     }
 
+    /// Routing policy setting backend
+    private var routingPolicySetting: OfflineEnumSetting<NetworkControlRoutingPolicy>!
+
+    /// Direct connection mode setting backend
+    private var directConnectionModeSetting: OfflineEnumSetting<NetworkDirectConnectionMode>!
+
+    /// Maximum cellular bitrate setting backend.
+    private var maxCellularBitrateSetting: OfflineIntSetting!
+
+    /// All setting backends of this peripheral
+    private var settings = [OfflineSetting]()
+
     /// Stored capabilities for settings.
     enum Capabilities {
         case routingPolicy(Set<NetworkControlRoutingPolicy>)
@@ -105,14 +120,8 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
         }
     }
 
-    /// Setting values as received from the drone.
-    private var droneSettings = Set<Setting>()
-
     /// Decoder for network events.
     private var arsdkDecoder: ArsdkNetworkEventDecoder!
-
-    /// Whether `State` message with capabilities has been received since `GetState` command was sent.
-    private var capabilitiesReceived = false
 
     /// Constructor.
     ///
@@ -125,15 +134,16 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
             deviceStore = deviceController.deviceStore.getSettingsStore(key: NetworkController.settingKey)
             presetStore = deviceController.presetStore.getSettingsStore(key: NetworkController.settingKey)
         }
+
         super.init(deviceController: deviceController)
 
         arsdkDecoder = ArsdkNetworkEventDecoder(listener: self)
 
         networkControl = NetworkControlCore(store: deviceController.device.peripheralStore, backend: self)
 
-        // load settings
-        if let deviceStore = deviceStore, let presetStore = presetStore, !deviceStore.new && !presetStore.new {
-            loadPresets()
+        prepareOfflineSettings()
+
+        if isPersisted {
             networkControl.publish()
         }
     }
@@ -149,8 +159,10 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
     override func willConnect() {
         super.willConnect()
         // remove settings stored while connecting. We will get new one on the next connection.
-        droneSettings.removeAll()
-        capabilitiesReceived = false
+        settings.forEach { setting in
+            setting.resetDeviceValue()
+        }
+
         _ = sendGetStateCommand()
     }
 
@@ -163,137 +175,69 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
             .update(link: nil)
             .update(links: [])
 
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            networkControl.unpublish()
+        if isPersisted {
+            networkControl.publish()
         } else {
-            networkControl.notifyUpdated()
+            networkControl.unpublish()
         }
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        networkControl.unpublish()
     }
 
     /// Preset has been changed.
     override func presetDidChange() {
         super.presetDidChange()
         // reload preset store
-        presetStore = deviceController.presetStore.getSettingsStore(key: NetworkController.settingKey)
-        loadPresets()
         if connected {
-            applyPresets()
-        }
-    }
-
-    /// Load saved settings.
-    private func loadPresets() {
-        if let presetStore = presetStore, let deviceStore = deviceStore {
-            for setting in Setting.allCases {
-                switch setting {
-                case .routingPolicy:
-                    if let policies: StorableArray<NetworkControlRoutingPolicy> = deviceStore.read(key: setting.key),
-                        let policy: NetworkControlRoutingPolicy = presetStore.read(key: setting.key) {
-                        let supportedPolicies = Set(policies.storableValue)
-                        if supportedPolicies.contains(policy) {
-                            networkControl.update(supportedPolicies: supportedPolicies)
-                                .update(policy: policy)
-                        }
-                    }
-                case .maxCellularBitrate:
-                    if let value: Int = presetStore.read(key: setting.key),
-                        let range: (min: Int, max: Int) = deviceStore.readRange(key: setting.key) {
-                        networkControl.update(maxCellularBitrate: (range.min, value, range.max))
-                    }
-                case .directConnectionMode:
-                    if let modes: StorableArray<NetworkDirectConnectionMode> = deviceStore.read(key: setting.key),
-                       let mode: NetworkDirectConnectionMode = presetStore.read(key: setting.key) {
-                        let supportedModes = Set(modes.storableValue)
-                        if supportedModes.contains(mode) {
-                            networkControl.update(supportedDirectConnectionModes: supportedModes)
-                                .update(directConnectionMode: mode)
-                        }
-                    }
-                }
-            }
-            networkControl.notifyUpdated()
-        }
-    }
-
-    /// Applies presets.
-    ///
-    /// Iterates settings received during connection.
-    private func applyPresets() {
-        for setting in droneSettings {
-            switch setting {
-            case .routingPolicy(let routingPolicy):
-                if let preset: NetworkControlRoutingPolicy = presetStore?.read(key: setting.key) {
-                    if preset != routingPolicy {
-                         _ = sendRoutingPolicyCommand(preset)
-                    }
-                    networkControl.update(policy: preset).notifyUpdated()
-                } else {
-                    networkControl.update(policy: routingPolicy).notifyUpdated()
-                }
-            case .maxCellularBitrate(let value):
-                if let preset: Int = presetStore?.read(key: setting.key) {
-                    if preset != value {
-                        _ = sendMaxCellularBitrate(preset)
-                    }
-                    networkControl.update(maxCellularBitrate: (min: nil, value: preset, max: nil))
-                } else {
-                    networkControl.update(maxCellularBitrate: (min: nil, value: value, max: nil))
-                }
-            case .directConnectionMode(let mode):
-                if let preset: NetworkDirectConnectionMode = presetStore?.read(key: setting.key) {
-                    if preset != mode {
-                        _ = sendDirectConnectionCommand(preset)
-                    }
-                    networkControl.update(directConnectionMode: preset).notifyUpdated()
-                } else {
-                    networkControl.update(directConnectionMode: mode).notifyUpdated()
-                }
-            }
-        }
-    }
-
-    /// Called when a command that notifiies a setting change has been received.
-    ///
-    /// - Parameter setting: setting that changed
-    func settingDidChange(_ setting: Setting) {
-        droneSettings.insert(setting)
-        switch setting {
-        case .routingPolicy(let routingPolicy):
-            if connected {
-                networkControl.update(policy: routingPolicy)
-            }
-        case .maxCellularBitrate(let maxCellularBitrate):
-            if connected {
-                networkControl.update(maxCellularBitrate: (min: nil, value: maxCellularBitrate, max: nil))
-            }
-        case .directConnectionMode(let mode):
-            if connected {
-                networkControl.update(directConnectionMode: mode)
+            settings.forEach { setting in
+                setting.applyPreset()
             }
         }
         networkControl.notifyUpdated()
     }
 
-    /// Processes stored capabilities changes.
-    ///
-    /// Update network control and device store.
-    ///
-    /// - Parameter capabilities: changed capabilities
-    /// - Note: Caller must call `networkControl.notifyUpdated()` to notify change.
-    func capabilitiesDidChange(_ capabilities: Capabilities) {
-        switch capabilities {
-        case .routingPolicy(let routingPolicies):
-            deviceStore?.write(key: capabilities.key, value: StorableArray(Array(routingPolicies)))
-            networkControl.update(supportedPolicies: routingPolicies)
-        case .maxCellularBitrate(let min, let max):
-            deviceStore?.writeRange(key: capabilities.key, min: min, max: max)
-            networkControl.update(maxCellularBitrate: (min: min, value: nil, max: max))
-        case .directConnectionMode(let modes):
-            deviceStore?.write(key: capabilities.key, value: StorableArray(Array(modes)))
-            networkControl.update(supportedDirectConnectionModes: modes)
-        }
-        deviceStore?.commit()
+    private func prepareOfflineSettings() {
+        routingPolicySetting = OfflineEnumSetting(
+            deviceDict: deviceStore, presetDict: presetStore,
+            entry: SettingKey.routingPolicyKey,
+            setting: networkControl.routingPolicy as! EnumSettingCore,
+            notifyComponent: {
+            self.networkControl.notifyUpdated()
+            }, markChanged: {
+                self.networkControl.markChanged()
+            }, sendCommand: { routingPolicy in
+            self.sendRoutingPolicyCommand(routingPolicy)
+        })
+
+        directConnectionModeSetting = OfflineEnumSetting(
+            deviceDict: deviceStore, presetDict: presetStore,
+            entry: SettingKey.directConnectionModeKey,
+            setting: networkControl.directConnection as! EnumSettingCore,
+            notifyComponent: {
+                self.networkControl.notifyUpdated()
+            }, markChanged: {
+                self.networkControl.markChanged()
+            }, sendCommand: { mode in
+                self.sendDirectConnectionCommand(mode)
+            })
+
+        maxCellularBitrateSetting = OfflineIntSetting(
+            deviceDict: deviceStore, presetDict: presetStore,
+            entry: SettingKey.maxCellularBitrateKey,
+            setting: networkControl.maxCellularBitrate as! IntSettingCore,
+            notifyComponent: {
+                self.networkControl.notifyUpdated()
+            }, markChanged: {
+                self.networkControl.markChanged()
+            }, sendCommand: { maxCellularBitrate in
+                self.sendMaxCellularBitrate(maxCellularBitrate)
+            })
+
+        settings = [routingPolicySetting, directConnectionModeSetting, maxCellularBitrateSetting]
     }
 
     /// A command has been received.
@@ -308,13 +252,7 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
     /// - Parameter policy: the new policy
     /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
     func set(policy: NetworkControlRoutingPolicy) -> Bool {
-        presetStore?.write(key: SettingKey.routingPolicyKey, value: policy).commit()
-        if connected {
-            return sendRoutingPolicyCommand(policy)
-        } else {
-            networkControl.update(policy: policy).notifyUpdated()
-            return false
-        }
+        return routingPolicySetting.setValue(value: policy)
     }
 
     /// Sets maximum cellular bitrate.
@@ -322,14 +260,7 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
     /// - Parameter maxCellularBitrate: the new maximum cellular bitrate, in kilobits per second
     /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
     func set(maxCellularBitrate: Int) -> Bool {
-        presetStore?.write(key: SettingKey.maxCellularBitrateKey, value: maxCellularBitrate).commit()
-        if connected {
-            return sendMaxCellularBitrate(maxCellularBitrate)
-        } else {
-            networkControl.update(maxCellularBitrate: (min: nil, value: maxCellularBitrate, max: nil))
-                .notifyUpdated()
-            return false
-        }
+        return maxCellularBitrateSetting.setValue(value: maxCellularBitrate)
     }
 
     /// Sets direct connection mode.
@@ -337,13 +268,7 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
     /// - Parameter directConnectionMode: the new mode
     /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
     func set(directConnectionMode: NetworkDirectConnectionMode) -> Bool {
-        presetStore?.write(key: SettingKey.directConnectionModeKey, value: directConnectionMode).commit()
-        if connected {
-            return sendDirectConnectionCommand(directConnectionMode)
-        } else {
-            networkControl.update(directConnectionMode: directConnectionMode).notifyUpdated()
-            return false
-        }
+        return directConnectionModeSetting.setValue(value: directConnectionMode)
     }
 }
 
@@ -354,12 +279,10 @@ extension NetworkController {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendNetworkCommand(_ command: Arsdk_Network_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkNetworkCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends get state command.
@@ -418,11 +341,15 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
             let capabilities = state.defaultCapabilities
             let minBitrate = Int(capabilities.cellularMinBitrate)
             let maxBitrate = Int(capabilities.cellularMaxBitrate)
-            capabilitiesDidChange(.maxCellularBitrate(minBitrate, maxBitrate))
+            maxCellularBitrateSetting.handleNewBounds(min: minBitrate, max: maxBitrate)
+
             let supportedModes = Set(capabilities.supportedDirectConnectionModes.compactMap {
                 NetworkDirectConnectionMode(fromArsdk: $0)
             })
-            capabilitiesDidChange(.directConnectionMode(supportedModes))
+            directConnectionModeSetting.handleNewAvailableValues(values: supportedModes)
+
+            // assume all routing policies are supported
+            routingPolicySetting.handleNewAvailableValues(values: Set(NetworkControlRoutingPolicy.allCases))
         }
 
         // routing info
@@ -447,16 +374,10 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
 
         // direct connection mode
         if let mode = NetworkDirectConnectionMode(fromArsdk: state.directConnectionMode) {
-            settingDidChange(.directConnectionMode(mode))
+            directConnectionModeSetting.handleNewValue(value: mode)
         }
 
-        if state.hasDefaultCapabilities,
-           !capabilitiesReceived {
-            capabilitiesReceived = true
-            applyPresets()
-            networkControl.publish()
-        }
-        networkControl.notifyUpdated()
+        networkControl.publish()
     }
 
     /// Processes a `RoutingInfo` message.
@@ -468,17 +389,14 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
             networkControl.update(link: .cellular)
         case .wlan:
             networkControl.update(link: .wlan)
+        case .direct:
+            networkControl.update(link: .direct)
         case .any, .UNRECOGNIZED:
             networkControl.update(link: nil)
         }
 
-        if !capabilitiesReceived { // first receipt of this message
-            // assume all routing policies are supported
-            capabilitiesDidChange(.routingPolicy(Set(NetworkControlRoutingPolicy.allCases)))
-        }
-
         if let routingPolicy = NetworkControlRoutingPolicy(fromArsdk: routingInfo.policy) {
-            settingDidChange(.routingPolicy(routingPolicy))
+            routingPolicySetting.handleNewValue(value: routingPolicy)
         }
     }
 
@@ -510,7 +428,7 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
             // zero means maximum cellular bitrate is set to its upper range value
             maxCellularBitrate = networkControl.maxCellularBitrate.max
         }
-        settingDidChange(.maxCellularBitrate(maxCellularBitrate))
+        maxCellularBitrateSetting.handleNewValue(value: maxCellularBitrate)
     }
 }
 
@@ -568,7 +486,10 @@ extension NetworkControlLinkError: ArsdkMappableEnum {
         .dns: .dns,
         .publish: .publish,
         .timeout: .timeout,
-        .invite: .invite])
+        .invite: .invite,
+        .setup: .setup,
+        .peerOffline: .peerOffline,
+        .peerMismatch: .peerMismatch])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
@@ -583,7 +504,7 @@ extension Arsdk_Network_LinksStatus.LinkInfo {
     /// Creates a new `NetworkControlLinkInfoCore` from `Arsdk_Network_LinksStatus.LinkInfo`.
     var gsdkLinkInfo: NetworkControlLinkInfoCore? {
         if let type = NetworkControlLinkType(fromArsdk: type),
-            let status = NetworkControlLinkStatus(fromArsdk: status) {
+           let status = NetworkControlLinkStatus(fromArsdk: status) {
             let gsdkQuality = quality == 0 ? nil : Int(quality) - 1
             let error = NetworkControlLinkError(fromArsdk: self.error)
             return NetworkControlLinkInfoCore(type: type, status: status, error: error, quality: gsdkQuality)

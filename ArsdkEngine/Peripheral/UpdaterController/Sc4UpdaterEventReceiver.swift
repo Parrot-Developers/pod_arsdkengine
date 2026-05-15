@@ -47,6 +47,6 @@ class Sc4UpdaterEventReceiver: NSObject, UpdaterEventReceiver {
 
 extension Sc4UpdaterEventReceiver: ArsdkFeatureSkyctrlSkycontrollerstateCallback {
     func onBatteryChanged(percent: UInt) {
-        updateUnavailabilityReasonChanged(.notEnoughBattery, percent < 5)
+        updateUnavailabilityReasonChanged(.notEnoughBattery, percent < 10)
     }
 }

@@ -67,54 +67,54 @@ class AnafiMotor: DeviceComponentController {
 extension AnafiMotor: ArsdkFeatureArdrone3SettingsstateCallback {
     func onMotorErrorStateChanged(
         motorids: UInt, motorerror: ArsdkFeatureArdrone3SettingsstateMotorerrorstatechangedMotorerror) {
-        let motorError: MotorError
-        switch motorerror {
-        case .noerror:
-            motorError = .noError
-        case .errormotorstalled:
-            motorError = .stalled
-        case .errorpropellersecurity:
-            motorError = .securityMode
-        case .errorrcemergencystop:
-            motorError = .emergencyStop
-        case .errorbatteryvoltage:
-            motorError = .batteryVoltage
-        case .errorlipocells:
-            motorError = .lipocells
-        case .errortemperature:
-            motorError = .temperature
-        case .errormosfet:
-            motorError = .mosfet
-        default:
-            motorError = .other
+            let motorError: MotorError
+            switch motorerror {
+            case .noerror:
+                motorError = .noError
+            case .errormotorstalled:
+                motorError = .stalled
+            case .errorpropellersecurity:
+                motorError = .securityMode
+            case .errorrcemergencystop:
+                motorError = .emergencyStop
+            case .errorbatteryvoltage:
+                motorError = .batteryVoltage
+            case .errorlipocells:
+                motorError = .lipocells
+            case .errortemperature:
+                motorError = .temperature
+            case .errormosfet:
+                motorError = .mosfet
+            default:
+                motorError = .other
+            }
+            backend.motorsErrorStateDidChange(error: motorError, motorMask: motorids)
         }
-        backend.motorsErrorStateDidChange(error: motorError, motorMask: motorids)
-    }
 
     func onMotorErrorLastErrorChanged(
         motorerror: ArsdkFeatureArdrone3SettingsstateMotorerrorlasterrorchangedMotorerror) {
-        let motorError: MotorError
+            let motorError: MotorError
 
-        switch motorerror {
-        case .noerror:
-            motorError = .noError
-        case .errormotorstalled:
-            motorError = .stalled
-        case .errorpropellersecurity:
-            motorError = .securityMode
-        case .errorrcemergencystop:
-            motorError = .emergencyStop
-        case .errorbatteryvoltage:
-            motorError = .batteryVoltage
-        case .errorlipocells:
-            motorError = .lipocells
-        case .errortemperature:
-            motorError = .temperature
-        case .errormosfet:
-            motorError = .mosfet
-        default:
-            motorError = .other
+            switch motorerror {
+            case .noerror:
+                motorError = .noError
+            case .errormotorstalled:
+                motorError = .stalled
+            case .errorpropellersecurity:
+                motorError = .securityMode
+            case .errorrcemergencystop:
+                motorError = .emergencyStop
+            case .errorbatteryvoltage:
+                motorError = .batteryVoltage
+            case .errorlipocells:
+                motorError = .lipocells
+            case .errortemperature:
+                motorError = .temperature
+            case .errormosfet:
+                motorError = .mosfet
+            default:
+                motorError = .other
+            }
+            backend.latestMotorStateDidChange(error: motorError)
         }
-        backend.latestMotorStateDidChange(error: motorError)
-    }
 }

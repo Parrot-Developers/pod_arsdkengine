@@ -44,6 +44,9 @@ class PreciseHomeController: DeviceComponentController, PreciseHomeBackend {
     /// Preset store for this piloting interface
     private var presetStore: SettingsStore?
 
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { deviceStore?.new == false }
+
     /// All settings that can be stored
     enum SettingKey: String, StoreKey {
         case modeKey = "mode"
@@ -102,9 +105,9 @@ class PreciseHomeController: DeviceComponentController, PreciseHomeBackend {
 
         super.init(deviceController: deviceController)
         preciseHome = PreciseHomeCore(store: deviceController.device.peripheralStore, backend: self)
-        // load settings
-        if let deviceStore = deviceStore, let presetStore = presetStore, !deviceStore.new && !presetStore.new {
-            loadPresets()
+
+        loadPresets()
+        if isPersisted {
             preciseHome.publish()
         }
     }
@@ -157,12 +160,17 @@ class PreciseHomeController: DeviceComponentController, PreciseHomeBackend {
         // clear all non saved values
         preciseHome.cancelSettingsRollback().update(mode: .disabled)
 
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            preciseHome.unpublish()
+        if isPersisted {
+            preciseHome.publish()
         } else {
-            preciseHome.notifyUpdated()
+            preciseHome.unpublish()
         }
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        preciseHome.unpublish()
     }
 
     /// Preset has been changed
@@ -183,7 +191,7 @@ class PreciseHomeController: DeviceComponentController, PreciseHomeBackend {
                 switch setting {
                 case .mode:
                     if let supportedModesValues: StorableArray<PreciseHomeMode> = deviceStore.read(key: setting.key),
-                        let mode: PreciseHomeMode = presetStore.read(key: setting.key) {
+                       let mode: PreciseHomeMode = presetStore.read(key: setting.key) {
                         let supportedModes = Set(supportedModesValues.storableValue)
                         if supportedModes.contains(mode) {
                             preciseHome.update(supportedModes: supportedModes).update(mode: mode)
@@ -210,7 +218,7 @@ class PreciseHomeController: DeviceComponentController, PreciseHomeBackend {
             case .mode(let mode):
                 if let preset: PreciseHomeMode = presetStore?.read(key: setting.key) {
                     if preset != mode {
-                         _ = sendModeCommand(preset)
+                        _ = sendModeCommand(preset)
                     }
                     preciseHome.update(mode: preset).notifyUpdated()
                 } else {
@@ -262,16 +270,12 @@ class PreciseHomeController: DeviceComponentController, PreciseHomeBackend {
     /// - Parameter mode: requested mode.
     /// - Returns: true if the command has been sent
     func sendModeCommand(_ mode: PreciseHomeMode) -> Bool {
-        var commandSent = false
         switch mode {
         case .standard:
-            sendCommand(ArsdkFeaturePreciseHome.setModeEncoder(mode: .standard))
-            commandSent = true
+            return sendCommand(ArsdkFeaturePreciseHome.setModeEncoder(mode: .standard))
         case .disabled:
-            sendCommand(ArsdkFeaturePreciseHome.setModeEncoder(mode: .disabled))
-            commandSent = true
+            return sendCommand(ArsdkFeaturePreciseHome.setModeEncoder(mode: .disabled))
         }
-        return commandSent
     }
 }
 
@@ -305,9 +309,9 @@ extension PreciseHomeController: ArsdkFeaturePreciseHomeCallback {
     func onMode(mode: ArsdkFeaturePreciseHomeMode) {
         switch mode {
         case .standard:
-             settingDidChange(.mode(.standard))
+            settingDidChange(.mode(.standard))
         case .disabled:
-             settingDidChange(.mode(.disabled))
+            settingDidChange(.mode(.disabled))
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:

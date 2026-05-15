@@ -72,16 +72,18 @@ class WifiScannerController: RadioComponentController {
         wifiScanner.publish()
     }
 
+    func processSystemEvent(state: Arsdk_System_Event.State) {}
+
     func processScanResult(scanResult: Arsdk_Connectivity_Event.ScanResult) {
         guard wifiScanner.scanning else { return }
 
         let scanResults = scanResult.networks.map {
-            var channel: WifiChannel?
+            var wifiChannel: WifiChannel?
             if $0.hasChannel,
-               case .wifiChannel(let arsdkChannel) = $0.channel.type {
-                channel = WifiChannel(fromArsdk: arsdkChannel)
+               case .radioChannel(let channel) = $0.channel.type {
+                wifiChannel = WifiChannel(fromArsdk: channel)
             }
-            return ScanResult(ssid: $0.ssid, channel: channel)
+            return ScanResult(ssid: $0.ssid, channel: wifiChannel)
         }
         wifiScanner.update(scanResults: scanResults).notifyUpdated()
 

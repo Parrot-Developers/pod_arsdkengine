@@ -35,16 +35,23 @@ class DroneManagerDroneFinder: DeviceComponentController {
     /// Drone finder component
     private var droneFinder: DroneFinderCore!
 
-    private var arsdkProxy: ArsdkProxy!
+    /// Device manager to use to connect to discovered drones.
+    private var deviceManager: RemoteDeviceManager
 
+    /// Drones seen during discovery, by drone uid.
     private var drones = [String: DiscoveredDroneCore]()
+
+    /// Known drones of the remote control. Indexed by drone uid.
+    private var knownDrones = [String: KnownDroneCore]()
 
     /// Constructor
     ///
-    /// - Parameter proxyDeviceController: device controller owning this component controller (weak)
-    init(proxyDeviceController: ProxyDeviceController) {
-        super.init(deviceController: proxyDeviceController)
-        arsdkProxy = proxyDeviceController.arsdkProxy
+    /// - Parameters:
+    ///    - deviceController: device controller owning this component controller (weak)
+    ///    - deviceManager: device manager to use to connect to discovered drones
+    init(deviceController: DeviceController, deviceManager: RemoteDeviceManager) {
+        self.deviceManager = deviceManager
+        super.init(deviceController: deviceController)
         droneFinder = DroneFinderCore(store: deviceController.device.peripheralStore, backend: self)
     }
 
@@ -79,20 +86,43 @@ class DroneManagerDroneFinder: DeviceComponentController {
         }
         droneFinder.update(discoveredDrones: discoveredDrones).update(state: .idle).notifyUpdated()
     }
+
+    private func notifyKnownDronesDidChange() {
+        let knownDrones = knownDrones.values.sorted { first, second in
+            return first.name.compare(second.name) == ComparisonResult.orderedAscending
+        }
+        droneFinder.update(knownDrones: knownDrones).notifyUpdated()
+    }
 }
 
 /// DroneFinder backend implementation
 extension DroneManagerDroneFinder: DroneFinderBackend {
-    func discoverDrones() {
+
+    func discoverDrones(useBackupRadio: Bool) {
         ULog.d(.ctrlTag, "DroneManagerDroneFinder: sending DiscoverDrones command")
-        sendCommand(ArsdkFeatureDroneManager.discoverDronesEncoder())
+        _ = sendCommand(ArsdkFeatureDroneManager.discoverDronesEncoder())
         droneFinder.update(state: .scanning).notifyUpdated()
     }
 
-    func connectDrone(uid: String, password: String) -> Bool {
+    /// Stop discovery is not available with this implementation
+    func stopDiscovery() -> Bool {
+        return false
+    }
+
+    func connectDrone(uid: String, parameters: [DeviceConnectionParameter], wakeIdle: Bool) -> Bool {
         if let drone = drones[uid] {
-            return arsdkProxy.connect(uid: drone.uid, model: .drone(drone.model), name: drone.name, password: password)
+            return deviceManager.connectDiscoveredProvider(deviceUid: drone.uid,
+                                                           deviceModel: .drone(drone.model),
+                                                           deviceName: drone.name,
+                                                           technology: .wifi,
+                                                           parameters: parameters,
+                                                           wakeIdle: wakeIdle)
         }
+        return false
+    }
+
+    /// Connecting to a known drone is not available with this implementation
+    func connectKnownDrone(uid: String) -> Bool {
         return false
     }
 }
@@ -104,7 +134,7 @@ extension DroneManagerDroneFinder: ArsdkFeatureDroneManagerCallback {
                          visibleBitField: UInt, security: ArsdkFeatureDroneManagerSecurity, hasSavedKey: UInt,
                          rssi: Int, listFlagsBitField: UInt) {
         ULog.d(.ctrlTag, "DroneManagerDroneFinder: onDroneListItem: \(serial) \(name)" +
-            " \(connectionOrder)")
+               " \(connectionOrder)")
         if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
             // remove all
             drones.removeAll()
@@ -123,25 +153,25 @@ extension DroneManagerDroneFinder: ArsdkFeatureDroneManagerCallback {
                 if case .drone(let droneModel)? = DeviceModel.from(internalId: Int(model)), visibleBitField != 0 {
                     func computeSecurity(visibleBitField: UInt,
                                          security: ArsdkFeatureDroneManagerSecurity, hasSavedKey: UInt)
-                        -> ConnectionSecurity {
-                            if ArsdkFeatureDroneManagerVisibleStateBitField.isSet(.wifiVisible,
-                                                                                  inBitField: visibleBitField) {
-                                switch security {
-                                case .wpa2:
-                                    return (hasSavedKey != 0) ? .savedPassword : .password
-                                case .none:
-                                    return .none
-                                case .sdkCoreUnknown:
-                                    fallthrough
-                                @unknown default:
-                                    // don't change anything if value is unknown
-                                    ULog.w(.tag, "Unknown security, setting it to none.")
-                                    return .none
-                                }
-                            } else {
-                                // if the drone is not visible in wifi, force the security to none.
+                    -> ConnectionSecurity {
+                        if ArsdkFeatureDroneManagerVisibleStateBitField.isSet(.wifiVisible,
+                                                                              inBitField: visibleBitField) {
+                            switch security {
+                            case .wpa2:
+                                return (hasSavedKey != 0) ? .savedPassword : .password
+                            case .none:
+                                return .none
+                            case .sdkCoreUnknown:
+                                fallthrough
+                            @unknown default:
+                                // don't change anything if value is unknown
+                                ULog.w(.tag, "Unknown security, setting it to none.")
                                 return .none
                             }
+                        } else {
+                            // if the drone is not visible in wifi, force the security to none.
+                            return .none
+                        }
                     }
 
                     drones[serial] = DiscoveredDroneCore(
@@ -151,7 +181,7 @@ extension DroneManagerDroneFinder: ArsdkFeatureDroneManagerCallback {
                         wifiVisibility: ArsdkFeatureDroneManagerVisibleStateBitField.isSet(
                             .wifiVisible, inBitField: visibleBitField),
                         cellularOnLine: ArsdkFeatureDroneManagerVisibleStateBitField.isSet(
-                            .cellularOnline, inBitField: visibleBitField))
+                            .cellularOnline, inBitField: visibleBitField), backupLinkVisibility: .invisible)
 
                 } else {
                     ULog.w(.ctrlTag, "Ignoring onDroneListItem for model \(model)")
@@ -161,6 +191,31 @@ extension DroneManagerDroneFinder: ArsdkFeatureDroneManagerCallback {
                 // notify
                 notifyDiscoveredDronesDidChange()
             }
+        }
+    }
+
+    func onKnownDroneItem(serial: String, model: UInt, name: String,
+                          security: ArsdkFeatureDroneManagerSecurity,
+                          hasSavedKey: UInt, listFlagsBitField: UInt) {
+
+        if ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
+            knownDrones.removeAll()
+            notifyKnownDronesDidChange()
+        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+            knownDrones[serial] = nil
+        } else {
+            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                knownDrones.removeAll()
+            }
+            if case .drone(let droneModel)? = DeviceModel.from(internalId: Int(model)) {
+                knownDrones[serial] = KnownDroneCore(uid: serial, model: droneModel,
+                                                     name: name,
+                                                     connectionTypes: Set([.wifi]))
+            }
+        }
+
+        if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
+            notifyKnownDronesDidChange()
         }
     }
 }

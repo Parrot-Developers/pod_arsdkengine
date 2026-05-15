@@ -42,7 +42,7 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
     /// component settings key
     private static let settingKey = "ObstacleAvoidanceController"
 
-     /// All settings that can be stored
+    /// All settings that can be stored
     enum SettingKey: String, StoreKey {
         case preferredModeKey = "preferredMode"
     }
@@ -74,6 +74,9 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
     /// Preset store for this obstacle avoidance interface
     private var presetStore: SettingsStore?
 
+    /// `true` if this controller has persisted model specific values
+    private var isPersisted: Bool { presetStore?.new == false }
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
@@ -87,8 +90,8 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
 
         super.init(deviceController: deviceController)
         obstacleAvoidance = ObstacleAvoidanceCore(store: deviceController.device.peripheralStore, backend: self)
-        // load settings
-        if let presetStore = presetStore, !presetStore.new {
+
+        if isPersisted {
             loadPresets()
             obstacleAvoidance.publish()
         }
@@ -130,11 +133,19 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
         obstacleAvoidanceSupported = false
 
         obstacleAvoidance.cancelSettingsRollback()
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
+            .update(state: nil)
+
+        if isPersisted {
+            obstacleAvoidance.publish()
+        } else {
             obstacleAvoidance.unpublish()
         }
-        obstacleAvoidance.update(state: .inactive).notifyUpdated()
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        obstacleAvoidance.unpublish()
     }
 
     /// Preset has been changed
@@ -199,11 +210,10 @@ class ObstacleAvoidanceController: DeviceComponentController, ObstacleAvoidanceB
         if obstacleAvoidance.mode.supportedValues.contains(mode) {
             switch mode {
             case .disabled:
-                sendCommand(ArsdkFeatureObstacleAvoidance.setModeEncoder(mode: .disabled))
+                return sendCommand(ArsdkFeatureObstacleAvoidance.setModeEncoder(mode: .disabled))
             case .standard:
-                sendCommand(ArsdkFeatureObstacleAvoidance.setModeEncoder(mode: .standard))
+                return sendCommand(ArsdkFeatureObstacleAvoidance.setModeEncoder(mode: .standard))
             }
-            return true
         } else {
             return false
         }
@@ -244,7 +254,7 @@ extension ObstacleAvoidanceMode: ArsdkMappableEnum {
     static var arsdkMapper = Mapper<ObstacleAvoidanceMode, ArsdkFeatureObstacleAvoidanceMode>([
         .disabled: .disabled,
         .standard: .standard
-        ])
+    ])
 }
 
 extension ObstacleAvoidanceMode: StorableEnum {
@@ -259,5 +269,5 @@ extension ObstacleAvoidanceState: ArsdkMappableEnum {
         .active: .active,
         .inactive: .inactive,
         .degraded: .degraded
-        ])
+    ])
 }

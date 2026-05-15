@@ -62,21 +62,36 @@ class WifiStationController: RadioComponentController {
     /// Radio identifier.
     private let radioId: UInt32
 
+    /// Whether state event has been received since connection to drone.
+    private var stateReceived = false
+
+    /// Reverse geocoder utility.
+    private var reverseGeocoderUtility: ReverseGeocoderUtilityCore?
+
+    /// Reverse geocoder monitor.
+    private var reverseGeocoderMonitor: MonitorCore?
+
     /// Constructor.
     ///
     /// - Parameters:
     ///    - store: store where the peripheral will be stored
+    ///    - utilities: utility registry
     ///    - delegate: command delegate
     ///    - radioId: identifies the radio this component belongs to
-    init(store: ComponentStoreCore, delegate: WifiStationCommandDelegate, radioId: UInt32) {
+    init(store: ComponentStoreCore, utilities: UtilityCoreRegistry, delegate: WifiStationCommandDelegate,
+         radioId: UInt32) {
         self.delegate = delegate
         self.radioId = radioId
+        self.reverseGeocoderUtility = utilities.getUtility(Utilities.reverseGeocoder)
         self.wifiStation = WifiStationCore(store: store, backend: self)
     }
 
     func didDisconnect() {
+        stateReceived = false
         wifiStation.cancelSettingsRollback()
         wifiStation.unpublish()
+        reverseGeocoderMonitor?.stop()
+        reverseGeocoderMonitor = nil
     }
 
     func processStateEvent(state: Arsdk_Connectivity_Event.State) {
@@ -102,6 +117,9 @@ class WifiStationController: RadioComponentController {
 
             if config.hasCountry,
                let country = Country(rawValue: config.country.value) {
+                if GroundSdkConfig.sharedInstance.autoSelectWifiCountry {
+                    wifiStation.update(supportedCountries: [country])
+                }
                 wifiStation.update(country: country)
             }
 
@@ -129,8 +147,42 @@ class WifiStationController: RadioComponentController {
             }
         }
 
+        // check autoSelectCountry config
+        if !stateReceived {
+            stateReceived = true
+            manageAutoSelectCountry()
+        }
+
         wifiStation.publish()
-        wifiStation.notifyUpdated()
+    }
+
+    func processSystemEvent(state: Arsdk_System_Event.State) {}
+
+    /// Checks `autoSelectWifiCountry` flag in configuration, and enables this feature, when appropriate.
+    private func manageAutoSelectCountry() {
+        if GroundSdkConfig.sharedInstance.autoSelectWifiCountry {
+            // force environment to outdoor
+            if wifiStation.environment.value != .outdoor {
+                _ = set(environment: .outdoor)
+            }
+            wifiStation.update(supportedEnvironments: [.outdoor])
+
+            // monitor reverseGeocoder
+            reverseGeocoderMonitor = reverseGeocoderUtility?
+                .startReverseGeocoderMonitoring { [unowned self] placemark in
+                    if let isoCountryCode = placemark?.isoCountryCode?.uppercased(),
+                       let country = Country(rawValue: isoCountryCode),
+                       isoCountryCode != self.wifiStation.country.value.rawValue {
+                        _ = self.set(country: country)
+                    }
+                }
+
+            // force country to the one found by reverse geocoding location
+            if let isoCountryCode = reverseGeocoderUtility?.placemark?.isoCountryCode?.uppercased(),
+               let country = Country(rawValue: isoCountryCode) {
+                wifiStation.update(supportedCountries: [country])
+            }
+        }
     }
 }
 

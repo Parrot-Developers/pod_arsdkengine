@@ -110,6 +110,8 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     private var uploadFpRequested = false
     /// Delegate to upload the FlightPlan
     private var uploader: ArsdkFlightplanUploader
+    /// Whether the flight plan feature is supported or not
+    private var isSupported = true
 
     /// The current upload cancellable.
     private var currentUpload: CancelableCore?
@@ -139,7 +141,9 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     /// Drone is connected
     override func didConnect() {
         uploader.configure(flightPlanPilotingItfController: self)
-        super.didConnect()
+        if isSupported {
+            flightPlanPilotingItf.publish()
+        }
     }
 
     /// Drone is disconnected
@@ -150,6 +154,7 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
         startAtMissionItem = nil
         disconnectionPolicy = .returnToHome
         uploadFpRequested = false
+        isSupported = true
 
         // reset values that does not have a meaning while disconnected
         flightPlanPilotingItf.update(isPaused: false).update(flightPlanFileIsKnown: false)
@@ -180,9 +185,12 @@ class FlightPlanPilotingItfController: ActivablePilotingItfController {
     /// - Note: caller is responsible to call the `notifiyUpdated()` function.
     private func updateUnavailabilityReasons() {
         var reasons: Set<FlightPlanUnavailabilityReason> = []
-        if (remoteFlightPlanUid == nil && !isPlaying) || uploadFpRequested {
+        if uploadFpRequested {
+            reasons.insert(.uploadingFlightPlanFile)
+        } else if remoteFlightPlanUid == nil && !isPlaying {
             reasons.insert(.missingFlightPlanFile)
         }
+
         if !flightPlanAvailable {
             reasons.formUnion(droneUnavailabilityReasons)
         }
@@ -350,7 +358,7 @@ extension FlightPlanPilotingItfController: FlightPlanPilotingItfBackend {
 
     // TODO: remove
     func prepareForFlightPlanActivation() {
-        sendCommand(ArsdkFeatureFlightPlan.preConfigEncoder())
+        _ = sendCommand(ArsdkFeatureFlightPlan.preConfigEncoder())
     }
 }
 
@@ -370,7 +378,7 @@ extension FlightPlanPilotingItfController {
             ? .flightplan
             : .flightplanv2
             let continueOnDisconnect: UInt = disconnectionPolicy == .returnToHome ? 0 : 1
-            sendCommand(ArsdkFeatureFlightPlan.startAtV2Encoder(flightplanId: remoteFlightPlanUid,
+            _ = sendCommand(ArsdkFeatureFlightPlan.startAtV2Encoder(flightplanId: remoteFlightPlanUid,
                                                                 customId: customFlightPlanId,
                                                                 type: type,
                                                                 item: missionItem,
@@ -380,30 +388,30 @@ extension FlightPlanPilotingItfController {
             let type: ArsdkFeatureFlightPlanMavlinkType = flightPlanInterpreter == .legacy
             ? .flightplan
             : .flightplanv2
-            sendCommand(ArsdkFeatureFlightPlan.startAtEncoder(flightplanId: remoteFlightPlanUid,
+            _ = sendCommand(ArsdkFeatureFlightPlan.startAtEncoder(flightplanId: remoteFlightPlanUid,
                                                               customId: customFlightPlanId,
                                                               type: type, item: missionItem))
         } else {
             let type: ArsdkFeatureCommonMavlinkStartType =
             flightPlanInterpreter == .legacy ? .flightplan : .flightplanv2
-            sendCommand(ArsdkFeatureCommonMavlink.startEncoder(filepath: remoteFlightPlanUid,
+            _ = sendCommand(ArsdkFeatureCommonMavlink.startEncoder(filepath: remoteFlightPlanUid,
                                                                type: type))
         }
     }
 
     /// Sends command to pause flight plan.
     private func sendPauseFlightPlan() {
-        sendCommand(ArsdkFeatureCommonMavlink.pauseEncoder())
+        _ = sendCommand(ArsdkFeatureCommonMavlink.pauseEncoder())
     }
 
     /// Sends command to stop flight plan.
     private func sendStopFlightPlan() {
-        sendCommand(ArsdkFeatureCommonMavlink.stopEncoder())
+        _ = sendCommand(ArsdkFeatureCommonMavlink.stopEncoder())
     }
 
     /// Sends command to clear recovery information.
     private func sendClearRecoveryInfo() {
-        sendCommand(ArsdkFeatureFlightPlan.clearRecoveryInfoEncoder())
+        _ = sendCommand(ArsdkFeatureFlightPlan.clearRecoveryInfoEncoder())
     }
 }
 
@@ -579,6 +587,10 @@ extension FlightPlanPilotingItfController: ArsdkFeatureFlightPlanCallback {
             flightPlanPilotingItf.update(latestMissionItemSkipped: item).notifyUpdated()
         }
     }
+
+    func onSupportedFeature(value: UInt) {
+        isSupported = value == 1
+    }
 }
 
 extension FlightPlanPilotingItfController {
@@ -630,6 +642,7 @@ extension FlightPlanUnavailabilityReason: ArsdkMappableEnum {
         .insufficientBattery: .droneBattery,
         .droneGpsInfoInaccurate: .droneGps,
         .droneNotCalibrated: .droneMagneto,
-        .droneInvalidState: .droneState
+        .droneInvalidState: .droneState,
+        .droneBatteryTooHot: .droneBatteryTooHot
     ])
 }

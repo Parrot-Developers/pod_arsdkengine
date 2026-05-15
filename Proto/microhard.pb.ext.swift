@@ -52,7 +52,7 @@ class ArsdkMicrohardEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
     }
 
-    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
     }
 

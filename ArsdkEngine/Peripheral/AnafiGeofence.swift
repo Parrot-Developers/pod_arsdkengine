@@ -40,11 +40,29 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// Geofence component
     private(set) var geofence: GeofenceCore!
 
+    /// Whether ArsdkGeofence messages are supported by the drone.
+    private var isArsdkGeofenceSupported: Bool = false
+
     /// Store device specific values
     private let deviceStore: SettingsStore?
 
     /// Preset store for this piloting interface
     private var presetStore: SettingsStore?
+
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { deviceStore?.new == false }
+
+    /// All setting backends of this peripheral
+    private var settings = [OfflineSetting]()
+
+    /// Max altitude setting backend
+    internal var maxAltitudeSetting: OfflineDoubleSetting!
+
+    /// Max distance setting backend
+    internal var maxDistanceSetting: OfflineDoubleSetting!
+
+    /// Mode setting backend
+    internal var modeSetting: OfflineEnumSetting<GeofenceMode>!
 
     /// All settings that can be stored
     enum SettingKey: String, StoreKey {
@@ -84,6 +102,9 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// Setting values as received from the drone
     private var droneSettings = Set<Setting>()
 
+    /// Decoder for geofence events.
+    private var geofenceDecoder: ArsdkGeofenceEventDecoder!
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
@@ -97,13 +118,47 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
         }
 
         super.init(deviceController: deviceController)
+        geofenceDecoder = ArsdkGeofenceEventDecoder(listener: self)
         geofence = GeofenceCore(store: deviceController.device.peripheralStore, backend: self)
-        setDefaults()
-        // load settings
-        if let deviceStore = deviceStore, let presetStore = presetStore, !deviceStore.new && !presetStore.new {
-            loadPresets()
+        prepareOfflineSettings()
+        if isPersisted {
             geofence.publish()
         }
+    }
+
+    public func prepareOfflineSettings() {
+        modeSetting = OfflineEnumSetting(
+            deviceDict: deviceStore, presetDict: presetStore,
+            entry: SettingKey.mode,
+            setting: geofence.mode as! EnumSettingCore,
+            notifyComponent: { self.geofence.notifyUpdated() },
+            markChanged: { self.geofence.markChanged() },
+            sendCommand: { mode in
+                return self.sendModeCommand(mode)
+            })
+
+        maxAltitudeSetting = OfflineDoubleSetting(
+            deviceDict: deviceStore, presetDict: presetStore,
+            entry: SettingKey.maxAltitude,
+            setting: geofence.maxAltitude as! DoubleSettingCore,
+            notifyComponent: { self.geofence.notifyUpdated() },
+            markChanged: { self.geofence.markChanged() },
+            sendCommand: { maxAltitude in
+                return self.sendMaxAltitudeCommand(maxAltitude)
+            }
+        )
+
+        maxDistanceSetting = OfflineDoubleSetting(
+            deviceDict: deviceStore, presetDict: presetStore,
+            entry: SettingKey.maxDistance,
+            setting: geofence.maxDistance as! DoubleSettingCore,
+            notifyComponent: { self.geofence.notifyUpdated() },
+            markChanged: { self.geofence.markChanged() },
+            sendCommand: { maxDistance in
+                return self.sendMaxDistanceCommand(maxDistance)
+            }
+        )
+        settings = [modeSetting!, maxAltitudeSetting!, maxDistanceSetting!]
     }
 
     /// Send max altitude settings
@@ -111,14 +166,11 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// - Parameter maxAltitude: new maximum altitude
     /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
     func set(maxAltitude value: Double) -> Bool {
-        presetStore?.write(key: SettingKey.maxAltitude, value: value).commit()
-        if connected {
-            sendMaxAltitudeCommand(value)
-            return true
-        } else {
-            geofence.update(maxAltitude: (nil, value, nil)).notifyUpdated()
+        guard !backupLinkIsActive else {
+            geofence.forceNotifyUpdated()
             return false
         }
+        return maxAltitudeSetting!.setValue(value: value)
     }
 
     /// Send max distance settings
@@ -126,14 +178,11 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// - Parameter maxDistance: new maximum distance
     /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
     func set(maxDistance value: Double) -> Bool {
-        presetStore?.write(key: SettingKey.maxDistance, value: value).commit()
-        if connected {
-            sendMaxDistanceCommand(value)
-            return true
-        } else {
-            geofence.update(maxDistance: (nil, value, nil)).notifyUpdated()
+        guard !backupLinkIsActive else {
+            geofence.forceNotifyUpdated()
             return false
         }
+        return maxDistanceSetting!.setValue(value: value)
     }
 
     /// Send mode setting
@@ -141,14 +190,11 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// - Parameter mode: new geofencing mode
     /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
     func set(mode value: GeofenceMode) -> Bool {
-        presetStore?.write(key: SettingKey.mode, value: value).commit()
-        if connected {
-            sendModeCommand(value)
-            return true
-        } else {
-            geofence.update(mode: value).notifyUpdated()
+        guard !backupLinkIsActive else {
+            geofence.forceNotifyUpdated()
             return false
         }
+        return modeSetting!.setValue(value: value)
     }
 
     /// Drone is about to be forgotten
@@ -161,14 +207,16 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// Drone is about to be connect
     override func willConnect() {
         super.willConnect()
+        isArsdkGeofenceSupported = false
         // remove settings stored while connecting. We will get new one on the next connection.
-        droneSettings.removeAll()
+        settings.forEach { setting in
+            setting.resetDeviceValue()
+        }
+        _ = sendGeofenceGetStateCommand()
     }
 
     /// Drone is connected
     override func didConnect() {
-        storeNewPresets()
-        applyPresets()
         geofence.publish()
         super.didConnect()
     }
@@ -176,147 +224,31 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// Drone is disconnected
     override func didDisconnect() {
         super.didDisconnect()
-
+        geofence.update(center: nil).update(isAvailable: nil)
         geofence.cancelSettingsRollback()
 
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
+        if isPersisted {
+            geofence.publish()
+        } else {
             geofence.unpublish()
         }
-        geofence.notifyUpdated()
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        geofence.publish()
     }
 
     /// Preset has been changed
     override func presetDidChange() {
         super.presetDidChange()
         // reload preset store
-        presetStore = deviceController.presetStore.getSettingsStore(key: AnafiGeofence.settingKey)
-        loadPresets()
         if connected {
-            applyPresets()
-        }
-    }
-
-    /// Set default values. Subclass can override this function to customize default values
-    func setDefaults() {
-    }
-
-    /// Load saved settings
-    private func loadPresets() {
-        if let presetStore = presetStore, let deviceStore = deviceStore {
-            for setting in Setting.allCases {
-                switch setting {
-                case .maxAltitude:
-                    if let value: Double = presetStore.read(key: setting.key),
-                        let range: (min: Double, max: Double) = deviceStore.readRange(key: setting.key) {
-                        geofence.update(maxAltitude: (range.min, value, range.max))
-                    }
-                case .maxDistance:
-                    if let value: Double = presetStore.read(key: setting.key),
-                        let range: (min: Double, max: Double) = deviceStore.readRange(key: setting.key) {
-                        geofence.update(maxDistance: (range.min, value, range.max))
-                    }
-                case .mode:
-                    if let mode: GeofenceMode = presetStore.read(key: setting.key) {
-                        geofence.update(mode: mode)
-                    }
-                }
+            settings.forEach { setting in
+                setting.applyPreset()
             }
-            geofence.notifyUpdated()
         }
-    }
-
-    /// Called when the drone is connected, save all settings received during the connection and not yet in the preset
-    /// store, and all received settings ranges
-    private func storeNewPresets() {
-        if let presetStore = presetStore, let deviceStore = deviceStore {
-            for setting in droneSettings {
-                switch setting {
-                case let .maxAltitude(min, value, max):
-                    presetStore.writeIfNew(key: setting.key, value: value)
-                    deviceStore.writeRange(key: setting.key, min: min, max: max)
-                case let .maxDistance(min, value, max):
-                    presetStore.writeIfNew(key: setting.key, value: value)
-                    deviceStore.writeRange(key: setting.key, min: min, max: max)
-                case .mode(let mode):
-                    presetStore.writeIfNew(key: setting.key, value: mode)
-                }
-            }
-            presetStore.commit()
-            deviceStore.commit()
-        }
-    }
-
-    /// Apply a presets
-    ///
-    /// Iterate settings received during connection
-    private func applyPresets() {
-        // iterate settings received during the connection
-        for setting in droneSettings {
-            switch setting {
-            case let .maxAltitude(min, value, max):
-                if let preset: Double = presetStore?.read(key: setting.key) {
-                    if preset != value {
-                        // update the drone with the preset value
-                        sendMaxAltitudeCommand(preset)
-                    }
-                    // uses preset value
-                    geofence.update(maxAltitude: (min: min, value: preset, max: max))
-                } else {
-                    // uses device value
-                    geofence.update(maxAltitude: (min: min, value: value, max: max))
-                }
-            case let .maxDistance(min, value, max):
-                if let preset: Double = presetStore?.read(key: setting.key) {
-                    if preset != value {
-                        // update the drone with the preset value
-                        sendMaxDistanceCommand(preset)
-                    }
-                    // uses preset value
-                    geofence.update(maxDistance: (min: min, value: preset, max: max))
-                } else {
-                    // uses device value
-                    geofence.update(maxDistance: (min: min, value: value, max: max))
-                }
-            case let .mode(mode):
-                if let preset: GeofenceMode = presetStore?.read(key: setting.key) {
-                    if preset != mode {
-                        // update the drone with the preset value
-                        sendModeCommand(preset)
-                    }
-                    // uses preset value
-                    geofence.update(mode: preset)
-                } else {
-                    // uses device value
-                    geofence.update(mode: mode)
-                }
-            }
-            geofence.notifyUpdated()
-        }
-    }
-
-    /// Called when a command that notify a setting change has been received
-    ///
-    /// - Parameter setting: setting that changed
-    func settingDidChange(_ setting: Setting) {
-        droneSettings.insert(setting)
-        // apply setting if connected
-        if connected {
-            switch setting {
-            case let .maxAltitude(min, value, max):
-                geofence.update(maxAltitude: (min: min, value: value, max: max))
-                // store range for device
-                deviceStore?.writeRange(key: setting.key, min: min, max: max)
-            case let .maxDistance(min, value, max):
-                geofence.update(maxDistance: (min: min, value: value, max: max))
-                // store range for device
-                deviceStore?.writeRange(key: setting.key, min: min, max: max)
-            case let .mode(mode):
-                geofence.update(mode: mode)
-            }
-            deviceStore?.commit()
-            geofence.notifyUpdated()
-        }
+        geofence.notifyUpdated()
     }
 
     /// A command has been received
@@ -324,12 +256,16 @@ class AnafiGeofence: DeviceComponentController, GeofenceBackend {
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
         let featureId = ArsdkCommand.getFeatureId(command)
-        if featureId == kArsdkFeatureArdrone3PilotingsettingsstateUid {
+        switch featureId {
+        case kArsdkFeatureArdrone3PilotingsettingsstateUid:
             // Piloting Settings
             ArsdkFeatureArdrone3Pilotingsettingsstate.decode(command, callback: self)
-        } else if featureId == kArsdkFeatureArdrone3GpssettingsstateUid {
+        case kArsdkFeatureArdrone3GpssettingsstateUid:
             // Piloting Settings
             ArsdkFeatureArdrone3Gpssettingsstate.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            geofenceDecoder.decode(command)
+        default: break
         }
     }
 }
@@ -339,50 +275,100 @@ extension AnafiGeofence {
     /// Send set max altitude command.
     ///
     /// - Parameter value: new value
-    func sendMaxAltitudeCommand(_ value: Double) {
+    /// - Returns: `true` if the command has been sent
+    func sendMaxAltitudeCommand(_ value: Double) -> Bool {
         ULog.d(.ctrlTag, "Geofence: setting max atlitude: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Pilotingsettings.maxAltitudeEncoder(current: Float(value)))
+        if isArsdkGeofenceSupported {
+            var setMaxAltitude = Arsdk_Geofence_Command.SetMaxAltitude()
+            setMaxAltitude.value = Float(value)
+            return sendGeofenceCommand(.setMaxAltitude(setMaxAltitude))
+        } else {
+            return sendCommand(ArsdkFeatureArdrone3Pilotingsettings.maxAltitudeEncoder(current: Float(value)))
+        }
     }
 
     /// Send set max distance command.
     ///
     /// - Parameter value: new value
-    func sendMaxDistanceCommand(_ value: Double) {
+    /// - Returns: `true` if the command has been sent
+    func sendMaxDistanceCommand(_ value: Double) -> Bool {
         ULog.d(.ctrlTag, "Geofence: setting max distance: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Pilotingsettings.maxDistanceEncoder(value: Float(value)))
+        if isArsdkGeofenceSupported {
+            var setMaxDistance = Arsdk_Geofence_Command.SetMaxDistance()
+            setMaxDistance.value = Float(value)
+            return sendGeofenceCommand(.setMaxDistance(setMaxDistance))
+        } else {
+            return sendCommand(ArsdkFeatureArdrone3Pilotingsettings.maxDistanceEncoder(value: Float(value)))
+        }
     }
 
     /// Send set mode command.
     ///
     /// - Parameter mode: new mode
-    func sendModeCommand(_ mode: GeofenceMode) {
+    /// - Returns: `true` if the command has been sent
+    func sendModeCommand(_ mode: GeofenceMode) -> Bool {
         ULog.d(.ctrlTag, "Geofence: setting mode: \(mode)")
-        sendCommand(ArsdkFeatureArdrone3Pilotingsettings.noFlyOverMaxDistanceEncoder(
-            shouldnotflyover: mode == .cylinder ? 1 : 0))
+        if isArsdkGeofenceSupported {
+            var setMode = Arsdk_Geofence_Command.SetMode()
+            setMode.value = mode.arsdkValue!
+            return sendGeofenceCommand(.setMode(setMode))
+        } else {
+            return sendCommand(ArsdkFeatureArdrone3Pilotingsettings.noFlyOverMaxDistanceEncoder(
+                shouldnotflyover: mode == .cylinder ? 1 : 0))
+        }
+    }
+
+    /// Sends geofence get state command.
+    ///
+    /// - Returns: `true` if the command has been sent
+    func sendGeofenceGetStateCommand() -> Bool {
+        var getState = Arsdk_Geofence_Command.GetState()
+        getState.includeDefaultCapabilities = true
+        return sendGeofenceCommand(.getState(getState))
+    }
+
+    /// Sends to the drone a Geofence command.
+    ///
+    /// - Parameter command: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendGeofenceCommand(_ command: Arsdk_Geofence_Command.OneOf_ID) -> Bool {
+        if let encoder = ArsdkGeofenceCommandEncoder.encoder(command) {
+            return sendCommand(encoder)
+        }
+        return false
     }
 }
 
 /// Piloting Settings callback implementation
 extension AnafiGeofence: ArsdkFeatureArdrone3PilotingsettingsstateCallback {
     func onMaxAltitudeChanged(current: Float, min: Float, max: Float) {
+        guard !isArsdkGeofenceSupported else { return }
         guard min <= max else {
             ULog.w(.tag, "Max altitude bounds are not correct, skipping this event.")
             return
         }
-        settingDidChange(.maxAltitude(Double(min), Double(current), Double(max)))
+        maxAltitudeSetting.handleNewBounds(min: Double(min), max: Double(max))
+        maxAltitudeSetting.handleNewValue(value: Double(current))
+        geofence.notifyUpdated()
     }
 
     func onMaxDistanceChanged(current: Float, min: Float, max: Float) {
+        guard !isArsdkGeofenceSupported else { return }
         guard min <= max else {
             ULog.w(.tag, "Max distance bounds are not correct, skipping this event.")
             return
         }
-        settingDidChange(.maxDistance(Double(min), Double(current), Double(max)))
+        maxDistanceSetting.handleNewBounds(min: Double(min), max: Double(max))
+        maxDistanceSetting.handleNewValue(value: Double(current))
+        geofence.notifyUpdated()
     }
 
     func onNoFlyOverMaxDistanceChanged(shouldnotflyover: UInt) {
+        guard !isArsdkGeofenceSupported else { return }
         ULog.d(.ctrlTag, "AnafiGeofence: onNoFlyOverMaxDistanceChanged: \(shouldnotflyover)")
-        settingDidChange(.mode(shouldnotflyover == 1 ? .cylinder : .altitude))
+        modeSetting.handleNewAvailableValues(values: [.cylinder, .altitude])
+        modeSetting.handleNewValue(value: shouldnotflyover == 1 ? .cylinder : .altitude)
+        geofence.notifyUpdated()
     }
 }
 
@@ -393,6 +379,7 @@ extension AnafiGeofence: ArsdkFeatureArdrone3GpssettingsstateCallback {
     private static let UnknownCoordinate: Double = 500
 
     func onGeofenceCenterChanged(latitude: Double, longitude: Double) {
+        guard !isArsdkGeofenceSupported else { return }
         updateGeofenceCenter(latitude: latitude, longitude: longitude)
     }
 
@@ -413,9 +400,63 @@ extension AnafiGeofence: ArsdkFeatureArdrone3GpssettingsstateCallback {
     }
 }
 
+extension AnafiGeofence: ArsdkGeofenceEventDecoderListener {
+    func onState(_ state: Arsdk_Geofence_Event.State) {
+        isArsdkGeofenceSupported = true
+        if state.hasDefaultCapabilities {
+            let modes = state.defaultCapabilities.modes
+                .compactMap { GeofenceMode(fromArsdk: $0) }
+            modeSetting.handleNewAvailableValues(values: Set(modes))
+
+            if state.defaultCapabilities.hasMaxAltitudeRange {
+                maxAltitudeSetting.handleNewBounds(
+                    min: Double(state.defaultCapabilities.maxAltitudeRange.min),
+                    max: Double(state.defaultCapabilities.maxAltitudeRange.max))
+            }
+
+            if state.defaultCapabilities.hasMaxDistanceRange {
+                maxDistanceSetting.handleNewBounds(min: Double(state.defaultCapabilities.maxDistanceRange.min),
+                                                max: Double(state.defaultCapabilities.maxDistanceRange.max))
+            }
+        }
+        if state.hasIsAvailable {
+            geofence.update(isAvailable: state.isAvailable.value)
+        }
+        if state.hasMode {
+            modeSetting.handleNewValue(value: GeofenceMode(fromArsdk: state.mode.value))
+        }
+        if state.hasCenter {
+            if state.center.hasCoordinates {
+                geofence.update(center: CLLocation(latitude: state.center.coordinates.latitude,
+                                                   longitude: state.center.coordinates.longitude))
+            } else {
+                geofence.update(center: nil)
+            }
+        }
+
+        if state.hasMaxAltitude {
+            maxAltitudeSetting.handleNewValue(value: Double(state.maxAltitude.value))
+        }
+
+        if state.hasMaxDistance {
+            maxDistanceSetting.handleNewValue(value: Double(state.maxDistance.value))
+
+        }
+        geofence.notifyUpdated()
+    }
+}
+
 // Extension to make GeofenceMode storable
 extension GeofenceMode: StorableEnum {
     static var storableMapper = Mapper<GeofenceMode, String>([
         .altitude: "altitude",
         .cylinder: "cylinder"])
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension GeofenceMode: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<GeofenceMode, Arsdk_Geofence_Mode>([
+        .altitude: .altitude,
+        .cylinder: .cylinder
+    ])
 }

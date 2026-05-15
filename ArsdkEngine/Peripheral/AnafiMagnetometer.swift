@@ -72,11 +72,11 @@ class AnafiMagnetometer: DeviceComponentController {
 /// Magnetometer backend implementation
 extension AnafiMagnetometer: MagnetometerBackend {
     func startCalibrationProcess() {
-        sendCommand(ArsdkFeatureCommonCalibration.magnetoCalibrationEncoder(calibrate: 1))
+        _ = sendCommand(ArsdkFeatureCommonCalibration.magnetoCalibrationEncoder(calibrate: 1))
     }
 
     func cancelCalibrationProcess() {
-        sendCommand(ArsdkFeatureCommonCalibration.magnetoCalibrationEncoder(calibrate: 0))
+        _ = sendCommand(ArsdkFeatureCommonCalibration.magnetoCalibrationEncoder(calibrate: 0))
     }
 }
 
@@ -91,7 +91,7 @@ extension AnafiMagnetometer: ArsdkFeatureCommonCalibrationstateCallback {
             // considered when the device has indicated the end of the validation process
             self.calibrationFailed = true
         } else {
-             self.calibrationFailed = false
+            self.calibrationFailed = false
             if xaxiscalibration == 1 {
                 calibratedAxes.insert(.roll)
             }
@@ -121,24 +121,24 @@ extension AnafiMagnetometer: ArsdkFeatureCommonCalibrationstateCallback {
 
     func onMagnetoCalibrationAxisToCalibrateChanged(
         axis: ArsdkFeatureCommonCalibrationstateMagnetocalibrationaxistocalibratechangedAxis) {
-        switch axis {
-        case .xaxis:
-            magnetometer.update(currentAxis: .roll)
-        case .yaxis:
-            magnetometer.update(currentAxis: .pitch)
-        case .zaxis:
-            magnetometer.update(currentAxis: .yaw)
-        case .none:
-            magnetometer.update(currentAxis: .none)
-        case .sdkCoreUnknown:
-            fallthrough
-        @unknown default:
-            // don't change anything if value is unknown
-            ULog.w(.tag, "Unknown axis, skipping this event.")
-            return
+            switch axis {
+            case .xaxis:
+                magnetometer.update(currentAxis: .roll)
+            case .yaxis:
+                magnetometer.update(currentAxis: .pitch)
+            case .zaxis:
+                magnetometer.update(currentAxis: .yaw)
+            case .none:
+                magnetometer.update(currentAxis: .none)
+            case .sdkCoreUnknown:
+                fallthrough
+            @unknown default:
+                // don't change anything if value is unknown
+                ULog.w(.tag, "Unknown axis, skipping this event.")
+                return
+            }
+            magnetometer.notifyUpdated()
         }
-        magnetometer.notifyUpdated()
-    }
 
     func onMagnetoCalibrationStartedChanged(started: UInt) {
         if started == 0 {

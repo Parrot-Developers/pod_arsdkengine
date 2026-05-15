@@ -17,11 +17,6 @@ protocol ArsdkConnectivityEventDecoderListener: AnyObject {
     /// - Parameter state: event to process
     func onState(_ state: Arsdk_Connectivity_Event.State)
 
-    /// Processes a `Arsdk_Connectivity_Event.CommandResponse` event.
-    ///
-    /// - Parameter commandResponse: event to process
-    func onCommandResponse(_ commandResponse: Arsdk_Connectivity_Event.CommandResponse)
-
     /// Processes a `Arsdk_Connectivity_Event.Connection` event.
     ///
     /// - Parameter connection: event to process
@@ -62,7 +57,7 @@ class ArsdkConnectivityEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
     }
 
-    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
     }
 
@@ -84,8 +79,6 @@ class ArsdkConnectivityEventDecoder: NSObject, ArsdkFeatureGenericCallback {
                 listener?.onRadioList(event)
             case .state(let event):
                 listener?.onState(event)
-            case .commandResponse(let event):
-                listener?.onCommandResponse(event)
             case .connection(let event):
                 listener?.onConnection(event)
             case .scanResult(let event):
@@ -103,7 +96,6 @@ extension Arsdk_Connectivity_Event.OneOf_ID {
         switch self {
         case .radioList: return 16
         case .state: return 17
-        case .commandResponse: return 18
         case .connection: return 19
         case .scanResult: return 20
         }
@@ -151,6 +143,7 @@ extension Arsdk_Connectivity_Command.ListRadios {
 extension Arsdk_Connectivity_Command.GetState {
     static var radioIdFieldNumber: Int32 { 1 }
     static var includeDefaultCapabilitiesFieldNumber: Int32 { 2 }
+    static var supportsPackedChannelsFieldNumber: Int32 { 3 }
 }
 extension Arsdk_Connectivity_Command.SetMode {
     static var radioIdFieldNumber: Int32 { 1 }
@@ -185,10 +178,7 @@ extension Arsdk_Connectivity_Event.State {
     static var channelFieldNumber: Int32 { 8 }
     static var authorizedChannelsFieldNumber: Int32 { 9 }
     static var rssiFieldNumber: Int32 { 10 }
-}
-extension Arsdk_Connectivity_Event.CommandResponse {
-    static var radioIdFieldNumber: Int32 { 1 }
-    static var statusFieldNumber: Int32 { 2 }
+    static var authorizedPackedChannelsFieldNumber: Int32 { 11 }
 }
 extension Arsdk_Connectivity_Event.Connection {
     static var radioIdFieldNumber: Int32 { 1 }
@@ -201,11 +191,11 @@ extension Arsdk_Connectivity_Event.ScanResult {
 extension Arsdk_Connectivity_Event {
     static var radioListFieldNumber: Int32 { 16 }
     static var stateFieldNumber: Int32 { 17 }
-    static var commandResponseFieldNumber: Int32 { 18 }
     static var connectionFieldNumber: Int32 { 19 }
     static var scanResultFieldNumber: Int32 { 20 }
 }
 extension Arsdk_Connectivity_Capabilities {
+    static var modelFieldNumber: Int32 { 1 }
     static var supportedModesFieldNumber: Int32 { 2 }
     static var supportedEncryptionTypesFieldNumber: Int32 { 3 }
     static var supportedCountriesFieldNumber: Int32 { 4 }
@@ -219,6 +209,9 @@ extension Arsdk_Connectivity_AccessPointConfig {
     static var environmentFieldNumber: Int32 { 6 }
     static var manualChannelFieldNumber: Int32 { 7 }
     static var automaticChannelFieldNumber: Int32 { 8 }
+    static var frequencyHoppingListFieldNumber: Int32 { 9 }
+    static var backupFreqsFieldNumber: Int32 { 10 }
+    static var extraInfosFieldNumber: Int32 { 11 }
 }
 extension Arsdk_Connectivity_StationConfig {
     static var securityFieldNumber: Int32 { 1 }
@@ -227,6 +220,11 @@ extension Arsdk_Connectivity_StationConfig {
     static var hwAddrFieldNumber: Int32 { 4 }
     static var countryFieldNumber: Int32 { 5 }
     static var environmentFieldNumber: Int32 { 6 }
+    static var manualChannelFieldNumber: Int32 { 7 }
+    static var automaticChannelFieldNumber: Int32 { 8 }
+    static var frequencyHoppingListFieldNumber: Int32 { 9 }
+    static var backupFreqsFieldNumber: Int32 { 10 }
+    static var extraInfosFieldNumber: Int32 { 11 }
 }
 extension Arsdk_Connectivity_AccessPointState {
     static var systemStateFieldNumber: Int32 { 1 }
@@ -236,18 +234,29 @@ extension Arsdk_Connectivity_StationState {
     static var connectionStateFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Connectivity_Channel {
-    static var wifiChannelFieldNumber: Int32 { 1 }
+    static var radioChannelFieldNumber: Int32 { 1 }
 }
-extension Arsdk_Connectivity_WifiChannel {
+extension Arsdk_Connectivity_RadioChannel {
     static var bandFieldNumber: Int32 { 1 }
-    static var channelFieldNumber: Int32 { 2 }
+    static var idFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Connectivity_AuthorizedChannels {
     static var channelFieldNumber: Int32 { 1 }
 }
-extension Arsdk_Connectivity_AuthorizedChannel {
+extension Arsdk_Connectivity_AuthorizedPackedChannels {
+    static var channelsFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Connectivity_ChannelDescriptor {
     static var channelFieldNumber: Int32 { 1 }
-    static var environmentFieldNumber: Int32 { 2 }
+    static var frequencyFieldNumber: Int32 { 3 }
+}
+extension Arsdk_Connectivity_PackedChannelDescriptor {
+    static var bandFieldNumber: Int32 { 1 }
+    static var numberOfChannelsFieldNumber: Int32 { 2 }
+    static var firstIdFieldNumber: Int32 { 3 }
+    static var idStepFieldNumber: Int32 { 4 }
+    static var firstFrequencyFieldNumber: Int32 { 5 }
+    static var frequencyStepFieldNumber: Int32 { 6 }
 }
 extension Arsdk_Connectivity_NetworkSecurityMode {
     static var encryptionFieldNumber: Int32 { 1 }
@@ -268,4 +277,16 @@ extension Arsdk_Connectivity_EnvironmentValue {
 }
 extension Arsdk_Connectivity_AutomaticChannelSelection {
     static var allowedBandsFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Connectivity_FrequencyHoppingList {
+    static var txChannelsFieldNumber: Int32 { 1 }
+    static var rxChannelsFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Connectivity_BackupFreqs {
+    static var rxFreqsFieldNumber: Int32 { 1 }
+    static var txFreqsFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Connectivity_ExtraInfos {
+    static var realCountryFieldNumber: Int32 { 1 }
+    static var activeCellularFieldNumber: Int32 { 2 }
 }

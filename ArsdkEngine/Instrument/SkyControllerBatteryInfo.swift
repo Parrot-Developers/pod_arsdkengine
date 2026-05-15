@@ -68,9 +68,14 @@ class SkyControllerBatteryInfo: DeviceComponentController {
 extension SkyControllerBatteryInfo: ArsdkFeatureSkyctrlSkycontrollerstateCallback {
     func onBatteryChanged(percent: UInt) {
         if percent == 255 {
-            batteryInfo.update(batteryLevel: Int(100)).update(isCharging: true).notifyUpdated()
+            batteryInfo.update(batteryLevel: Int(100)).notifyUpdated()
         } else {
-            batteryInfo.update(batteryLevel: Int(percent)).update(isCharging: false).notifyUpdated()
+            batteryInfo.update(batteryLevel: Int(percent)).notifyUpdated()
         }
+    }
+
+    func onBatteryState(state: ArsdkFeatureSkyctrlSkycontrollerstateBatterystateState) {
+        batteryInfo.update(isCharging: state == .charging)
+            .notifyUpdated()
     }
 }

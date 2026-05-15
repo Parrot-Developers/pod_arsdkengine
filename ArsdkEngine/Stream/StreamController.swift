@@ -44,7 +44,13 @@ public class StreamController: NSObject, ReplayCoreBackend {
         }
 
         /// Ground SDK camera live source.
-        public let gsdkSource: CameraLiveSource
+        public var gsdkSource: CameraLiveSource
+
+        /// Stream state listener handle.
+        private var streamListenerHandle: ListenerHandle?
+
+        /// Monitor of the stream sharing changes.
+        private var streamSharingMonitor: MonitorCore?
 
         /// Constructor.
         ///
@@ -58,10 +64,72 @@ public class StreamController: NSObject, ReplayCoreBackend {
             let sdkcoreStream = droneController.createVideoStream()!
             let backend = StreamCoreBackendCore()
             let gsdkStreamLive = CameraLiveCore(source: source, backend: backend)
+
             super.init(source: arsdkSource, stream: gsdkStreamLive, sdkcoreStream: sdkcoreStream, backend: backend)
 
             backend.controller = self
             sdkcoreStream.listener = self
+
+            let streamSharingManager = deviceController.engine.utilities.getUtility(Utilities.streamSharingManager)
+
+            streamListenerHandle = register(
+                streamWouldOpen: {},
+                sdkcoreStreamStateDidChange: { state in
+                    switch state {
+                    case .opened:
+                        streamSharingManager?.setStream(sdkCoreStream: sdkcoreStream)
+                    case .closed:
+                        streamSharingManager?.setStream(sdkCoreStream: nil)
+                    default:
+                        break
+                    }
+                },
+                availableMediaDidChange: {})
+
+            streamSharingMonitor = streamSharingManager?.startMonitoring(
+                didEnable: { streamSharingManager?.setStream(sdkCoreStream: sdkcoreStream) },
+                serviceDidStart: {},
+                recordingStateDidChange: { _, _, _ in },
+                streamingStateDidChange: { _, _, _ in })
+        }
+
+        override func selectSource(source: CameraLiveSource) {
+            gsdkSource = source
+            let arsdkSource = source.arsdkValue!
+            self.source = droneController.createVideoSourceLive(cameraType: arsdkSource)!
+            sdkcoreStream.selectMedia(arsdkSource, source: self.source)
+        }
+
+        /// Notifies the drone that the requested camera has been accepted by sending it back.
+        ///
+        /// This method should be called following the [requested camera][requestedCamera] demand from the drone
+        /// after selecting the new camera source if necessary.
+        ///
+        /// - Parameters:
+        ///    - source: the camera live source
+        ///    - requester: the requester
+        public func doNotifyCamera(source: CameraLiveSource, requester: String) {
+            if let type = source.arsdkType {
+                var notifyCamera = Arsdk_Camera_StreamCamera()
+                notifyCamera.type = type
+                notifyCamera.requester = requester
+                _ = sendCameraCommand(.notifyStreamCamera(notifyCamera))
+            }
+        }
+
+        /// Sends to the drone a camera command.
+        ///
+        /// - Parameter command: command to send
+        /// - Returns: `true` if the command has been sent
+        func sendCameraCommand(_ command: Arsdk_Camera_Command.OneOf_ID) -> Bool {
+            if let encoder = ArsdkCameraCommandEncoder.encoder(command) {
+                return droneController.sendCommand(encoder)
+            }
+            return false
+        }
+
+        deinit {
+            streamSharingMonitor?.stop()
         }
     }
 
@@ -171,7 +239,7 @@ public class StreamController: NSObject, ReplayCoreBackend {
     var sdkcoreStream: ArsdkStream
 
     /// Stream source to play.
-    fileprivate let source: SdkCoreSource
+    fileprivate var source: SdkCoreSource
 
     /// StreamCore backend.
     private let backend: StreamCoreBackendCore
@@ -234,14 +302,17 @@ public class StreamController: NSObject, ReplayCoreBackend {
 
     /// Set the stream at a specific position.
     ///
-    /// - Parameter position: position to seek in the stream, in seconds.
-    public func seek(position: Int) {
+    /// - Parameters:
+    ///   - position: position to seek in the stream, in seconds.
+    ///   - exact: `true` means seek to the sample closest to the position (slower), `false` means seek
+    ///   to the nearest synchronization sample preceding the position (faster)
+    public func seek(position: Int, exact: Bool) {
         ULog.i(.streamTag, "\(self) seek to position: \(position)")
 
         if state == .stopped {
             state = .paused
         }
-        pendingSeekCmd = CommandSeek(streamCtrl: self, position: position)
+        pendingSeekCmd = CommandSeek(streamCtrl: self, position: position, exact: exact)
         stateRun()
     }
 
@@ -264,6 +335,19 @@ public class StreamController: NSObject, ReplayCoreBackend {
             return sinkCtrl.rawVideoSinkCore
         } else {
             fatalError("Bad stream sink configuration")
+        }
+    }
+
+    public func requestSources() {
+        sdkcoreStream.getMediaList()
+    }
+
+    public func selectSource(source: CameraLiveSource) {}
+
+    public func notifyCamera(source: CameraLiveSource, requester: String) {
+
+        if let live = self as? StreamController.Live {
+            live.doNotifyCamera(source: source, requester: requester)
         }
     }
 
@@ -319,14 +403,20 @@ public class StreamController: NSObject, ReplayCoreBackend {
             // Waiting opened state.
             break
         case .opened:
-            if sdkcoreStream.playbackState()?.speed == 0 || lastCmdStatus == -ETIMEDOUT {
-                // Send play command.
-                setCmd(CommandPlay(streamCtrl: self))
-            } else if let pendingSeekCmd = pendingSeekCmd {
-                // Send seek command.
-                setCmd(pendingSeekCmd)
+            if let state = sdkcoreStream.playbackState() {
+                if state.playing != true || lastCmdStatus == -ETIMEDOUT {
+                    setCmd(CommandPlay(streamCtrl: self))
+                } else if pendingSeekCmd != nil {
+                    if state.position > state.duration,
+                       let seekCmd = pendingSeekCmd as? CommandSeek {
+                        pendingSeekCmd = CommandSeek(
+                            streamCtrl: self,
+                            position: Int(state.duration),
+                            exact: seekCmd.exact)
+                    }
+                    setCmd(pendingSeekCmd!)
+                }
             }
-
         case .closing:
             // Waiting closed state.
             break
@@ -347,12 +437,20 @@ public class StreamController: NSObject, ReplayCoreBackend {
             // Waiting opened state.
             break
         case .opened:
-            if sdkcoreStream.playbackState()?.speed != 0 || lastCmdStatus == -ETIMEDOUT {
-                // Send pause cmd
-                setCmd(CommandPause(streamCtrl: self))
-            } else if let pendingSeekCmd = pendingSeekCmd {
-                // Send seek command.
-                setCmd(pendingSeekCmd)
+            if let state = sdkcoreStream.playbackState() {
+                if state.playing != false || lastCmdStatus == -ETIMEDOUT {
+                    // Send pause cmd
+                    setCmd(CommandPause(streamCtrl: self))
+                } else if pendingSeekCmd != nil {
+                    if state.position > state.duration,
+                       let seekCmd = pendingSeekCmd as? CommandSeek {
+                        pendingSeekCmd = CommandSeek(
+                            streamCtrl: self,
+                            position: Int(state.duration),
+                            exact: seekCmd.exact)
+                    }
+                    setCmd(pendingSeekCmd!)
+                }
             }
         case .closing:
             // Waiting closed state.
@@ -390,7 +488,7 @@ public class StreamController: NSObject, ReplayCoreBackend {
     /// - Parameter cmd: command to send
     private func setCmd(_ cmd: Command) {
         ULog.d(.streamTag, "\(self) setCmd cmd \(cmd) currentCmd: \(String(describing: currentCmd))" +
-                " lastCmdFailed: \(String(describing: lastCmdFailed))")
+               " lastCmdFailed: \(String(describing: lastCmdFailed))")
         if currentCmd == nil && cmd != lastCmdFailed {
             currentCmd = cmd
             cmd.execute()
@@ -427,7 +525,7 @@ public class StreamController: NSObject, ReplayCoreBackend {
             lastCmdFailed = currentCmd
             lastCmdStatus = status
             currentCmd = nil
-            Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { _ in
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
                 self.lastCmdFailed = nil
                 self.lastCmdStatus = 0
                 self.stateRun()
@@ -530,8 +628,14 @@ extension StreamController {
 extension StreamController: ArsdkStreamListener {
     public func streamStateDidChange(_ stream: ArsdkStream) {
         ULog.d(.streamTag, "\(self) streamStateDidChange \(sdkcoreStreamStateDescription())")
-
-        stateRun()
+       
+        if stream.state == .closed {
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
+                self.stateRun()
+            }
+        } else {
+            stateRun()
+        }
 
         // notify state change.
         for listener in listeners {
@@ -540,10 +644,21 @@ extension StreamController: ArsdkStreamListener {
     }
 
     public func streamPlaybackStateDidChange(_ stream: ArsdkStream, playbackState: ArsdkStreamPlaybackState) {
+        let speed = playbackState.playing == true &&
+        playbackState.position < playbackState.duration ? playbackState.speed : 0
+
         gsdkStream.streamPlaybackStateDidChange(duration: playbackState.duration,
                                                 position: playbackState.position,
-                                                speed: playbackState.speed,
-                                                timestamp: TimeProvider.timeInterval)
+                                                speed: speed,
+                                                timestamp: TimeProvider.timeInterval,
+                                                isSeeking: pendingSeekCmd != nil && currentCmd != pendingSeekCmd)
+    }
+
+    public func mediaListDidChange(_ medias: [SdkCoreDemuxerMedia]) {
+        let sourceSet = Set(medias.compactMap { CameraLiveSource(fromArsdk: $0.cameraType) })
+        let selectedSource = CameraLiveSource(fromArsdk: medias.first(
+            where: { $0.isSelected })?.cameraType ?? .unspecified)
+        gsdkStream.sourceSetDidChange(sources: sourceSet, selected: selectedSource)
     }
 
     public func mediaAdded(_ stream: ArsdkStream, mediaInfo: SdkCoreMediaInfo) {
@@ -627,20 +742,26 @@ private class CommandPause: Command {
 private class CommandSeek: Command {
     /// Position to seek, in seconds.
     let position: Int
+    /// `true` means seek to the sample closest to the position, `false` means seek to the nearest
+    ///  synchronization sample preceding the position
+    let exact: Bool
 
     /// Constructor.
     ///
     /// - Parameters:
     ///    - streamCtrl: stream controller owner of this command.
     ///    - position: position to seek, in seconds.
-    init(streamCtrl: StreamController, position: Int) {
+    ///    - exact: `true` means seek to the sample closest to the position (slower), `false` means seek
+    ///    to the nearest synchronization sample preceding the position (faster)
+    init(streamCtrl: StreamController, position: Int, exact: Bool) {
         self.position = position
+        self.exact = exact
         super.init(streamCtrl: streamCtrl)
     }
 
     override func execute() {
         ULog.d(.streamTag, "\(streamCtrl) CommandSeek")
-        streamCtrl.sdkcoreStream.seek(to: Int32(position)) { [weak self] status in
+        streamCtrl.sdkcoreStream.seek(to: Int32(position), exact: exact) { [weak self] status in
             if let self = self {
                 ULog.d(.streamTag, "\(self.streamCtrl) CommandSeek to \(self.position) status: \(status)")
                 self.streamCtrl.cmdCompletion(status: status)
@@ -672,14 +793,18 @@ private class CommandClose: Command {
 
 /// Extension that adds conversion from/to arsdk enum
 extension CameraLiveSource: ArsdkMappableEnum {
-
     static let arsdkMapper = Mapper<CameraLiveSource, ArsdkSourceLiveCameraType>([
         .unspecified: .unspecified,
-        .frontCamera: .frontCamera,
-        .frontStereoCameraLeft: .frontStereoCameraLeft,
-        .frontStereoCameraRight: .frontStereoCameraRight,
-        .verticalCamera: .verticalCamera,
-        .disparity: .disparity])
+        .frontCamera: .front,
+        .frontStereoCameraLeft: .frontStereoLeft,
+        .frontStereoCameraRight: .frontStereoRight,
+        .verticalCamera: .vertical,
+        .disparity: .disparity,
+        .horizontalStereoCameraLeft: .horizontalStereoLeft,
+        .horizontalStereoCameraRight: .horizontalStereoRight,
+        .downStereoCameraLeft: .downStereoLeft,
+        .downStereoCameraRight: .downStereoRight,
+        .externalCamera: .external])
 }
 
 /// StreamCore backend implementation
@@ -709,9 +834,9 @@ private class StreamCoreBackendCore: StreamCoreBackend {
         controller?.pause()
     }
 
-    func seek(position: Int) {
+    func seek(position: Int, exact: Bool) {
         assert(controller != nil)
-        controller?.seek(position: position)
+        controller?.seek(position: position, exact: exact)
     }
 
     func stop() {
@@ -723,4 +848,20 @@ private class StreamCoreBackendCore: StreamCoreBackend {
         assert(controller != nil)
         return controller?.newSink(config: config) ?? SinkCore()
     }
+
+    func requestSources() {
+        assert(controller != nil)
+        controller?.requestSources()
+    }
+
+    func selectSource(source: CameraLiveSource) {
+        assert(controller != nil)
+        controller?.selectSource(source: source)
+    }
+
+    func notifyCamera(source: CameraLiveSource, requester: String) {
+        assert(controller != nil)
+        controller?.notifyCamera(source: source, requester: requester)
+    }
+
 }

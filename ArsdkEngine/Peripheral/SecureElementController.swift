@@ -56,7 +56,8 @@ class SecureElementController: DeviceComponentController, SecureElementBackend {
     override init(deviceController: DeviceController) {
         self.delegate = HttpSecureElementDownloaderDelegate()
         super.init(deviceController: deviceController)
-        self.secureElement = SecureElementCore(store: deviceController.device.peripheralStore, backend: self)
+        self.secureElement = SecureElementCore(desc: Peripherals.secureElement,
+                                               store: deviceController.device.peripheralStore, backend: self)
 
         self.certificateFileUrl = secureElement.certificateImagesStorage.workDir
             .appendingPathComponent("\(deviceController.device.uid).der")
@@ -69,7 +70,7 @@ class SecureElementController: DeviceComponentController, SecureElementBackend {
     /// Device is connected
     override func didConnect() {
         super.didConnect()
-        delegate.configure(downloader: self)
+        delegate.configure(deviceServer: deviceController.deviceServer)
         secureElement.publish()
     }
 
@@ -78,11 +79,17 @@ class SecureElementController: DeviceComponentController, SecureElementBackend {
         super.didDisconnect()
         secureElement.update(certificateCompletionStatus: .none)
         if certificateFilePresent {
-            secureElement.notifyUpdated()
+            secureElement.publish()
         } else {
             secureElement.unpublish()
         }
         delegate.reset(downloader: self)
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        secureElement.unpublish()
     }
 
     /// Drone is about to be forgotten
@@ -121,8 +128,21 @@ class SecureElementController: DeviceComponentController, SecureElementBackend {
     }
 
     /// Signs a challenge
+    ///
+    /// - Parameters:
+    ///   - challenge: challenge to send
+    ///   - operation: operation associated to the challenge signing request
     func sign(challenge: String, with operation: SecureElementSignatureOperation) {
-        if delegate.sign(challenge: challenge, with: operation, downloader: self) {
+        let result = delegate.sign(challenge: challenge, with: operation) { token in
+            if let token = token {
+                self.secureElement.update(
+                    newChallengeState: .success(challenge: challenge, token: token)).notifyUpdated()
+            } else {
+                self.secureElement.update(newChallengeState: .failure(challenge: challenge)).notifyUpdated()
+            }
+        }
+
+        if result {
             secureElement.update(newChallengeState: .processing(challenge: challenge))
                 .notifyUpdated()
         }

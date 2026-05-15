@@ -39,16 +39,16 @@ struct MapperButtonsMask: OptionSet, Hashable {
 
     /// Converts a `MapperButton` into a `MapperButtonsMask`
     ///
-    /// - Parameter mapperAxis: the axis to convert
-    /// - Returns: an axes mask
+    /// - Parameter mapperButton: the button to convert
+    /// - Returns: an buttons mask
     static func from(_ mapperButton: MapperButton) -> MapperButtonsMask {
         return MapperButtonsMask(rawValue: 1 << UInt(mapperButton.rawValue))
     }
 
-    /// Converts a list of `MapperAxis` into a `MapperAxesMask`
+    /// Converts a list of `MapperButton` into a `MapperButtonsMask`
     ///
-    /// - Parameter mapperAxes: the list of axes
-    /// - Returns: an axes mask
+    /// - Parameter mapperButtons: the list of buttons
+    /// - Returns: an buttons mask
     static func from(_ mapperButtons: MapperButton...) -> MapperButtonsMask {
         var mask = MapperButtonsMask.none
         mapperButtons.forEach { mask.insert(from($0)) }
@@ -157,12 +157,21 @@ enum MapperButton: Int {
     /// Generic button 21
     case button21
 
+    /// Generic button 22
+    case button22
+
+    /// Generic button 23
+    case button23
+
+    /// Generic button 24
+    case button24
+
     /// Set containing all generic buttons
     static let allCases: Set<MapperButton> = [.button0, .button1, .button2, .button3, .button4,
                                               .button5, .button6, .button7, .button8, .button9,
                                               .button10, .button11, .button12, .button13, .button14,
                                               .button15, .button16, .button17, .button18, .button19,
-                                              .button20, .button21]
+                                              .button20, .button21, .button22, .button23, .button24]
 }
 
 /// An generic axis
@@ -398,7 +407,7 @@ class MapperVirtualGamepad: DeviceComponentController {
                 isGrabRequestedForNav = true
             }
         }
-        sendCommand(ArsdkFeatureMapper.grabEncoder(buttons: buttons.rawValue, axes: axes.rawValue))
+        _ = sendCommand(ArsdkFeatureMapper.grabEncoder(buttons: buttons.rawValue, axes: axes.rawValue))
     }
 
     /// Sends the command to configure a button mapping entry
@@ -409,11 +418,11 @@ class MapperVirtualGamepad: DeviceComponentController {
     ///   - buttonsMask: mask of buttons that triggers the action
     final func sendAddButtonsMappingEntry(
         droneModel: Drone.Model, action: ButtonsMappableAction, buttonsMask: MapperButtonsMask) {
-        sendCommand(ArsdkFeatureMapper.mapButtonActionEncoder(
-            product: UInt(droneModel.internalId),
-            action: MapperVirtualGamepad.Actions.arsdkButtonsActions[action]!,
-            buttons: buttonsMask.rawValue))
-    }
+            _ = sendCommand(ArsdkFeatureMapper.mapButtonActionEncoder(
+                product: UInt(droneModel.internalId),
+                action: MapperVirtualGamepad.Actions.arsdkButtonsActions[action]!,
+                buttons: buttonsMask.rawValue))
+        }
 
     /// Sends the command to remove a button mapping entry
     ///
@@ -421,7 +430,7 @@ class MapperVirtualGamepad: DeviceComponentController {
     ///   - droneModel: the drone model on which the entry that should be removed applies
     ///   - action: buttons action the mapping entry triggers
     final func sendRemoveButtonsMappingEntry(droneModel: Drone.Model, action: ButtonsMappableAction) {
-        sendCommand(ArsdkFeatureMapper.mapButtonActionEncoder(
+        _ = sendCommand(ArsdkFeatureMapper.mapButtonActionEncoder(
             product: UInt(droneModel.internalId),
             action: MapperVirtualGamepad.Actions.arsdkButtonsActions[action]!,
             buttons: 0))
@@ -437,11 +446,11 @@ class MapperVirtualGamepad: DeviceComponentController {
     final func sendAddAxisMappingEntry(
         droneModel: Drone.Model, action: AxisMappableAction, axis: MapperAxis,
         buttonsMask: MapperButtonsMask) {
-        sendCommand(ArsdkFeatureMapper.mapAxisActionEncoder(
-            product: UInt(droneModel.internalId),
-            action: MapperVirtualGamepad.Actions.arsdkAxisActions[action]!, axis: axis.rawValue,
-            buttons: buttonsMask.rawValue))
-    }
+            _ = sendCommand(ArsdkFeatureMapper.mapAxisActionEncoder(
+                product: UInt(droneModel.internalId),
+                action: MapperVirtualGamepad.Actions.arsdkAxisActions[action]!, axis: axis.rawValue,
+                buttons: buttonsMask.rawValue))
+        }
 
     /// Sends the command to remove an axis mapping entry
     ///
@@ -449,7 +458,7 @@ class MapperVirtualGamepad: DeviceComponentController {
     ///   - droneModel: the drone model on which the entry that should be removed applies
     ///   - action: axis action the mapping entry triggers
     final func sendRemoveAxisMappingEntry(droneModel: Drone.Model, action: AxisMappableAction) {
-        sendCommand(ArsdkFeatureMapper.mapAxisActionEncoder(
+        _ = sendCommand(ArsdkFeatureMapper.mapAxisActionEncoder(
             product: UInt(droneModel.internalId),
             action: MapperVirtualGamepad.Actions.arsdkAxisActions[action]!, axis: -1, buttons: 0))
     }
@@ -465,7 +474,7 @@ class MapperVirtualGamepad: DeviceComponentController {
             product = 0
         }
         if let product = product {
-            sendCommand(ArsdkFeatureMapper.resetMappingEncoder(product: product))
+            _ = sendCommand(ArsdkFeatureMapper.resetMappingEncoder(product: product))
         }
     }
 
@@ -479,23 +488,23 @@ class MapperVirtualGamepad: DeviceComponentController {
         interpolator: AxisInterpolator, forDroneModel droneModel: Drone.Model,
         onAxis axis: MapperAxis) {
 
-        let expoType: ArsdkFeatureMapperExpoType
-        switch interpolator {
-        case .linear:
-            expoType = .linear
-        case .lightExponential:
-            expoType = .expo0
-        case .mediumExponential:
-            expoType = .expo1
-        case .strongExponential:
-            expoType = .expo2
-        case .strongestExponential:
-            expoType = .expo4
+            let expoType: ArsdkFeatureMapperExpoType
+            switch interpolator {
+            case .linear:
+                expoType = .linear
+            case .lightExponential:
+                expoType = .expo0
+            case .mediumExponential:
+                expoType = .expo1
+            case .strongExponential:
+                expoType = .expo2
+            case .strongestExponential:
+                expoType = .expo4
+            }
+            // we can force unwrap axis mask because it comes from a specific
+            _ = sendCommand(ArsdkFeatureMapper.setExpoEncoder(
+                product: UInt(droneModel.internalId), axis: axis.rawValue, expo: expoType))
         }
-        // we can force unwrap axis mask because it comes from a specific
-        sendCommand(ArsdkFeatureMapper.setExpoEncoder(
-            product: UInt(droneModel.internalId), axis: axis.rawValue, expo: expoType))
-    }
 
     /// Sends the command that configures the axis inversion
     ///
@@ -504,16 +513,16 @@ class MapperVirtualGamepad: DeviceComponentController {
     ///   - droneModel: drone model onto which the axis inversion applies
     ///   - reversed: true to make the axis reversed, false otherwise
     final func send(axis: MapperAxis, forDroneModel droneModel: Drone.Model, reversed: Bool) {
-        sendCommand(ArsdkFeatureMapper.setInvertedEncoder(
+        _ = sendCommand(ArsdkFeatureMapper.setInvertedEncoder(
             product: UInt(droneModel.internalId), axis: axis.rawValue, inverted: reversed ? 1 : 0))
     }
 
     /// Sends the command to enter or exit volatile mapping
     final func send(volatileMapping: Bool) {
         if volatileMapping {
-            sendCommand(ArsdkFeatureMapper.enterVolatileMappingEncoder())
+            _ = sendCommand(ArsdkFeatureMapper.enterVolatileMappingEncoder())
         } else {
-            sendCommand(ArsdkFeatureMapper.exitVolatileMappingEncoder())
+            _ = sendCommand(ArsdkFeatureMapper.exitVolatileMappingEncoder())
         }
     }
 }
@@ -566,11 +575,11 @@ extension MapperVirtualGamepad: ArsdkFeatureMapperCallback {
 
                     if !buttonsGrabbed.contains(navButtons) {
                         ULog.w(.mapperTag, "Missing grabbed buttons for navigation. " +
-                            "\(navButtons.rawValue) is not fully contained in: \(buttonsGrabbed.rawValue)")
+                               "\(navButtons.rawValue) is not fully contained in: \(buttonsGrabbed.rawValue)")
                     }
                     if !axesGrabbed.contains(navAxes) {
                         ULog.w(.mapperTag, "Missing grabbed axes for navigation. " +
-                            "\(navAxes.rawValue) is not fully contained in: \(axesGrabbed.rawValue)")
+                               "\(navAxes.rawValue) is not fully contained in: \(axesGrabbed.rawValue)")
                     }
                     // send a nav event for each event associated to a buttons which is pressed
                     for button in MapperButton.allCases {
@@ -628,65 +637,68 @@ extension MapperVirtualGamepad: ArsdkFeatureMapperCallback {
     func onButtonMappingItem(
         uid: UInt, product: UInt, action: ArsdkFeatureMapperButtonAction, buttons: UInt, listFlagsBitField: UInt) {
 
-        let clearMappings = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
-        if clearMappings {
-            specializedBackend.clearAllButtonsMappings()
-        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
-            specializedBackend.removeButtonsMappingEntry(withUid: uid)
-        } else {
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+            let clearMappings = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
+            if clearMappings {
                 specializedBackend.clearAllButtonsMappings()
-            }
-
-            if case DeviceModel.drone(let droneModel)? = DeviceModel.from(internalId: Int(product)),
-                let buttonsAction = Actions.gsdkButtonsActions[action] {
-                specializedBackend.addButtonsMappingEntry(
-                    uid: uid, droneModel: droneModel, action: buttonsAction,
-                    buttons: MapperButtonsMask(rawValue: buttons))
+            } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+                specializedBackend.removeButtonsMappingEntry(withUid: uid)
             } else {
-                ULog.w(.mapperTag, "Invalid product \(product) or action \(action), dropping mapping [uid: \(uid)" +
-                    " product: \(product) buttons: \(buttons)")
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                    specializedBackend.clearAllButtonsMappings()
+                }
+
+                if case DeviceModel.drone(let droneModel)? = DeviceModel.from(internalId: Int(product)),
+                   let buttonsAction = Actions.gsdkButtonsActions[action] {
+                    specializedBackend.addButtonsMappingEntry(
+                        uid: uid, droneModel: droneModel, action: buttonsAction,
+                        buttons: MapperButtonsMask(rawValue: buttons))
+                } else {
+                    ULog.w(.mapperTag, "Invalid product \(product) or action \(action), dropping mapping [uid: \(uid)" +
+                           " product: \(product) buttons: \(buttons)")
+                }
+            }
+
+            if clearMappings || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
+                specializedBackend.updateButtonsMappings()
             }
         }
-
-        if clearMappings || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-            specializedBackend.updateButtonsMappings()
-        }
-    }
 
     func onAxisMappingItem(
         uid: UInt, product: UInt, action: ArsdkFeatureMapperAxisAction, axis: Int, buttons: UInt,
         listFlagsBitField: UInt) {
 
-        let clearMappings = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
-        if clearMappings {
-            specializedBackend.clearAllAxisMappings()
-        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
-            specializedBackend.removeAxisMappingEntry(withUid: uid)
-        } else {
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+            let clearMappings = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
+            if clearMappings {
                 specializedBackend.clearAllAxisMappings()
-            }
-
-            if case DeviceModel.drone(let droneModel)? = DeviceModel.from(internalId: Int(product)),
-                let axisAction = Actions.gsdkAxisActions[action],
-                let mapperAxis = MapperAxis(rawValue: axis) {
-                specializedBackend.addAxisMappingEntry(
-                    uid: uid, droneModel: droneModel, action: axisAction,
-                    axis: mapperAxis, buttons: MapperButtonsMask(rawValue: buttons))
+            } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+                specializedBackend.removeAxisMappingEntry(withUid: uid)
             } else {
-                ULog.w(.mapperTag, "Invalid product \(product) or action \(action) or axis \(axis), " +
-                    "dropping mapping [uid: \(uid) product: \(product) axis: \(axis) buttons: \(buttons)")
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                    specializedBackend.clearAllAxisMappings()
+                }
+
+                if case DeviceModel.drone(let droneModel)? = DeviceModel.from(internalId: Int(product)),
+                   let axisAction = Actions.gsdkAxisActions[action],
+                   let mapperAxis = MapperAxis(rawValue: axis) {
+                    specializedBackend.addAxisMappingEntry(
+                        uid: uid, droneModel: droneModel, action: axisAction,
+                        axis: mapperAxis, buttons: MapperButtonsMask(rawValue: buttons))
+                } else {
+                    ULog.w(.mapperTag, "Invalid product \(product) or action \(action) or axis \(axis), " +
+                           "dropping mapping [uid: \(uid) product: \(product) axis: \(axis) buttons: \(buttons)")
+                }
+            }
+
+            if clearMappings || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
+                specializedBackend.updateAxisMappings()
             }
         }
-
-        if clearMappings || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-            specializedBackend.updateAxisMappings()
-        }
-    }
 
     func onApplicationAxisEvent(action: ArsdkFeatureMapperAxisAction, value: Int) {
-
+        let appAction = Actions.gsdkAxisActions[action]
+        if let appAction {
+            virtualGamepad.notifyAppAction(appAction, value)
+        }
     }
 
     func onApplicationButtonEvent(action: ArsdkFeatureMapperButtonAction) {
@@ -699,50 +711,50 @@ extension MapperVirtualGamepad: ArsdkFeatureMapperCallback {
     func onExpoMapItem(
         uid: UInt, product: UInt, axis: Int, expo: ArsdkFeatureMapperExpoType, listFlagsBitField: UInt) {
 
-        let clearMappings = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
-        if clearMappings {
-            specializedBackend.clearAllAxisInterpolators()
-        } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
-            specializedBackend.removeAxisInterpolator(withUid: uid)
-        } else {
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+            let clearMappings = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
+            if clearMappings {
                 specializedBackend.clearAllAxisInterpolators()
-            }
-
-            if case DeviceModel.drone(let droneModel)? = DeviceModel.from(internalId: Int(product)),
-                let mapperAxis = MapperAxis(rawValue: axis) {
-                let interpolator: AxisInterpolator
-                switch expo {
-                case .linear:
-                    interpolator = .linear
-                case .expo0:
-                    interpolator = .lightExponential
-                case .expo1:
-                    interpolator = .mediumExponential
-                case .expo2:
-                    interpolator = .strongExponential
-                case .expo4:
-                    interpolator = .strongestExponential
-                case .sdkCoreUnknown:
-                    fallthrough
-                @unknown default:
-                    // don't change anything if value is unknown
-                    ULog.w(.mapperTag, "Unknown expo, skipping this event.")
-                    return
-                }
-                specializedBackend.addAxisInterpolator(
-                    uid: uid, droneModel: droneModel, axis: mapperAxis,
-                    interpolator: interpolator)
+            } else if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+                specializedBackend.removeAxisInterpolator(withUid: uid)
             } else {
-                ULog.w(.mapperTag, "Invalid product \(product) or axis \(axis), dropping axis interpolator " +
-                    "[uid: \(uid) product: \(product) axis: \(axis) expo: \(expo)")
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                    specializedBackend.clearAllAxisInterpolators()
+                }
+
+                if case DeviceModel.drone(let droneModel)? = DeviceModel.from(internalId: Int(product)),
+                   let mapperAxis = MapperAxis(rawValue: axis) {
+                    let interpolator: AxisInterpolator
+                    switch expo {
+                    case .linear:
+                        interpolator = .linear
+                    case .expo0:
+                        interpolator = .lightExponential
+                    case .expo1:
+                        interpolator = .mediumExponential
+                    case .expo2:
+                        interpolator = .strongExponential
+                    case .expo4:
+                        interpolator = .strongestExponential
+                    case .sdkCoreUnknown:
+                        fallthrough
+                    @unknown default:
+                        // don't change anything if value is unknown
+                        ULog.w(.mapperTag, "Unknown expo, skipping this event.")
+                        return
+                    }
+                    specializedBackend.addAxisInterpolator(
+                        uid: uid, droneModel: droneModel, axis: mapperAxis,
+                        interpolator: interpolator)
+                } else {
+                    ULog.w(.mapperTag, "Invalid product \(product) or axis \(axis), dropping axis interpolator " +
+                           "[uid: \(uid) product: \(product) axis: \(axis) expo: \(expo)")
+                }
+            }
+
+            if clearMappings || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
+                specializedBackend.updateAxisInterpolators()
             }
         }
-
-        if clearMappings || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-            specializedBackend.updateAxisInterpolators()
-        }
-    }
 
     func onInvertedMapItem(uid: UInt, product: UInt, axis: Int, inverted: UInt, listFlagsBitField: UInt) {
 
@@ -757,13 +769,13 @@ extension MapperVirtualGamepad: ArsdkFeatureMapperCallback {
             }
 
             if case DeviceModel.drone(let droneModel)? = DeviceModel.from(internalId: Int(product)),
-                let mapperAxis = MapperAxis(rawValue: axis) {
+               let mapperAxis = MapperAxis(rawValue: axis) {
                 specializedBackend.addReversedAxis(
                     uid: uid, droneModel: droneModel, axis: mapperAxis,
                     reversed: inverted == 1)
             } else {
                 ULog.w(.mapperTag, "Invalid product \(product) or axis \(axis), dropping axis inversion " +
-                    "[uid: \(uid) product: \(product) axis: \(axis) inverted: \(inverted)")
+                       "[uid: \(uid) product: \(product) axis: \(axis) inverted: \(inverted)")
             }
         }
 
@@ -849,6 +861,7 @@ extension MapperVirtualGamepad {
             // map predefined buttons actions
             map(arsdkAction: .returnHome, gsdkAction: .returnHome)
             map(arsdkAction: .takeoffLand, gsdkAction: .takeOffOrLand)
+            map(arsdkAction: .smartTakeoffLand, gsdkAction: .smartTakeOffLand)
             map(arsdkAction: .videoRecord, gsdkAction: .recordVideo)
             map(arsdkAction: .takePicture, gsdkAction: .takePicture)
             map(arsdkAction: .cameraAuto, gsdkAction: .photoOrVideo)
@@ -861,6 +874,12 @@ extension MapperVirtualGamepad {
             map(arsdkAction: .emergency, gsdkAction: .emergencyCutOff)
             map(arsdkAction: .centerCamera, gsdkAction: .centerCamera)
             map(arsdkAction: .cycleHud, gsdkAction: .cycleHud)
+            map(arsdkAction: .debugTag, gsdkAction: .debugTag)
+            map(arsdkAction: .toggleAntenna, gsdkAction: .toggleAntenna)
+            map(arsdkAction: .changeSpectrum, gsdkAction: .changeSpectrum)
+            map(arsdkAction: .screenshot, gsdkAction: .screenshot)
+            map(arsdkAction: .pilotingMode, gsdkAction: .pilotingMode)
+            map(arsdkAction: .assistanceMode, gsdkAction: .assistanceMode)
 
             return mapper
         }()

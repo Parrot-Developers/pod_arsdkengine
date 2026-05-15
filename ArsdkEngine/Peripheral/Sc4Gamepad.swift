@@ -80,7 +80,7 @@ extension Sc4Gamepad: SkyCtrl4GamepadBackend {
             if register {
                 let buttonMask = Sc4Buttons.maskFrom(buttonEvents: buttonsEntry.buttonEvents)
                 sendAddButtonsMappingEntry(droneModel: mappingEntry.droneModel, action: buttonsEntry.action,
-                                        buttonsMask: buttonMask)
+                                           buttonsMask: buttonMask)
             } else {
                 sendRemoveButtonsMappingEntry(droneModel: mappingEntry.droneModel, action: buttonsEntry.action)
             }
@@ -91,7 +91,7 @@ extension Sc4Gamepad: SkyCtrl4GamepadBackend {
                 let axis = Sc4Axes.convert(axisEntry.axisEvent)!
                 let buttonMask = Sc4Buttons.maskFrom(buttonEvents: axisEntry.buttonEvents)
                 sendAddAxisMappingEntry(droneModel: mappingEntry.droneModel, action: axisEntry.action, axis: axis,
-                                     buttonsMask: buttonMask)
+                                        buttonsMask: buttonMask)
             } else {
                 sendRemoveAxisMappingEntry(droneModel: mappingEntry.droneModel, action: axisEntry.action)
             }
@@ -105,10 +105,10 @@ extension Sc4Gamepad: SkyCtrl4GamepadBackend {
     public func set(
         interpolator: AxisInterpolator, forDroneModel droneModel: Drone.Model, onAxis axis: SkyCtrl4Axis) {
 
-        if let mapperAxis = Sc4Axes.convert(axis) {
-            send(interpolator: interpolator, forDroneModel: droneModel, onAxis: mapperAxis)
+            if let mapperAxis = Sc4Axes.convert(axis) {
+                send(interpolator: interpolator, forDroneModel: droneModel, onAxis: mapperAxis)
+            }
         }
-    }
 
     public func set(axis: SkyCtrl4Axis, forDroneModel droneModel: Drone.Model, reversed: Bool) {
         if let mapperAxis = Sc4Axes.convert(axis) {
@@ -174,7 +174,7 @@ extension Sc4Gamepad: SpecializedGamepadBackend {
 
                 if !buttonsMask.contains(buttonsMaskUsedByButton) {
                     ULog.w(.mapperTag, "Missing grabbed buttons for button \(button.description)." +
-                    "\(buttonsMaskUsedByButton.rawValue) is not fully contained in: \(buttonsMask.rawValue)")
+                           "\(buttonsMaskUsedByButton.rawValue) is not fully contained in: \(buttonsMask.rawValue)")
                 }
             }
         }
@@ -188,7 +188,7 @@ extension Sc4Gamepad: SpecializedGamepadBackend {
 
                 if !buttonsMask.contains(buttonsMaskUsedByAxis) {
                     ULog.w(.mapperTag, "Missing grabbed buttons for axis \(axis.description)." +
-                        "\(buttonsMaskUsedByAxis.rawValue) is not fully contained in: \(buttonsMask.rawValue)")
+                           "\(buttonsMaskUsedByAxis.rawValue) is not fully contained in: \(buttonsMask.rawValue)")
                 }
             }
             if axesMask.intersection(axesMaskUsedByAxis) != .none {
@@ -196,7 +196,7 @@ extension Sc4Gamepad: SpecializedGamepadBackend {
 
                 if !axesMask.contains(axesMaskUsedByAxis) {
                     ULog.w(.mapperTag, "Missing grabbed axes for axis \(axis.description)." +
-                        "\(axesMaskUsedByAxis.rawValue) is not fully contained in: \(axesMask.rawValue)")
+                           "\(axesMaskUsedByAxis.rawValue) is not fully contained in: \(axesMask.rawValue)")
                 }
             }
         }
@@ -253,15 +253,15 @@ extension Sc4Gamepad: SpecializedGamepadBackend {
 
     func addButtonsMappingEntry(
         uid: UInt, droneModel: Drone.Model, action: ButtonsMappableAction, buttons: MapperButtonsMask) {
-        let buttonEvents = Sc4Buttons.eventsFrom(buttons: buttons)
-        if !buttonEvents.isEmpty {
-            buttonsMappings[uid] = SkyCtrl4ButtonsMappingEntry(droneModel: droneModel, action: action,
-                                                               buttonEvents: buttonEvents)
-        } else {
-            ULog.w(.mapperTag, "Invalid event \(buttons), dropping mapping [uid: \(uid) model: \(droneModel)" +
-                " action: \(action)")
+            let buttonEvents = Sc4Buttons.eventsFrom(buttons: buttons)
+            if !buttonEvents.isEmpty {
+                buttonsMappings[uid] = SkyCtrl4ButtonsMappingEntry(droneModel: droneModel, action: action,
+                                                                   buttonEvents: buttonEvents)
+            } else {
+                ULog.w(.mapperTag, "Invalid event \(buttons), dropping mapping [uid: \(uid) model: \(droneModel)" +
+                       " action: \(action)")
+            }
         }
-    }
 
     func updateButtonsMappings() {
         skyCtrl4Gamepad.updateButtonsMappings(Array(buttonsMappings.values)).notifyUpdated()
@@ -278,16 +278,18 @@ extension Sc4Gamepad: SpecializedGamepadBackend {
     func addAxisMappingEntry(
         uid: UInt, droneModel: Drone.Model, action: AxisMappableAction, axis: MapperAxis,
         buttons: MapperButtonsMask) {
-        let axisEvent: SkyCtrl4AxisEvent? = Sc4Axes.convert(axis)
-        let buttonEvents = Sc4Buttons.eventsFrom(buttons: buttons)
-        if let axisEvent = axisEvent {
-            axisMappings[uid] = SkyCtrl4AxisMappingEntry(droneModel: droneModel, action: action, axisEvent: axisEvent,
-                                                         buttonEvents: buttonEvents)
-        } else {
-            ULog.w(.mapperTag, "Invalid axis event \(axis.rawValue), dropping mapping [uid: \(uid) " +
-                " model: \(droneModel) action: \(action)")
+            let axisEvent: SkyCtrl4AxisEvent? = Sc4Axes.convert(axis)
+            let buttonEvents = Sc4Buttons.eventsFrom(buttons: buttons)
+            if let axisEvent = axisEvent {
+                axisMappings[uid] = SkyCtrl4AxisMappingEntry(droneModel: droneModel,
+                                                             action: action,
+                                                             axisEvent: axisEvent,
+                                                             buttonEvents: buttonEvents)
+            } else {
+                ULog.w(.mapperTag, "Invalid axis event \(axis.rawValue), dropping mapping [uid: \(uid) " +
+                       " model: \(droneModel) action: \(action)")
+            }
         }
-    }
 
     func updateAxisMappings() {
         skyCtrl4Gamepad.updateAxisMappings(Array(axisMappings.values)).notifyUpdated()
@@ -311,11 +313,11 @@ extension Sc4Gamepad: SpecializedGamepadBackend {
 
     func addAxisInterpolator(
         uid: UInt, droneModel: Drone.Model, axis: MapperAxis, interpolator: AxisInterpolator) {
-        if let sc4Axis: SkyCtrl4Axis = Sc4Axes.convert(axis) {
-            axisInterpolators[uid] = SkyCtrl4GamepadCore.AxisInterpolatorEntry(
-                droneModel: droneModel, axis: sc4Axis, interpolator: interpolator)
+            if let sc4Axis: SkyCtrl4Axis = Sc4Axes.convert(axis) {
+                axisInterpolators[uid] = SkyCtrl4GamepadCore.AxisInterpolatorEntry(
+                    droneModel: droneModel, axis: sc4Axis, interpolator: interpolator)
+            }
         }
-    }
 
     func updateAxisInterpolators() {
         // axis interpolators also serve to provide the set of supported drone models

@@ -55,7 +55,7 @@ class Camera2ZoomCommandEncoder: NoAckCmdEncoder {
     /// Latest control mode sent to drone.
     private var latestControlMode = Arsdk_Camera_ZoomControlMode.level
     /// Latest target sent to drone.
-    private var latestTarget: Double = 1.0
+    private var latestTarget: Double = 0.0
 
     /// Number of times the same command has been sent.
     private var sentCnt = -1
@@ -87,7 +87,7 @@ class Camera2ZoomCommandEncoder: NoAckCmdEncoder {
 
             if cancelled {
                 latestControlMode = .level
-                latestTarget = 1
+                latestTarget = 0.0
                 return nil
             }
 
@@ -100,9 +100,9 @@ class Camera2ZoomCommandEncoder: NoAckCmdEncoder {
                 sentCnt = maxRepeatedSent
             }
 
-            // only decrement the counter if the control is in level,
+            // only decrement the counter if the control is in level or hfov,
             // or, if the control is in velocity and target is zero
-            if encoderControlMode == .level || encoderTarget == 0.0 {
+            if encoderControlMode != .velocity || encoderTarget == 0.0 {
                 sentCnt -= 1
             }
 
@@ -118,6 +118,9 @@ class Camera2ZoomCommandEncoder: NoAckCmdEncoder {
                                                                       msgNum: UInt(cameraCommand.id!.number),
                                                                       payload: payload)
                 }
+            } else {
+                // once repetitions are done, reset latest values to allow sending the same position request again
+                cancelControl()
             }
             return nil
         }

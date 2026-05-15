@@ -69,7 +69,7 @@ extension Arsdk: ArsdkCoreListener {
     func onDeviceAdded(_ uid: String, type: Int, backendType: ArsdkBackendType,
                        name: String, api: ArsdkApiCapabilities, handle: CShort) {
         if let model = DeviceModel.from(internalId: type),
-            let provider = ArsdkDeviceProvider.getProvider(backendType: backendType) {
+           let provider = ArsdkDeviceProvider.getProvider(backendType: backendType) {
             let deviceController = engine.getOrCreateDeviceController(uid: uid, model: model, name: name)
             provider.backends[deviceController] = ArsdkDeviceCtrlBackend(
                 arsdk: self, deviceHandle: handle, deviceController: deviceController, provider: provider)
@@ -79,7 +79,7 @@ extension Arsdk: ArsdkCoreListener {
 
     func onDeviceRemoved(_ uid: String, type: Int, backendType: ArsdkBackendType, handle: Int16) {
         if let deviceController = engine.deviceControllers[uid],
-            let provider = ArsdkDeviceProvider.getProvider(backendType: backendType) {
+           let provider = ArsdkDeviceProvider.getProvider(backendType: backendType) {
             deviceController.removeProvider(provider)
             provider.backends[deviceController] = nil
         }
@@ -99,10 +99,12 @@ private class ArsdkDeviceProvider: DeviceProvider {
     /// Connects the device managed by the given controller
     ///
     /// - Parameters:
-    ///    - deviceController: device controller whose device must be connected
-    ///    - password: password to use for authentication, an empty string if no password are required
+    ///   - deviceController: device controller whose device must be connected
+    ///   - parameters: custom parameters to use to connect the device
+    ///   - wakeIdle: `true` to wake up the drone if it's in idle state
     /// - Returns: true if the connect operation was successfully initiated,
-    override func connect(deviceController: DeviceController, password: String) -> Bool {
+    override func connect(deviceController: DeviceController, parameters: [DeviceConnectionParameter],
+                          wakeIdle: Bool) -> Bool {
         if let backend = backends[deviceController] {
             return backend.connect()
         } else {
@@ -159,11 +161,11 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
             encoder: @escaping () -> (ArsdkCommandEncoder?), type: ArsdkNoAckCmdType,
             arsdkDeviceCtrlBackend: ArsdkDeviceCtrlBackend) {
 
-            self.registeredEncoder = encoder
-            self.type = type
-            self.arsdkDeviceCtrlBackend = arsdkDeviceCtrlBackend
-            super.init()
-        }
+                self.registeredEncoder = encoder
+                self.type = type
+                self.arsdkDeviceCtrlBackend = arsdkDeviceCtrlBackend
+                super.init()
+            }
 
         func unregister() {
             arsdkDeviceCtrlBackend?.removeRegisteredNoAckEncoder(registeredNoAckEncoder: self)
@@ -173,7 +175,7 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
     }
 
     /// Storage of ArsdkCommandEncoder(s) registered in the NoAck Command Loop. Elements of this Set are
-    //  added by the function `subscribeNoAckCommandEncoder()` and removed with
+    /// added by the function `subscribeNoAckCommandEncoder()` and removed with
     /// `ArsdkRegisteredNoAckCmdEncoder.unregister()`.
     /// This Set is sent to the NoAckCommandLoop with the ArsdkCore function : `setNoAckCommands()`
     private var registeredNoAckEncoders = Set<ArsdkRegisteredNoAckCmdEncoder>()
@@ -260,6 +262,13 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
                                        completion: completion)
     }
 
+    func createTcpProxy(url: String, port: Int,
+                        completion: @escaping (_ tcpProxy: ArsdkTcpProxy?, _ proxyAddress: String?,
+                                               _ proxyPort: Int) -> Void) {
+        arsdk.arsdkCore.createTcpProxy(deviceHandle, url: url, port: UInt16(port),
+                                       completion: completion)
+    }
+
     func createVideoSourceLive(cameraType: ArsdkSourceLiveCameraType) -> ArsdkSourceLive {
         return arsdk.arsdkCore.createVideoSourceLive(deviceHandle, cameraType: cameraType)
     }
@@ -278,9 +287,9 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
 
     func downloadMediaThumbnail(_ media: ArsdkMedia, model: DeviceModel,
                                 completion: @escaping ArsdkMediaDownloadThumbnailCompletion)
-        -> ArsdkRequest {
-            return arsdk.arsdkCore.downloadMediaThumnail(
-                deviceHandle, deviceType: model.internalId, media: media, completion: completion)
+    -> ArsdkRequest {
+        return arsdk.arsdkCore.downloadMediaThumnail(
+            deviceHandle, deviceType: model.internalId, media: media, completion: completion)
     }
 
     func downloadMedia(_ media: ArsdkMedia, model: DeviceModel, format: ArsdkMediaResourceFormat,
@@ -323,26 +332,30 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
                            progress: @escaping ArsdkFlightLogDownloadProgress,
                            completion: @escaping ArsdkFlightLogDownloadCompletion) -> ArsdkRequest {
         return arsdk.arsdkCore.downloadFlightLog(deviceHandle, deviceType: model.internalId, path: path,
-                                               progress: progress, completion: completion)
+                                                 progress: progress, completion: completion)
     }
 
     func subscribeToRcBlackBox(
         buttonAction: @escaping ArsdkRcBlackBoxButtonActionCb,
         pilotingInfo: @escaping ArsdkRcBlackBoxPilotingInfoCb) -> ArsdkRequest {
-        return arsdk.arsdkCore.subscribeToRcBlackBox(
-            handle: deviceHandle, buttonAction: buttonAction, pilotingInfo: pilotingInfo)
-    }
+            return arsdk.arsdkCore.subscribeToRcBlackBox(
+                handle: deviceHandle, buttonAction: buttonAction, pilotingInfo: pilotingInfo)
+        }
 }
 
 /// Extension of Arsdk that implements ArsdkCoreDeviceListener
 extension ArsdkDeviceCtrlBackend: ArsdkCoreDeviceListener {
     func onConnecting() {
-        deviceController.linkWillConnect(provider: provider)
+        deviceController.linkWillConnect(provider: provider, backupLink: false)
     }
 
     func onConnected(api: ArsdkApiCapabilities) {
         deviceController.apiCapabilities(api)
         deviceController.linkDidConnect(provider: provider, backend: self)
+    }
+
+    func onBackupLink() {
+        deviceController.backupLinkDidActivate(provider: provider, backend: self)
     }
 
     func onDisconnected(_ removing: Bool) {

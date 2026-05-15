@@ -54,28 +54,28 @@ class FlightLogRestApi {
     /// - Returns: the request
     func getFlightLogList(
         completion: @escaping (_ flightLogList: [FlightLog]?) -> Void) -> CancelableCore {
-        return server.getData(api: "\(baseApi)/lite_records") { result, data in
-            switch result {
-            case .success:
-                // listing the flight logs is successful
-                if let data = data {
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .formatted(.iso8601Base)
-                    do {
-                        let flightLogs = try decoder.decode([FlightLog].self, from: data)
-                        completion(flightLogs)
-                    } catch let error {
-                        ULog.w(.flightLogTag,
-                               "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                                error.localizedDescription)
-                        completion(nil)
+            return server.getData(api: "\(baseApi)/lite_records") { result, data in
+                switch result {
+                case .success:
+                    // listing the flight logs is successful
+                    if let data = data {
+                        let decoder = JSONDecoder()
+                        decoder.dateDecodingStrategy = .formatted(.iso8601Base)
+                        do {
+                            let flightLogs = try decoder.decode([FlightLog].self, from: data)
+                            completion(flightLogs)
+                        } catch let error {
+                            ULog.w(.flightLogTag,
+                                   "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
+                                   error.localizedDescription)
+                            completion(nil)
+                        }
                     }
+                default:
+                    completion(nil)
                 }
-            default:
-                completion(nil)
             }
         }
-    }
 
     /// Get the list of flight logs for the given boot id
     ///
@@ -85,7 +85,7 @@ class FlightLogRestApi {
     ///   - flightLogList: list of flight logs available for the given boot id
     /// - Returns: the request
     func getFlightLogListForBootId(_ bootId: String = "CURRENT",
-        completion: @escaping (_ flightLogList: [FlightLog]?) -> Void) -> CancelableCore {
+                                   completion: @escaping (_ flightLogList: [FlightLog]?) -> Void) -> CancelableCore {
         return server.getData(api: "\(baseApi)/bootids/\(bootId)") { result, data in
             switch result {
             case .success:
@@ -99,7 +99,7 @@ class FlightLogRestApi {
                     } catch let error {
                         ULog.w(.flightLogTag,
                                "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                                error.localizedDescription)
+                               error.localizedDescription)
                         completion(nil)
                     }
                 }
@@ -125,14 +125,14 @@ class FlightLogRestApi {
         progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore {
 
-        return server.downloadFile(
-            api: flightLog.urlPath,
-            destination: directory.appendingPathComponent(flightLog.name),
-            progress: progress,
-            completion: { _, localFileUrl in
-                completion(localFileUrl)
-        })
-    }
+            return server.downloadFile(
+                api: flightLog.urlPath,
+                destination: directory.appendingPathComponent(flightLog.name),
+                progress: progress,
+                completion: { _, localFileUrl in
+                    completion(localFileUrl)
+                })
+        }
 
     /// Delete a given flight log on the device
     ///
@@ -159,6 +159,7 @@ class FlightLogRestApi {
             case date
             case urlPath = "url"
             case size
+            case hasFlight = "has_flight"
         }
 
         /// Flight log name
@@ -169,5 +170,7 @@ class FlightLogRestApi {
         let urlPath: String
         /// Flight log size in bytes
         let size: UInt64
+        /// Whether flight log contains a flight
+        let hasFlight: Bool?
     }
 }

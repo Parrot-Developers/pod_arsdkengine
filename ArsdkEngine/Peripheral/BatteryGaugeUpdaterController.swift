@@ -72,12 +72,12 @@ class BatteryGaugeUpdaterController: DeviceComponentController, BatteryGaugeUpda
 
     /// Requests preparing battery gauge update.
     func prepareUpdate() {
-        sendCommand(ArsdkFeatureGaugeFwUpdater.prepareEncoder())
+        _ = sendCommand(ArsdkFeatureGaugeFwUpdater.prepareEncoder())
     }
 
     /// Requests battery gauge update.
     func update() {
-        sendCommand(ArsdkFeatureGaugeFwUpdater.updateEncoder())
+        _ = sendCommand(ArsdkFeatureGaugeFwUpdater.updateEncoder())
     }
 }
 
@@ -138,8 +138,8 @@ extension BatteryGaugeUpdaterUnavailabilityReasons: ArsdkMappableEnum {
     }
 
     static var arsdkMapper = Mapper<BatteryGaugeUpdaterUnavailabilityReasons,
-        ArsdkFeatureGaugeFwUpdaterRequirements>([
-        .notUsbPowered: .usb,
-        .insufficientCharge: .rsoc,
-        .droneNotLanded: .droneState])
+                                    ArsdkFeatureGaugeFwUpdaterRequirements>([
+                                        .notUsbPowered: .usb,
+                                        .insufficientCharge: .rsoc,
+                                        .droneNotLanded: .droneState])
 }

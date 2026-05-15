@@ -75,8 +75,8 @@ class EphemerisRestApi {
     ///   - result: the completion status
     func upload(
         ephemeris: URL, completion: @escaping (_ result: Result) -> Void) -> CancelableCore {
-        return server.putFile(api: "/api/v1/upload/ephemeris", fileUrl: ephemeris, progress: {_ in},
-                              completion: { result, _ in
+            return server.putFile(api: "/api/v1/upload/ephemeris", fileUrl: ephemeris, progress: {_ in},
+                                  completion: { result, _ in
                 switch result {
                 case .success:
                     ULog.w(.ephemerisTag, "ephemeris success upload")
@@ -88,6 +88,6 @@ class EphemerisRestApi {
                     ULog.w(.ephemerisTag, "ephemeris canceled upload")
                     completion(.canceled)
                 }
-        })
-    }
+            })
+        }
 }

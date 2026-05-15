@@ -55,6 +55,13 @@ class AnafiPrivacy: PrivacyController {
 
 /// Extension for methods to send Privacy commands.
 extension AnafiPrivacy: PrivacyControllerBackend {
+    func sendCommand(setEnableLogEncryption: Arsdk_Privacy_Command.EnableLogEncryption) -> Bool {
+        sendPrivacyCommand(.enableLogEncryption(setEnableLogEncryption))
+    }
+
+    func sendCommand(setDisableLogEncryption: Arsdk_Privacy_Command.DisableLogEncryption) -> Bool {
+        sendPrivacyCommand(.disableLogEncryption(setDisableLogEncryption))
+    }
 
     func sendCommand(getState: Arsdk_Privacy_Command.GetState) -> Bool {
         sendPrivacyCommand(.getState(getState))
@@ -69,12 +76,10 @@ extension AnafiPrivacy: PrivacyControllerBackend {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     private func sendPrivacyCommand(_ command: Arsdk_Privacy_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkPrivacyCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 }
 

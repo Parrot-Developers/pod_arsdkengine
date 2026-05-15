@@ -99,6 +99,21 @@ extension SwiftProtobuf.Google_Protobuf_FileOptions {
   mutating func clearOlympePackage() {
     clearExtensionValue(ext: Extensions_olympe_package)
   }
+
+  var arsdkDirection: String {
+    get {return getExtensionValue(ext: Extensions_arsdk_direction) ?? String()}
+    set {setExtensionValue(ext: Extensions_arsdk_direction, value: newValue)}
+  }
+  /// Returns true if extension `Extensions_arsdk_direction`
+  /// has been explicitly set.
+  var hasArsdkDirection: Bool {
+    return hasExtensionValue(ext: Extensions_arsdk_direction)
+  }
+  /// Clears the value of extension `Extensions_arsdk_direction`.
+  /// Subsequent reads from it will return its default value.
+  mutating func clearArsdkDirection() {
+    clearExtensionValue(ext: Extensions_arsdk_direction)
+  }
 }
 
 extension SwiftProtobuf.Google_Protobuf_MessageOptions {
@@ -163,6 +178,21 @@ extension SwiftProtobuf.Google_Protobuf_MessageOptions {
     clearExtensionValue(ext: Extensions_support)
   }
 
+  var mapKey: String {
+    get {return getExtensionValue(ext: Extensions_map_key) ?? String()}
+    set {setExtensionValue(ext: Extensions_map_key, value: newValue)}
+  }
+  /// Returns true if extension `Extensions_map_key`
+  /// has been explicitly set.
+  var hasMapKey: Bool {
+    return hasExtensionValue(ext: Extensions_map_key)
+  }
+  /// Clears the value of extension `Extensions_map_key`.
+  /// Subsequent reads from it will return its default value.
+  mutating func clearMapKey() {
+    clearExtensionValue(ext: Extensions_map_key)
+  }
+
 }
 
 // MARK: - File's ExtensionMap: Extensions_Extensions
@@ -179,7 +209,9 @@ let Extensions_Extensions: SwiftProtobuf.SimpleExtensionMap = [
   Extensions_on_failure,
   Extensions_support,
   Extensions_enum_doc,
-  Extensions_enum_value_doc
+  Extensions_enum_value_doc,
+  Extensions_arsdk_direction,
+  Extensions_map_key
 ]
 
 // Extension Objects - The only reason these might be needed is when manually
@@ -224,4 +256,14 @@ let Extensions_enum_doc = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalE
 let Extensions_enum_value_doc = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_EnumValueOptions>(
   _protobuf_fieldNumber: 65007,
   fieldName: "enum_value_doc"
+)
+
+let Extensions_arsdk_direction = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_FileOptions>(
+  _protobuf_fieldNumber: 65008,
+  fieldName: "arsdk_direction"
+)
+
+let Extensions_map_key = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_MessageOptions>(
+  _protobuf_fieldNumber: 65009,
+  fieldName: "map_key"
 )

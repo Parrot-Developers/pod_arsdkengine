@@ -402,11 +402,14 @@ struct Arsdk_Pointnfly_Fly {
   /// Requested (max) speed for move.
   var maxHorizontalSpeed: Double = 0
 
-  /// in meters per second
+  /// in meters per second, 0 for autoselection
   var maxVerticalSpeed: Double = 0
 
-  /// in degrees per second
+  /// in degrees per second, 0 for autoselection
   var maxYawRotationSpeed: Double = 0
+
+  /// Enabled radio links for the fly action
+  var enabledLinks: Arsdk_Backuplink_EnabledLinks = .all
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -535,6 +538,15 @@ struct Arsdk_Pointnfly_Event {
       set {state = .active(newValue)}
     }
 
+    var capabilities: Arsdk_Pointnfly_Capabilities {
+      get {return _capabilities ?? Arsdk_Pointnfly_Capabilities()}
+      set {_capabilities = newValue}
+    }
+    /// Returns true if `capabilities` has been explicitly set.
+    var hasCapabilities: Bool {return self._capabilities != nil}
+    /// Clears the value of `capabilities`. Subsequent reads from it will return its default value.
+    mutating func clearCapabilities() {self._capabilities = nil}
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     enum OneOf_State: Equatable {
@@ -567,6 +579,8 @@ struct Arsdk_Pointnfly_Event {
     }
 
     init() {}
+
+    fileprivate var _capabilities: Arsdk_Pointnfly_Capabilities? = nil
   }
 
   /// Event relative to the execution of a point or fly directive.
@@ -673,30 +687,18 @@ struct Arsdk_Pointnfly_State {
   init() {}
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Pointnfly_ExecutionStatus: @unchecked Sendable {}
-extension Arsdk_Pointnfly_GimbalControlMode: @unchecked Sendable {}
-extension Arsdk_Pointnfly_UnavailabilityReason: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Command: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Command.Deactivate: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Command.Execute: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Command.Execute.OneOf_Directive: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Point: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Fly: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Fly.OneOf_Heading: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Event: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Event.State: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Event.State.OneOf_State: @unchecked Sendable {}
-extension Arsdk_Pointnfly_Event.Execution: @unchecked Sendable {}
-extension Arsdk_Pointnfly_State: @unchecked Sendable {}
-extension Arsdk_Pointnfly_State.Unavailable: @unchecked Sendable {}
-extension Arsdk_Pointnfly_State.Idle: @unchecked Sendable {}
-extension Arsdk_Pointnfly_State.Active: @unchecked Sendable {}
-extension Arsdk_Pointnfly_State.Active.OneOf_CurrentDirective: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
+/// Capabilities
+struct Arsdk_Pointnfly_Capabilities {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var allowedLinks: [Arsdk_Backuplink_EnabledLinks] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -1003,6 +1005,7 @@ extension Arsdk_Pointnfly_Fly: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     9: .standard(proto: "max_horizontal_speed"),
     10: .standard(proto: "max_vertical_speed"),
     11: .standard(proto: "max_yaw_rotation_speed"),
+    12: .standard(proto: "enabled_links"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1060,6 +1063,7 @@ extension Arsdk_Pointnfly_Fly: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
       case 9: try { try decoder.decodeSingularDoubleField(value: &self.maxHorizontalSpeed) }()
       case 10: try { try decoder.decodeSingularDoubleField(value: &self.maxVerticalSpeed) }()
       case 11: try { try decoder.decodeSingularDoubleField(value: &self.maxYawRotationSpeed) }()
+      case 12: try { try decoder.decodeSingularEnumField(value: &self.enabledLinks) }()
       default: break
       }
     }
@@ -1110,6 +1114,9 @@ extension Arsdk_Pointnfly_Fly: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     if self.maxYawRotationSpeed != 0 {
       try visitor.visitSingularDoubleField(value: self.maxYawRotationSpeed, fieldNumber: 11)
     }
+    if self.enabledLinks != .all {
+      try visitor.visitSingularEnumField(value: self.enabledLinks, fieldNumber: 12)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1122,6 +1129,7 @@ extension Arsdk_Pointnfly_Fly: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     if lhs.maxHorizontalSpeed != rhs.maxHorizontalSpeed {return false}
     if lhs.maxVerticalSpeed != rhs.maxVerticalSpeed {return false}
     if lhs.maxYawRotationSpeed != rhs.maxYawRotationSpeed {return false}
+    if lhs.enabledLinks != rhs.enabledLinks {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1203,6 +1211,7 @@ extension Arsdk_Pointnfly_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Mes
     2: .same(proto: "unavailable"),
     3: .same(proto: "idle"),
     4: .same(proto: "active"),
+    5: .same(proto: "capabilities"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1250,6 +1259,7 @@ extension Arsdk_Pointnfly_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Mes
           self.state = .active(v)
         }
       }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._capabilities) }()
       default: break
       }
     }
@@ -1275,11 +1285,15 @@ extension Arsdk_Pointnfly_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Mes
     }()
     case nil: break
     }
+    try { if let v = self._capabilities {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Pointnfly_Event.State, rhs: Arsdk_Pointnfly_Event.State) -> Bool {
     if lhs.state != rhs.state {return false}
+    if lhs._capabilities != rhs._capabilities {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1452,6 +1466,38 @@ extension Arsdk_Pointnfly_State.Active: SwiftProtobuf.Message, SwiftProtobuf._Me
 
   static func ==(lhs: Arsdk_Pointnfly_State.Active, rhs: Arsdk_Pointnfly_State.Active) -> Bool {
     if lhs.currentDirective != rhs.currentDirective {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Pointnfly_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".Capabilities"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "allowed_links"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedEnumField(value: &self.allowedLinks) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.allowedLinks.isEmpty {
+      try visitor.visitPackedEnumField(value: self.allowedLinks, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Pointnfly_Capabilities, rhs: Arsdk_Pointnfly_Capabilities) -> Bool {
+    if lhs.allowedLinks != rhs.allowedLinks {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

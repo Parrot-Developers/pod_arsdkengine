@@ -82,20 +82,20 @@ class UpdateRestApi {
         withFirmware firmware: URL, reboot: Bool, progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ result: Result) -> Void) -> CancelableCore {
 
-        return server.putFile(
-            api: "/api/v1/update/upload",
-            query: ["reboot": (reboot ? "yes" : "no")],
-            fileUrl: firmware,
-            timeoutInterval: 120,
-            progress: progress) { result, _ in
-                switch result {
-                case .success:
-                    completion(.success)
-                case .error, .httpError:
-                    completion(.error)
-                case .canceled:
-                    completion(.canceled)
+            return server.putFile(
+                api: "/api/v1/update/upload",
+                query: ["reboot": (reboot ? "yes" : "no")],
+                fileUrl: firmware,
+                timeoutInterval: 120,
+                progress: progress) { result, _ in
+                    switch result {
+                    case .success:
+                        completion(.success)
+                    case .error, .httpError:
+                        completion(.error)
+                    case .canceled:
+                        completion(.canceled)
+                    }
                 }
         }
-    }
 }

@@ -98,8 +98,7 @@ class AnafiPilotingControl: DeviceComponentController, PilotingControlBackend {
     /// - Returns: true if the command has been sent
     func sendPilotingBehaviourCommand(_ behaviour: PilotingBehaviour) -> Bool {
         if let style = behaviour.arsdkValue {
-            sendCommand(ArsdkFeaturePilotingStyle.setStyleEncoder(style: style))
-            return true
+            return sendCommand(ArsdkFeaturePilotingStyle.setStyleEncoder(style: style))
         } else {
             return false
         }

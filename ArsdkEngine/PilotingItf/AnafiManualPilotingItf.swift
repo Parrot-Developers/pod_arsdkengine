@@ -29,9 +29,10 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
 /// Manual piloting interface component controller for the Anafi-messages piloting based copter products
-class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
+class AnafiManualPilotingItf: ManualCopterPilotingItfController {
 
     /// Drone flying state.
     private var flyingState: ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState?
@@ -43,40 +44,46 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
 
     /// Send takeoff command.
     override func sendTakeOffCommand() {
-        if self.droneController.drone.model == .anafi2 ||
-            self.droneController.drone.model == .anafi3 ||
-            self.droneController.drone.model == .anafi3Usa {
+        switch self.droneController.drone.model {
+        case .anafi2,
+             .anafi3,
+             .anafi3Mil,
+             .anafi3Gov,
+             .chuck3:
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending smarttakeoffland command")
-            sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
-        } else {
+            _ = sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
+        default:
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending takeoff command")
-            sendCommand(ArsdkFeatureArdrone3Piloting.takeOffEncoder())
+            _ = sendCommand(ArsdkFeatureArdrone3Piloting.takeOffEncoder())
         }
     }
 
     /// Send thrown takeoff command.
     override func sendThrownTakeOffCommand() {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending userTakeOffEncoder command")
-        sendCommand(ArsdkFeatureArdrone3Piloting.userTakeOffEncoder(state: 1))
+        _ = sendCommand(ArsdkFeatureArdrone3Piloting.userTakeOffEncoder(state: 1))
     }
 
     /// Send land command.
     override func sendLandCommand() {
-        if self.droneController.drone.model == .anafi2 ||
-            self.droneController.drone.model == .anafi3 ||
-            self.droneController.drone.model == .anafi3Usa {
+        switch self.droneController.drone.model {
+        case .anafi2,
+             .anafi3,
+             .anafi3Mil,
+             .anafi3Gov,
+             .chuck3:
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending smarttakeoffland command")
-            sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
-        } else {
+            _ = sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
+        default:
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending land command")
-            sendCommand(ArsdkFeatureArdrone3Piloting.landingEncoder())
+            _ = sendCommand(ArsdkFeatureArdrone3Piloting.landingEncoder())
         }
     }
 
     /// Send emergency cut-out command.
     override func sendEmergencyCutOutCommand() {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending emergency cut out command")
-        sendCommand(ArsdkFeatureArdrone3Piloting.emergencyEncoder())
+        _ = sendCommand(ArsdkFeatureArdrone3Piloting.emergencyEncoder())
     }
 
     /// Send set max pitch/roll command.
@@ -84,7 +91,15 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     /// - Parameter value: new value
     override func sendMaxPitchRollCommand(_ value: Double) {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: setting max pitch/roll: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Pilotingsettings.maxTiltEncoder(current: Float(value)))
+        _ = sendCommand(ArsdkFeatureArdrone3Pilotingsettings.maxTiltEncoder(current: Float(value)))
+    }
+
+    /// Send set max horizontal speed.
+    ///
+    /// - Parameter value: new value
+    override func sendMaxHorizontalSpeedCommand(_ value: Double) {
+        ULog.d(.ctrlTag, "AnafiCopter manual piloting: setting max horizontal speed: \(value)")
+        _ = sendCommand(ArsdkFeatureArdrone3Pilotingsettings.maxHorizontalSpeedEncoder(current: Float(value)))
     }
 
     /// Send set max pitch/roll velocity command.
@@ -92,7 +107,7 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     /// - Parameter value: new value
     override func sendMaxPitchRollVelocityCommand(_ value: Double) {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: setting max pitch/roll velocity: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Speedsettings.maxPitchRollRotationSpeedEncoder(current: Float(value)))
+        _ = sendCommand(ArsdkFeatureArdrone3Speedsettings.maxPitchRollRotationSpeedEncoder(current: Float(value)))
     }
 
     /// Send set max vertical speed command.
@@ -100,7 +115,7 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     /// - Parameter value: new value
     override func sendMaxVerticalSpeedCommand(_ value: Double) {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: setting max vertical speed: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Speedsettings.maxVerticalSpeedEncoder(current: Float(value)))
+        _ = sendCommand(ArsdkFeatureArdrone3Speedsettings.maxVerticalSpeedEncoder(current: Float(value)))
     }
 
     /// Send set max yaw rotation speed command.
@@ -108,7 +123,7 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     /// - Parameter value: new value
     override func sendMaxYawRotationSpeedCommand(_ value: Double) {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: setting max yaw rotation speed: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Speedsettings.maxRotationSpeedEncoder(current: Float(value)))
+        _ = sendCommand(ArsdkFeatureArdrone3Speedsettings.maxRotationSpeedEncoder(current: Float(value)))
     }
 
     /// Send set banked turn mode command.
@@ -116,7 +131,7 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     /// - Parameter value: new value
     override func sendBankedTurnModeCommand(_ value: Bool) {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: setting banked turn mode: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Pilotingsettings.bankedTurnEncoder(value: value ? 1 : 0))
+        _ = sendCommand(ArsdkFeatureArdrone3Pilotingsettings.bankedTurnEncoder(value: value ? 1 : 0))
     }
 
     /// Send set Motion Detection command.
@@ -124,7 +139,55 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     /// - Parameter value: new value
     override func sendMotionDetectionModeCommand(_ value: Bool) {
         ULog.d(.ctrlTag, "AnafiCopter manual piloting: setting Motion Detection mode: \(value)")
-        sendCommand(ArsdkFeatureArdrone3Pilotingsettings.setMotionDetectionModeEncoder(enable: (value ? 1 : 0)))
+        _ = sendCommand(ArsdkFeatureArdrone3Pilotingsettings.setMotionDetectionModeEncoder(enable: (value ? 1 : 0)))
+    }
+
+    override func sendSpeedModeCommand(_ value: SpeedMode) {
+        var speedMode = Arsdk_Piloting_Command.SetSpeedMode()
+        speedMode.speedMode = value.arsdkValue!
+        _ = sendPilotingCommand(.setSpeedMode(speedMode))
+    }
+
+    override func sendTakeoffHoveringAltitude(_ value: Double) {
+        var takeoffHoveringAltitude = Arsdk_Piloting_Command.SetTakeoffHoveringAltitude()
+        takeoffHoveringAltitude.altitude = Float(value)
+        _ = sendPilotingCommand(.setTakeoffHoveringAltitude(takeoffHoveringAltitude))
+    }
+
+    override func sendPreferredAttiModeCommand(_ value: Bool) {
+        var preferredAttiMode = Arsdk_Piloting_AttiMode()
+        preferredAttiMode.enabled = value
+        _ = sendPilotingCommand(.setPreferredAttiMode(preferredAttiMode))
+    }
+
+    override func sendAssistanceModeCommand(_ value: AssistanceMode) -> Bool {
+        var assistanceMode = Arsdk_Piloting_Command.SetAssistanceMode()
+        assistanceMode.value = value.arsdkValue!
+        return sendPilotingCommand(.setAssistanceMode(assistanceMode))
+    }
+
+    override func sendLoiterShapeCommand(_ value: LoiterShape) -> Bool {
+        var shape = Arsdk_Loiter_Command.SetShape()
+        shape.value = value.arsdkValue!
+        return sendLoiterCommand(.setShape(shape))
+    }
+
+    override func sendLoiterDirectionCommand(_ value: LoiterDirection) -> Bool {
+        var direction = Arsdk_Loiter_Command.SetDirection()
+        direction.value = value.arsdkValue!
+        return sendLoiterCommand(.setDirection(direction))
+    }
+
+    override func sendLoiterRadiusCommand(_ value: Double) -> Bool {
+        var radius = Arsdk_Loiter_Command.SetRadius()
+        radius.value = value
+        return sendLoiterCommand(.setRadius(radius))
+    }
+
+    override func sendStartFlightModeCommand(_ value: Arsdk_Piloting_FlightMode) -> Bool {
+        var startFlightMode = Arsdk_Piloting_Command.StartFlightMode()
+        startFlightMode.value = value
+        return sendPilotingCommand(.startFlightMode(startFlightMode))
     }
 
     /// A command has been received.
@@ -132,17 +195,23 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
         let featureId = ArsdkCommand.getFeatureId(command)
-        if featureId == kArsdkFeatureArdrone3PilotingstateUid {
+        switch featureId {
+        case kArsdkFeatureArdrone3PilotingstateUid:
             // Piloting State
             ArsdkFeatureArdrone3Pilotingstate.decode(command, callback: self)
-        } else if featureId == kArsdkFeatureArdrone3PilotingsettingsstateUid {
+        case kArsdkFeatureArdrone3PilotingsettingsstateUid:
             // Piloting Settings
             ArsdkFeatureArdrone3Pilotingsettingsstate.decode(command, callback: self)
-        } else if featureId == kArsdkFeatureArdrone3SpeedsettingsstateUid {
+        case kArsdkFeatureArdrone3SpeedsettingsstateUid:
             // Speed Settings
             ArsdkFeatureArdrone3Speedsettingsstate.decode(command, callback: self)
-        } else if featureId == kArsdkFeatureAlarmsUid {
+        case kArsdkFeatureAlarmsUid:
             ArsdkFeatureAlarms.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkPilotingDecoder.decode(command)
+            arsdkLoiterDecoder.decode(command)
+        default:
+            break
         }
     }
 
@@ -159,15 +228,15 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
 
             manualCopterPilotingItf.update(canTakeOff: true).update(canLand: false).notifyUpdated()
         case .takingoff,
-             .hovering,
-             .motorRamping,
-             .usertakeoff,
-             .flying:
+                .hovering,
+                .motorRamping,
+                .usertakeoff,
+                .flying:
 
             manualCopterPilotingItf.update(canTakeOff: false).update(smartWillThrownTakeoff: false)
                 .update(canLand: true).notifyUpdated()
         case .emergency,
-             .emergencyLanding:
+                .emergencyLanding:
 
             let canTakeOff = takeoffAlarmsOn?.isEmpty ?? false
             manualCopterPilotingItf.update(canTakeOff: canTakeOff).update(canLand: false).notifyUpdated()
@@ -181,7 +250,7 @@ class AnafiCopterManualPilotingItf: ManualCopterPilotingItfController {
     }
 }
 
-extension AnafiCopterManualPilotingItf: ArsdkFeatureAlarmsCallback {
+extension AnafiManualPilotingItf: ArsdkFeatureAlarmsCallback {
     func onTakeoffChecklist(check: ArsdkFeatureAlarmsTakeoffChecklistType, state: ArsdkFeatureAlarmsState,
                             listFlagsBitField: UInt) {
 
@@ -223,7 +292,7 @@ extension AnafiCopterManualPilotingItf: ArsdkFeatureAlarmsCallback {
 }
 
 /// Piloting State callback implementation
-extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
+extension AnafiManualPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
     func onFlyingStateChanged(state: ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState) {
         flyingState = state
 
@@ -232,6 +301,7 @@ extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3PilotingstateCallbac
     }
 
     func onMotionState(state: ArsdkFeatureArdrone3PilotingstateMotionstateState) {
+        guard isHandLaunchSupported else { return }
         switch state {
         case .steady:
             manualCopterPilotingItf.update(smartWillThrownTakeoff: false).notifyUpdated()
@@ -248,7 +318,7 @@ extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3PilotingstateCallbac
 }
 
 /// Piloting Settings callback implementation
-extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3PilotingsettingsstateCallback {
+extension AnafiManualPilotingItf: ArsdkFeatureArdrone3PilotingsettingsstateCallback {
 
     func onMaxTiltChanged(current: Float, min: Float, max: Float) {
         guard min <= max else {
@@ -265,10 +335,19 @@ extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3Pilotingsettingsstat
     func onMotionDetection(enabled state: UInt) {
         settingDidChange(.motionDetectionMode(state == 1))
     }
+
+    func onMaxHorizontalSpeedChanged(current: Float, min: Float, max: Float) {
+        guard min <= max else {
+            ULog.w(.tag, "Max horizontal speed bounds are not correct, skipping this event.")
+            return
+        }
+        settingDidChange(.maxHorizontalSpeed(Double(min), Double(current), Double(max)))
+    }
+
 }
 
 /// Speed Settings callback implementation
-extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3SpeedsettingsstateCallback {
+extension AnafiManualPilotingItf: ArsdkFeatureArdrone3SpeedsettingsstateCallback {
     func onMaxVerticalSpeedChanged(current: Float, min: Float, max: Float) {
         guard min <= max else {
             ULog.w(.tag, "Max vertical speed bounds are not correct, skipping this event.")
@@ -291,5 +370,113 @@ extension AnafiCopterManualPilotingItf: ArsdkFeatureArdrone3SpeedsettingsstateCa
             return
         }
         settingDidChange(.maxPitchRollVelocity(Double(min), Double(current), Double(max)))
+    }
+}
+
+/// Piloting callback implementation
+extension ManualCopterPilotingItfController: ArsdkPilotingEventDecoderListener {
+    func onCapabilities(_ capabilities: Arsdk_Piloting_Event.Capabilities) {
+        isHandLaunchSupported = capabilities.supportedFeatures.contains(.handLaunch)
+        isPreferredAttiModeSupported = capabilities.supportedFeatures.contains(.attiMode)
+        let assistanceModes = capabilities.assistanceModes.compactMap { AssistanceMode(fromArsdk: $0) }
+        assistanceModeSetting?.handleNewAvailableValues(values: Set(assistanceModes))
+        if !isHandLaunchSupported {
+            manualCopterPilotingItf.update(smartWillThrownTakeoff: false)
+        }
+        if isPreferredAttiModeSupported {
+            manualCopterPilotingItf.update(preferredAttiMode: false)
+        }
+        if capabilities.hasTakeoffHoveringAltitudeRange {
+            manualCopterPilotingItf.update(takeoffHoveringAltitude: (
+                min: Double(capabilities.takeoffHoveringAltitudeRange.min), value: nil,
+                max: Double(capabilities.takeoffHoveringAltitudeRange.max)))
+            manualPlanePilotingItf.update(takeoffHoveringAltitude: (
+                min: Double(capabilities.takeoffHoveringAltitudeRange.min), value: nil,
+                max: Double(capabilities.takeoffHoveringAltitudeRange.max)))
+        }
+        let speedModes  = capabilities.speedModes.compactMap { SpeedMode(fromArsdk: $0) }
+
+        capabilitiesDidChange(.speedMode(Set(speedModes)))
+    }
+
+    func onState(_ state: Arsdk_Piloting_Event.State) {
+        if state.hasSpeedMode, let speedMode = SpeedMode(fromArsdk: state.speedMode.value) {
+            settingDidChange(.speedMode(speedMode))
+        }
+
+        if state.hasTakeoffHoveringAltitude, let setting = manualCopterPilotingItf.takeoffHoveringAltitude {
+            settingDidChange(.takeoffHoveringAltitude(setting.min,
+                                                      Double(state.takeoffHoveringAltitude.value),
+                                                      setting.max))
+        }
+
+        if state.hasAssistanceMode,
+           let assistanceMode = AssistanceMode(fromArsdk: state.assistanceMode.value) {
+            assistanceModeSetting?.handleNewValue(value: assistanceMode)
+        }
+
+        if state.hasTakeoffState,
+           let takeoffState = TakeoffState(fromArsdk: state.takeoffState.value) {
+            manualPlanePilotingItf.update(takeoffState: takeoffState)
+        }
+
+        if isPreferredAttiModeSupported {
+            if state.hasPreferredAttiMode {
+                manualCopterPilotingItf.update(preferredAttiMode: state.preferredAttiMode.enabled)
+            }
+
+            if state.hasCurrentAttiMode {
+                manualCopterPilotingItf.update(currentAttiMode: state.currentAttiMode.enabled)
+            }
+        }
+
+        if state.hasVehicleMode {
+            if let vehicleMode = VehicleMode(fromArsdk: state.vehicleMode.value) {
+                self.vehicleMode = vehicleMode
+            }
+        }
+
+        if state.hasVehicleType, let vehicleType = VehicleType(fromArsdk: state.vehicleType.value) {
+            deviceStore?.write(key: SettingKey.vehicleTypeKey, value: vehicleType).commit()
+            self.vehicleType = vehicleType
+        }
+        manualCopterPilotingItf.notifyUpdated()
+        manualPlanePilotingItf.notifyUpdated()
+    }
+}
+
+/// Plane callback implementation
+extension ManualCopterPilotingItfController: ArsdkLoiterEventDecoderListener {
+
+    func onState(_ state: Arsdk_Loiter_Event.State) {
+        guard let manualPlanePilotingItf else { return }
+
+        if state.hasDefaultCapabilities {
+            let loiterShapes = state.defaultCapabilities.shapes.compactMap { LoiterShape(fromArsdk: $0) }
+            loiterShapeSetting?.handleNewAvailableValues(values: Set(loiterShapes))
+
+            let loiterDirections = state.defaultCapabilities.directions
+                .compactMap { LoiterDirection(fromArsdk: $0) }
+            loiterDirectionSetting?.handleNewAvailableValues(values: Set(loiterDirections))
+
+            loiterRadiusSetting?.handleNewBounds(min: state.defaultCapabilities.radiusRange.min,
+                                                 max: state.defaultCapabilities.radiusRange.max)
+        }
+
+        if state.hasShape,
+           let loiterShape = LoiterShape(fromArsdk: state.shape.value) {
+            loiterShapeSetting?.handleNewValue(value: loiterShape)
+        }
+
+        if state.hasDirection,
+           let loiterDirection = LoiterDirection(fromArsdk: state.direction.value) {
+            loiterDirectionSetting?.handleNewValue(value: loiterDirection)
+        }
+        if state.hasRadius {
+            loiterRadiusSetting?.handleNewValue(value: state.radius.value)
+        }
+
+        manualPlanePilotingItf.notifyUpdated()
+        deviceStore?.commit()
     }
 }

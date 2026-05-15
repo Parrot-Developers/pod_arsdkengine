@@ -82,7 +82,7 @@ class UserStorageController: DeviceComponentController {
     private func updateState(_ state: UserStorageFileSystemState) {
         userStorage.update(fileSystemState: state)
             .update(canFormat: (state == .needFormat || (formatWhenReadyAllowed && state == .ready)
-                || state == .passwordNeeded)).notifyUpdated()
+                                || state == .passwordNeeded)).notifyUpdated()
     }
 
     public func updateFormattingType(_ formattingType: Set<FormattingType>) {
@@ -101,91 +101,103 @@ class UserStorageController: DeviceComponentController {
 /// User storage backend implementation
 extension UserStorageController: UserStorageBackend {
     public func format(formattingType: FormattingType, newMediaName: String?) -> Bool {
+        var commandSent = false
         if !formattingTypeSupported {
             if userStorageType != nil {
-                sendCommand(ArsdkFeatureUserStorageV2.formatEncoder(storageId: userStorageId!,
-                    label: newMediaName ?? ""))
+                commandSent = sendCommand(ArsdkFeatureUserStorageV2.formatEncoder(storageId: userStorageId!,
+                                                                    label: newMediaName ?? ""))
             } else {
-                sendCommand(ArsdkFeatureUserStorage.formatEncoder(label: newMediaName ?? ""))
+                commandSent = sendCommand(ArsdkFeatureUserStorage.formatEncoder(label: newMediaName ?? ""))
             }
         } else {
             switch formattingType {
             case .quick:
                 if userStorageType != nil {
-                    sendCommand(ArsdkFeatureUserStorageV2.formatWithTypeEncoder(storageId: userStorageId!,
-                        label: newMediaName ?? "", type: .quick))
+                    commandSent = sendCommand(ArsdkFeatureUserStorageV2.formatWithTypeEncoder(storageId: userStorageId!,
+                                                                                label: newMediaName ?? "",
+                                                                                type: .quick))
                 } else {
-                    sendCommand(ArsdkFeatureUserStorage.formatWithTypeEncoder(label: newMediaName ?? "", type: .quick))
+                    commandSent = sendCommand(ArsdkFeatureUserStorage.formatWithTypeEncoder(label: newMediaName ?? "",
+                                                                              type: .quick))
                 }
             case .full:
                 if userStorageType != nil {
-                    sendCommand(ArsdkFeatureUserStorageV2.formatWithTypeEncoder(storageId: userStorageId!,
-                        label: newMediaName ?? "", type: .full))
+                    commandSent = sendCommand(ArsdkFeatureUserStorageV2.formatWithTypeEncoder(storageId: userStorageId!,
+                                                                                label: newMediaName ?? "",
+                                                                                type: .full))
                 } else {
-                    sendCommand(ArsdkFeatureUserStorage.formatWithTypeEncoder(label: newMediaName ?? "", type: .full))
+                    commandSent = sendCommand(ArsdkFeatureUserStorage.formatWithTypeEncoder(label: newMediaName ?? "",
+                                                                              type: .full))
                 }
             }
         }
-        if formatResultEvtSupported {
+        if commandSent && formatResultEvtSupported {
             waitingFormatResult = true
             updateState(.formatting)
         }
-        return true
+        return commandSent
     }
 
     func formatWithEncryption(password: String, formattingType: FormattingType, newMediaName: String?) -> Bool {
+        var commandSent = false
         if encryptionSupported {
             switch formattingType {
             case .quick:
                 if userStorageType != nil {
-                    sendCommand(ArsdkFeatureUserStorageV2.formatWithEncryptionEncoder(storageId: userStorageId!,
-                        label: newMediaName ?? "", password: password, type: .quick))
+                    commandSent = sendCommand(ArsdkFeatureUserStorageV2
+                        .formatWithEncryptionEncoder(storageId: userStorageId!,
+                                                     label: newMediaName ?? "",
+                                                     password: password, type: .quick))
                 } else {
-                    sendCommand(ArsdkFeatureUserStorage.formatWithEncryptionEncoder(label: newMediaName ?? "",
-                        password: password, type: .quick))
+                    commandSent = sendCommand(ArsdkFeatureUserStorage
+                        .formatWithEncryptionEncoder(label: newMediaName ?? "",
+                                                     password: password, type: .quick))
                 }
             case .full:
                 if userStorageType != nil {
-                    sendCommand(ArsdkFeatureUserStorageV2.formatWithEncryptionEncoder(storageId: userStorageId!,
-                        label: newMediaName ?? "", password: password, type: .full))
+                    commandSent = sendCommand(ArsdkFeatureUserStorageV2
+                        .formatWithEncryptionEncoder(storageId: userStorageId!,
+                                                     label: newMediaName ?? "",
+                                                     password: password, type: .full))
                 } else {
-                    sendCommand(ArsdkFeatureUserStorage.formatWithEncryptionEncoder(label: newMediaName ?? "",
-                        password: password, type: .full))
+                    commandSent = sendCommand(ArsdkFeatureUserStorage
+                        .formatWithEncryptionEncoder(label: newMediaName ?? "",
+                                                     password: password, type: .full))
                 }
             }
         }
-        if formatResultEvtSupported {
+        if commandSent && formatResultEvtSupported {
             waitingFormatResult = true
             updateState(.formatting)
         }
-        return true
+        return commandSent
     }
 
     func sendPassword(password: String, usage: PasswordUsage) -> Bool {
         switch usage {
         case .record:
             if userStorageType != nil {
-                sendCommand(ArsdkFeatureUserStorageV2.encryptionPasswordEncoder(storageId: userStorageId!,
-                    password: password, type: .record))
+                return sendCommand(ArsdkFeatureUserStorageV2.encryptionPasswordEncoder(storageId: userStorageId!,
+                                                                                       password: password,
+                                                                                       type: .record))
             } else {
-                sendCommand(ArsdkFeatureUserStorage.encryptionPasswordEncoder(password: password, type: .record))
+                return sendCommand(ArsdkFeatureUserStorage.encryptionPasswordEncoder(password: password, type: .record))
             }
         case .usb:
             if userStorageType != nil {
-                sendCommand(ArsdkFeatureUserStorageV2.encryptionPasswordEncoder(storageId: userStorageId!,
-                    password: password, type: .record))
+                return sendCommand(ArsdkFeatureUserStorageV2.encryptionPasswordEncoder(storageId: userStorageId!,
+                                                                                password: password, type: .usb))
             } else {
-                sendCommand(ArsdkFeatureUserStorage.encryptionPasswordEncoder(password: password, type: .usb))
+                return sendCommand(ArsdkFeatureUserStorage.encryptionPasswordEncoder(password: password, type: .usb))
             }
         }
-        return true
     }
 }
 extension UserStorageController {
 
     func state(physicalState: ArsdkFeatureUserStoragePhyState,
-        fileSystemState: ArsdkFeatureUserStorageFsState,
-        attributeBitField: UInt, monitorEnabled: UInt, monitorPeriod: UInt) {
+               fileSystemState: ArsdkFeatureUserStorageFsState,
+               attributeBitField: UInt, monitorEnabled: UInt, monitorPeriod: UInt) {
 
         var newPhysicalState = UserStoragePhysicalState.noMedia
         var newFileSystemState = UserStorageFileSystemState.error
@@ -251,9 +263,9 @@ extension UserStorageController {
         }
         latestState = newFileSystemState
         if newFileSystemState == .ready && monitorEnabled == 0 {
-            sendCommand(ArsdkFeatureUserStorage.startMonitoringEncoder(period: 0))
+            _ = sendCommand(ArsdkFeatureUserStorage.startMonitoringEncoder(period: 0))
         } else if newFileSystemState != .ready && monitorEnabled == 1 {
-            sendCommand(ArsdkFeatureUserStorage.stopMonitoringEncoder())
+            _ = sendCommand(ArsdkFeatureUserStorage.stopMonitoringEncoder())
         }
     }
 
@@ -320,7 +332,7 @@ extension UserStorageController {
     }
 
     func state(physicalState: ArsdkFeatureUserStorageV2PhyState, fileSystemState: ArsdkFeatureUserStorageV2FsState,
-        attributeBitField: UInt, monitorEnabled: UInt, monitorPeriod: UInt) {
+               attributeBitField: UInt, monitorEnabled: UInt, monitorPeriod: UInt) {
 
         var newPhysicalState = UserStoragePhysicalState.noMedia
         var newFileSystemState = UserStorageFileSystemState.error
@@ -386,9 +398,9 @@ extension UserStorageController {
         }
         latestState = newFileSystemState
         if newFileSystemState == .ready && monitorEnabled == 0 {
-            sendCommand(ArsdkFeatureUserStorageV2.startMonitoringEncoder(storageId: userStorageId!, period: 0))
+            _ = sendCommand(ArsdkFeatureUserStorageV2.startMonitoringEncoder(storageId: userStorageId!, period: 0))
         } else if newFileSystemState != .ready && monitorEnabled == 1 {
-            sendCommand(ArsdkFeatureUserStorageV2.stopMonitoringEncoder(storageId: userStorageId!))
+            _ = sendCommand(ArsdkFeatureUserStorageV2.stopMonitoringEncoder(storageId: userStorageId!))
         }
     }
 
@@ -460,21 +472,21 @@ extension UserStorageController {
     }
 
     func formatProgress(step: ArsdkFeatureUserStorageV2FormattingStep, percentage: UInt) {
-           var formattingStep: FormattingStep = .partitioning
-           switch step {
-           case .partitioning:
-               formattingStep = .partitioning
-           case .clearingData:
-               formattingStep = .clearingData
-           case .creatingFs:
-               formattingStep = .creatingFs
-           case .sdkCoreUnknown:
-               fallthrough
-           @unknown default:
-               ULog.w(.tag, "Unknown result, skipping this event.")
-           }
-           updateFormatProgress(formattingStep: formattingStep, formattingProgress: Int(percentage))
-       }
+        var formattingStep: FormattingStep = .partitioning
+        switch step {
+        case .partitioning:
+            formattingStep = .partitioning
+        case .clearingData:
+            formattingStep = .clearingData
+        case .creatingFs:
+            formattingStep = .creatingFs
+        case .sdkCoreUnknown:
+            fallthrough
+        @unknown default:
+            ULog.w(.tag, "Unknown result, skipping this event.")
+        }
+        updateFormatProgress(formattingStep: formattingStep, formattingProgress: Int(percentage))
+    }
 
     func supportedFormattingTypes(supportedTypesBitField: UInt) {
         formattingTypeSupported = true
@@ -492,7 +504,7 @@ extension UserStorageController {
         formatResultEvtSupported = ArsdkFeatureUserStorageFeatureBitField.isSet(.formatResultEvtSupported,
                                                                                 inBitField: supportedFeaturesBitField)
         formatWhenReadyAllowed = ArsdkFeatureUserStorageFeatureBitField.isSet(.formatWhenReadyAllowed,
-                                                                                inBitField: supportedFeaturesBitField)
+                                                                              inBitField: supportedFeaturesBitField)
         encryptionSupported = ArsdkFeatureUserStorageFeatureBitField.isSet(.encryptionSupported,
                                                                            inBitField: supportedFeaturesBitField)
         updateEncryptionSupported(encryptionSupported)

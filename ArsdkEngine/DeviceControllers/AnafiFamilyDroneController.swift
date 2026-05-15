@@ -48,7 +48,7 @@ class AnafiFamilyDroneController: DroneController {
                    pcmdEncoder: PilotingCommand.Encoder.AnafiCopter(),
                    ephemerisConfig: EphemerisConfig(fileType: .ublox, uploader: HttpEphemerisUploader()),
                    defaultPilotingItfFactory: { activationController in
-                    return AnafiCopterManualPilotingItf(activationController: activationController)
+            return AnafiManualPilotingItf(activationController: activationController)
         })
         // add all component controllers
         // Activable Piloting Itfs
@@ -87,35 +87,22 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(AnafiFlightMeter(deviceController: self))
         componentControllers.append(CameraFeatureExposureValues(deviceController: self))
         componentControllers.append(AnafiFlightInfo(deviceController: self))
-        if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
-            componentControllers.append(CellularLogsController(deviceController: self))
-            componentControllers.append(Anafi2CellularSession(deviceController: self))
-        }
         componentControllers.append(AnafiTakeoffChecklist(deviceController: self))
+        componentControllers.append(AnafiAnemometer(deviceController: self))
         // Peripherals
         componentControllers.append(AnafiMagnetometer(deviceController: self))
-        let streamServer = (model == .anafi4k || model == .anafiThermal || model == .anafiUa || model == .anafiUsa) ?
-            StreamServerController(deviceController: self, maxConcurrentStreams: 1,
-                                   liveSourceMap: { src in src == .frontCamera ? .unspecified: src }) :
-            StreamServerController(deviceController: self)
-        componentControllers.append(streamServer)
-        componentControllers.append(CameraFeatureCameraRouter(deviceController: self))
-        if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
-            componentControllers.append(Anafi2Antiflicker(deviceController: self))
-        } else {
-            componentControllers.append(CameraFeatureAntiflicker(deviceController: self))
-        }
-        componentControllers.append(Camera2Router(deviceController: self))
         componentControllers.append(HttpMediaStore(deviceController: self))
         componentControllers.append(AnafiSystemInfo(deviceController: self))
+        componentControllers.append(HttpDtedStore(deviceController: self))
+        componentControllers.append(LineOfSightController(deviceController: self))
 
         componentControllers.append(MissionUpdaterController(deviceController: self))
         if let firmwareStore = engine.utilities.getUtility(Utilities.firmwareStore),
-            let firmwareDownloader = engine.utilities.getUtility(Utilities.firmwareDownloader) {
+           let firmwareDownloader = engine.utilities.getUtility(Utilities.firmwareDownloader) {
             componentControllers.append(
-                UpdaterController(deviceController: self,
-                                     config: UpdaterController.Config(deviceModel: deviceModel, uploaderType: .http),
-                                     firmwareStore: firmwareStore, firmwareDownloader: firmwareDownloader))
+                DeviceUpdaterController(deviceController: self,
+                                  config: UpdaterController.Config(deviceModel: deviceModel, uploaderType: .http),
+                                  firmwareStore: firmwareStore, firmwareDownloader: firmwareDownloader))
         }
         componentControllers.append(AnafiCopterMotors(deviceController: self))
         if let crashReportStorage = engine.utilities.getUtility(Utilities.crashReportStorage) {
@@ -136,7 +123,7 @@ class AnafiFamilyDroneController: DroneController {
         if let flightCameraRecordStorage = engine.utilities.getUtility(Utilities.flightCameraRecordStorage) {
             componentControllers.append(
                 HttpFlightCameraRecordDownloader(deviceController: self,
-                                        flightCameraRecordStorage: flightCameraRecordStorage))
+                                                 flightCameraRecordStorage: flightCameraRecordStorage))
         }
         componentControllers.append(AnafiWifiFeature(deviceController: self))
         componentControllers.append(RemovableUserStorageController(deviceController: self))
@@ -147,7 +134,6 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(TargetTrackerController(deviceController: self))
         componentControllers.append(AnafiGeofence(deviceController: self))
         componentControllers.append(PreciseHomeController(deviceController: self))
-        componentControllers.append(ThermalController(deviceController: self))
         componentControllers.append(LedsController(deviceController: self))
         componentControllers.append(PhotoProgressIndicatorController(deviceController: self))
         componentControllers.append(AnafiPilotingControl(deviceController: self))
@@ -162,38 +148,62 @@ class AnafiFamilyDroneController: DroneController {
             componentControllers.append(AnafiDevToolbox(deviceController: self))
         }
         componentControllers.append(MissionManagerController(deviceController: self))
-        let certificateUploader = (model == .anafi2 || model == .anafi3 || model == .anafi3Usa) ?
-            Anafi2CertificateUploader(deviceController: self) :
-            AnafiCertificateUploader(deviceController: self)
-        componentControllers.append(certificateUploader)
         componentControllers.append(NetworkController(deviceController: self))
         componentControllers.append(FlightCameraRecorderController(deviceController: self))
-        componentControllers.append(SecureElementController(deviceController: self))
         componentControllers.append(AnafiPrivacy(deviceController: self))
         componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
         componentControllers.append(HttpServerController(deviceController: self))
         componentControllers.append(Anafi2ConnectivityRouter(deviceController: self))
+        componentControllers.append(AnafiNavigationController(deviceController: self))
+        componentControllers.append(AnafiUnguardedFlight(deviceController: self))
+        componentControllers.append(AnafiNightVision(deviceController: self))
+        componentControllers.append(AnafiUsbPower(deviceController: self))
+        componentControllers.append(ESimController(deviceController: self))
 
-        if model == .anafi2 || model == .anafi3 || model == .anafi3Usa {
-            componentControllers.append(DebugShellController(deviceController: self))
-            componentControllers.append(AnafiTerrainControl(deviceController: self))
-        }
-        if model == .anafi3 || model == .anafi3Usa {
+        switch model {
+        case .anafi4k,
+             .anafiThermal,
+             .anafiUa,
+             .anafiUsa:
+            componentControllers.append(StreamServerController(
+                deviceController: self,
+                maxConcurrentStreams: 1,
+                liveSourceMap: { src in src == .frontCamera ? .unspecified: src }
+            ))
+            componentControllers.append(CameraFeatureAntiflicker(deviceController: self))
+            componentControllers.append(CameraFeatureCameraRouter(deviceController: self))
+            componentControllers.append(AnafiThermalController(deviceController: self))
+            componentControllers.append(AnafiCertificateUploader(deviceController: self))
+        case .anafi3,
+             .anafi3Gov,
+             .anafi3Mil,
+             .chuck3:
+            componentControllers.append(Anafi3ThermalController(deviceController: self))
+            componentControllers.append(ThermalController2(deviceController: self))
             componentControllers.append(Anafi3KillSwitch(deviceController: self))
             componentControllers.append(Anafi3Messenger(deviceController: self))
             componentControllers.append(Anafi3SleepMode(deviceController: self))
+            componentControllers.append(ExternalAutopilotDebugController(deviceController: self))
+            fallthrough
+        case .anafi2: // also for above models
+            componentControllers.append(StreamServerController(deviceController: self))
+            componentControllers.append(Anafi2Antiflicker(deviceController: self))
+            componentControllers.append(Camera2Router(deviceController: self))
+            componentControllers.append(Anafi2CertificateUploader(deviceController: self))
+            componentControllers.append(SecureElementController(deviceController: self))
+            componentControllers.append(Anafi2StreamSharingOverlay(deviceController: self))
+            componentControllers.append(CellularLogsController(deviceController: self))
+            componentControllers.append(Anafi2CellularSession(deviceController: self))
+            componentControllers.append(DebugShellController(deviceController: self))
+            componentControllers.append(AnafiTerrainControl(deviceController: self))
         }
 
         sendDateAndTime = { [weak self] in
-            let dateFormatter = DateFormatter()
-            dateFormatter.timeZone = NSTimeZone.system
-            dateFormatter.locale = NSLocale.system
             let currentDate = Date()
 
             // send date/time
-            dateFormatter.dateFormat = "yyyyMMdd'T'HHmmssZZZ"
-            let currentDateStr = dateFormatter.string(from: currentDate)
-            self?.sendCommand(ArsdkFeatureCommonCommon.currentDateTimeEncoder(datetime: currentDateStr))
+            let currentDateStr = ArsdkEngine.iso8601DateFormatter.string(from: currentDate)
+            _ = self?.sendCommand(ArsdkFeatureCommonCommon.currentDateTimeEncoder(datetime: currentDateStr))
 
             if let eventLogger = self?.engine.utilities.getUtility(Utilities.eventLogger) {
                 eventLogger.log("EVT:SEND_TIME;time='\(currentDateStr)'")

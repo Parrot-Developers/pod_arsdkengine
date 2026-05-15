@@ -208,6 +208,15 @@ enum Arsdk_Microhard_Model: SwiftProtobuf.Enum {
   case pDdl1800 // = 3
   case pDdl2400 // = 4
   case pMddl2400 // = 5
+
+  /// mars radio
+  case sl200 // = 6
+
+  /// mars radio
+  case sl3001624 // = 7
+
+  /// mars radio
+  case sl3002400 // = 8
   case UNRECOGNIZED(Int)
 
   init() {
@@ -222,6 +231,9 @@ enum Arsdk_Microhard_Model: SwiftProtobuf.Enum {
     case 3: self = .pDdl1800
     case 4: self = .pDdl2400
     case 5: self = .pMddl2400
+    case 6: self = .sl200
+    case 7: self = .sl3001624
+    case 8: self = .sl3002400
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -234,6 +246,9 @@ enum Arsdk_Microhard_Model: SwiftProtobuf.Enum {
     case .pDdl1800: return 3
     case .pDdl2400: return 4
     case .pMddl2400: return 5
+    case .sl200: return 6
+    case .sl3001624: return 7
+    case .sl3002400: return 8
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -251,6 +266,9 @@ extension Arsdk_Microhard_Model: CaseIterable {
     .pDdl1800,
     .pDdl2400,
     .pMddl2400,
+    .sl200,
+    .sl3001624,
+    .sl3002400,
   ]
 }
 
@@ -850,41 +868,6 @@ struct Arsdk_Microhard_BandwidthValue {
   init() {}
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Microhard_Bandwidth: @unchecked Sendable {}
-extension Arsdk_Microhard_Encryption: @unchecked Sendable {}
-extension Arsdk_Microhard_HardwareErrorCause: @unchecked Sendable {}
-extension Arsdk_Microhard_PairingFailureReason: @unchecked Sendable {}
-extension Arsdk_Microhard_Model: @unchecked Sendable {}
-extension Arsdk_Microhard_Command: @unchecked Sendable {}
-extension Arsdk_Microhard_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Microhard_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Microhard_Command.PowerOn: @unchecked Sendable {}
-extension Arsdk_Microhard_Command.ShutDown: @unchecked Sendable {}
-extension Arsdk_Microhard_Command.PairDevice: @unchecked Sendable {}
-extension Arsdk_Microhard_Event: @unchecked Sendable {}
-extension Arsdk_Microhard_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Microhard_Event.State: @unchecked Sendable {}
-extension Arsdk_Microhard_Event.State.OneOf_State: @unchecked Sendable {}
-extension Arsdk_Microhard_Event.HardwareError: @unchecked Sendable {}
-extension Arsdk_Microhard_Event.Pairing: @unchecked Sendable {}
-extension Arsdk_Microhard_Event.Pairing.OneOf_Status: @unchecked Sendable {}
-extension Arsdk_Microhard_Capabilities: @unchecked Sendable {}
-extension Arsdk_Microhard_ConnectionParameters: @unchecked Sendable {}
-extension Arsdk_Microhard_State: @unchecked Sendable {}
-extension Arsdk_Microhard_State.Offline: @unchecked Sendable {}
-extension Arsdk_Microhard_State.Booting: @unchecked Sendable {}
-extension Arsdk_Microhard_State.Idle: @unchecked Sendable {}
-extension Arsdk_Microhard_State.Pairing: @unchecked Sendable {}
-extension Arsdk_Microhard_State.Connecting: @unchecked Sendable {}
-extension Arsdk_Microhard_State.Connected: @unchecked Sendable {}
-extension Arsdk_Microhard_PairingParameters: @unchecked Sendable {}
-extension Arsdk_Microhard_PairingStatus: @unchecked Sendable {}
-extension Arsdk_Microhard_PairingStatus.Failure: @unchecked Sendable {}
-extension Arsdk_Microhard_PairingStatus.Success: @unchecked Sendable {}
-extension Arsdk_Microhard_BandwidthValue: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.microhard"
@@ -930,6 +913,9 @@ extension Arsdk_Microhard_Model: SwiftProtobuf._ProtoNameProviding {
     3: .same(proto: "MODEL_P_DDL_1800"),
     4: .same(proto: "MODEL_P_DDL_2400"),
     5: .same(proto: "MODEL_P_MDDL_2400"),
+    6: .same(proto: "MODEL_SL200"),
+    7: .same(proto: "MODEL_SL300_1624"),
+    8: .same(proto: "MODEL_SL300_2400"),
   ]
 }
 

@@ -29,6 +29,7 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
 /// Callback called when the device controller close itself
 protocol DeviceControllerStoppedListener: AnyObject {
@@ -38,68 +39,7 @@ protocol DeviceControllerStoppedListener: AnyObject {
     func onSelfStopped(uid: String)
 }
 
-/// Provides connection for a device.
-class DeviceProvider: NSObject {
-
-    /// GroundSdk API connector that this provider represents.
-    private(set) var connector: DeviceConnectorCore
-
-    /// Parent connection provider of this connection provider.
-    /// Nil if there is no parent connection provider.
-    private(set) var parent: DeviceProvider?
-
-    /// Constructor
-    ///
-    /// - Parameter connector: device connector that this provider represents
-    init(connector: DeviceConnectorCore) {
-        self.connector = connector
-    }
-
-    /// Connects the device managed by the given controller
-    ///
-    /// - Parameters:
-    ///    - deviceController: device controller whose device must be connected
-    ///    - password: password to use for authentication, an empty string if no password are required
-    ///
-    /// - Returns: true if the connect operation was successfully initiated,
-    func connect(deviceController: DeviceController, password: String) -> Bool {
-        return false
-    }
-
-    /// Disconnects the device managed by the given controller
-    ///
-    /// As a provider may not support the disconnect operation, this method provides a default implementation that
-    /// return false. Subclasses that need to support the disconnect operation may override this method to do so.
-    ///
-    /// - Parameter deviceController: device controller whose device must be disconnected
-    ///
-    /// - Returns: true if the disconnect operation was successfully initiated
-    func disconnect(deviceController: DeviceController) -> Bool {
-        return false
-    }
-
-    /// Forgets the device managed by the given controller.
-    ///
-    /// As a provider may not support the forget operation, this method provides a default implementation that
-    /// does nothing. Subclasses that need to support the forget operation may override this method to do so.
-    ///
-    /// - Parameter deviceController: device controller whose device must be forgotten
-    func forget(deviceController: DeviceController) {
-    }
-
-    /// Notifies that some conditions that control data synchronization allowance have changed.
-    ///
-    /// This method allows proxy device providers to know when data sync allowance conditions concerning
-    /// the device they proxy change, and take appropriate measures.
-    ///
-    /// Default implementation does nothing.
-    ///
-    /// - Parameter deviceController: device controller whose data sync allowance conditions changed
-    public func dataSyncAllowanceMightHaveChanged(deviceController: DeviceController) {
-    }
-}
-
-// The type returned by `subscribeNoAckCommandEncoder()`
+/// The type returned by `subscribeNoAckCommandEncoder()`.
 protocol RegisteredNoAckCmdEncoder {
     /// Unregister an `ArsdkCommandEncoder` previously registered in the NoAckCmdLoop
     ///
@@ -154,7 +94,24 @@ protocol DeviceControllerBackend: AnyObject {
     ///   - proxyPort: the port to use in order to reach the given `port`.
     ///                If `proxyAddress` is `nil`, this value should be ignored.
     func createTcpProxy(model: DeviceModel, port: Int,
-        completion: @escaping (_ tcpProxy: ArsdkTcpProxy?, _ proxyAddress: String?, _ proxyPort: Int) -> Void)
+                        completion: @escaping (_ tcpProxy: ArsdkTcpProxy?,
+                                               _ proxyAddress: String?,
+                                               _ proxyPort: Int) -> Void)
+
+    /// Creates a tcp proxy and gets the address and port to use to reach the given port on the given model
+    ///
+    /// - Parameters:
+    ///   - url: the url that the proxy should address
+    ///   - port: the port to access
+    ///   - completion: completion callback that is called when the tcp proxy is created (or on error).
+    ///   - tcpProxy: the proxy handle to keep to maintain the proxy open. Nil if an error occurred.
+    ///   - proxyAddress: the address to use in order to reach the given `port`. Nil if an error occurred.
+    ///   - proxyPort: the port to use in order to reach the given `port`.
+    ///                If `proxyAddress` is `nil`, this value should be ignored.
+    func createTcpProxy(url: String, port: Int,
+                        completion: @escaping (_ tcpProxy: ArsdkTcpProxy?,
+                                               _ proxyAddress: String?,
+                                               _ proxyPort: Int) -> Void)
 
     /// Creates a video live stream source.
     ///
@@ -278,14 +235,17 @@ protocol DeviceControllerBackend: AnyObject {
 
 }
 
-/// Class that store a connection session state in an object.
+/// Class that stores a connection session state in an object.
 /// Having an object that is created on each connection session allows timeout closure that weak capture it to ensure
-/// checking state of the correct connect session
+/// checking state of the correct connect session.
 class ControllerConnectionSession {
     /// Connection state of the session
     enum State {
         /// Controller is fully disconnected.
         case disconnected
+
+        /// Controller has requested connection.
+        case connectionRequested
 
         /// Link is connecting.
         /// The protocol connection is not initiated.
@@ -306,6 +266,9 @@ class ControllerConnectionSession {
         /// Controller is fully connected to the device.
         /// The protocol is connected.
         case connected
+
+        /// Controller main link is lost but backup link is active.
+        case backupLink
 
         /// Controller is disconnecting the device.
         case disconnecting
@@ -334,7 +297,7 @@ class ControllerConnectionSession {
     }
 }
 
-/// Base class for a device controller
+/// Base class for a device controller.
 class DeviceController: NSObject {
 
     /// Non-acknowledged command loop period, in milliseconds. `0` if disabled.
@@ -353,7 +316,7 @@ class DeviceController: NSObject {
     let deviceModel: DeviceModel
 
     /// Registered providers for this device controller, by connector uid
-    private var providers = [String: DeviceProvider]()
+    private var providers = Set<DeviceProvider>()
 
     /// Current provider used to connect this device
     private(set) weak var activeProvider: DeviceProvider?
@@ -392,20 +355,31 @@ class DeviceController: NSObject {
     /// Send the current date and time to the managed device
     var sendDateAndTime: (() -> Void)!
 
-    /// `true` when the controller must attempt to reconnect the device after disconnection.
+    /// `true` when the controller must attempt to reconnect the device after disconnection if the active provider is a
+    /// local provider. If the provider has a parent provider, then it is assumed that the parent provider will handle
+    /// the auto reconnection itself.
     var autoReconnect = false
 
     /// Computed property that represents whether the background data is allowed or not.
     /// This computed property might be overriden by subclasses if they have custom conditions to allow or restrict
     /// background data. Overrides **must** call super.
     var dataSyncAllowed: Bool {
-        return _dataSyncAllowed
+        return _dataSyncAllowed && !isUpdating
     }
 
     /// Private implementation of the data sync allowance.
     /// It will be changed according to the connection state. It is true as soon as the device is connected, and set
     /// back to false when device is disconnected.
     private var _dataSyncAllowed = false
+
+    /// Tells whether device is currently updating.
+    internal var isUpdating: Bool = false {
+        didSet {
+            if oldValue != isUpdating {
+                dataSyncAllowanceMightHaveChanged()
+            }
+        }
+    }
 
     /// Memorize the previous data sync allowance value in order to notify only if it has changed.
     private var previousDataSyncAllowed = false
@@ -415,6 +389,11 @@ class DeviceController: NSObject {
 
     /// API Capabilities.
     private var apiCapabilities = ArsdkApiCapabilities.unknown
+
+    /// Description.
+    override var description: String {
+        return "\(String(describing: type(of: self))) [uid: \(device.uid), model: \(device.deviceModel)]"
+    }
 
     /// Constructor
     ///
@@ -445,21 +424,22 @@ class DeviceController: NSObject {
             presetId = PersistentStore.presetKey(forModel: deviceModel)
         }
         var presetDict: PersistentDictionary!
-        presetDict = engine.persistentStore.getPreset(uid: presetId) { [unowned self] in
+        presetDict = engine.persistentStore.getPreset(uid: presetId) { [weak self] in
             presetDict.reload()
-            self.componentControllers.forEach { component in component.presetDidChange() }
+            self?.componentControllers.forEach { component in component.presetDidChange() }
         }
         presetStore = SettingsStore(dictionary: presetDict)
         // create the device
         self.device = deviceFactory(self)
         if let firmwareVersionStr: String = deviceStore.read(key: PersistentStore.deviceFirmwareVersion),
-            let firmwareVersion = FirmwareVersion.parse(versionStr: firmwareVersionStr) {
+           let firmwareVersion = FirmwareVersion.parse(versionStr: firmwareVersionStr) {
             self.device.firmwareVersionHolder.update(version: firmwareVersion)
         }
         if let boardId: String = deviceStore.read(key: PersistentStore.deviceBoardId) {
             self.device.boardIdHolder.update(boardId: boardId)
         }
         self.device.stateHolder.state.update(persisted: !deviceStore.new).notifyUpdated()
+        ULog.d(.ctrlTag, "Create \(self)]")
     }
 
     /// Start the controller
@@ -467,7 +447,7 @@ class DeviceController: NSObject {
     /// - Parameter stopListener: listener called if the device controller stops itself
     /// - Note: custom actions after the start should be defined in the subclasses
     final func start(stopListener: DeviceControllerStoppedListener) {
-        ULog.d(.ctrlTag, "Starting deviceController \(device.uid)]")
+        ULog.d(.ctrlTag, "Starting \(self)")
         self.stopListener = stopListener
         controllerDidStart()
     }
@@ -476,7 +456,7 @@ class DeviceController: NSObject {
     ///
     /// - Note: custom actions after the stop should be defined in the subclasses
     final func stop() {
-        ULog.d(.ctrlTag, "Stopping deviceController \(device.uid)]")
+        ULog.d(.ctrlTag, "Stopping \(self)")
         controllerDidStop()
     }
 
@@ -484,12 +464,18 @@ class DeviceController: NSObject {
     ///
     /// - Parameter provider: provider to add
     final func addProvider(_ provider: DeviceProvider) {
-        if providers.updateValue(provider, forKey: provider.connector.uid) != provider {
+        let (inserted, _) = providers.insert(provider)
+        if inserted {
             providersDidChange()
         }
 
-        if autoReconnect && activeProvider == nil {
-            _ = doConnect(provider: provider, password: "", cause: .connectionLost)
+        // The device controller should automatically reconnect to the device when all the following conditions are met:
+        // - the autoReconnect flag is set,
+        // - the device controller has no active provider,
+        // - the given provider has no parent provider.
+        // If the provider has a parent provider, the latter should handle the auto reconnection itself.
+        if autoReconnect && activeProvider == nil && provider.parent == nil {
+            _ = doConnect(provider: provider, parameters: [], cause: .connectionLost)
         }
 
         device.stateHolder.state.notifyUpdated()
@@ -499,8 +485,8 @@ class DeviceController: NSObject {
     ///
     /// - Parameter provider: provider to remove
     final func removeProvider(_ provider: DeviceProvider) {
-        if let removedProvider = providers.removeValue(forKey: provider.connector.uid) {
-            if removedProvider == activeProvider {
+        if providers.remove(provider) != nil {
+            if provider == activeProvider {
                 activeProvider = nil
                 autoReconnect = true
                 transitToDisconnectedState(withCause: .connectionLost)
@@ -520,7 +506,7 @@ class DeviceController: NSObject {
     /// - Note: Note that this method does not publish changes made to the device state.
     ///   Caller has the responsibility to call `notifyUpdated`.
     final func providersDidChange() {
-        device.stateHolder.state.update(connectors: providers.values.map({$0.connector}))
+        device.stateHolder.state.update(connectors: providers.map({$0.connector}))
             .update(activeConnector: activeProvider?.connector)
     }
 
@@ -530,32 +516,36 @@ class DeviceController: NSObject {
         stopListener?.onSelfStopped(uid: device.uid)
     }
 
-    /// Connect this controller using the given provider
+    /// Connects this controller using the given provider.
     ///
     /// - Parameters:
-    ///     - provider: provider to use to connect this device
-    ///     - password: if the provider supports password, the password to use, else an empty string
-    ///     - cause: cause of this connection request
-    /// - Returns: true if the request has been process
-    final func doConnect(provider: DeviceProvider, password: String, cause: DeviceState.ConnectionStateCause) -> Bool {
-        connectionSession = ControllerConnectionSession(initialState: .connecting, deviceController: self)
+    ///   - provider:  provider to use to connect this device
+    ///   - parameters: custom parameters to use to connect this device
+    ///   - cause: cause of this connection request
+    ///   - wakeIdle: `true` to wake up the drone if it's in idle state
+    ///
+    /// - Returns: `true` if the connection process has started, `false` otherwise
+    final func doConnect(provider: DeviceProvider, parameters: [DeviceConnectionParameter],
+                         cause: DeviceState.ConnectionStateCause, wakeIdle: Bool = false) -> Bool {
+        connectionSession = ControllerConnectionSession(initialState: .connectionRequested, deviceController: self)
         activeProvider = provider
-        device.stateHolder.state?.update(activeConnector: activeProvider!.connector)
-            .update(connectionState: .connecting, withCause: cause).notifyUpdated()
-        return activeProvider!.connect(deviceController: self, password: password)
+        device.stateHolder.state?
+            .update(activeConnector: activeProvider!.connector)
+            .update(connectionState: .connecting, withCause: cause)
+            .notifyUpdated()
+        return activeProvider!.connect(deviceController: self, parameters: parameters, wakeIdle: wakeIdle)
     }
 
     /// Disconnects this controller.
     ///
     /// - Parameter cause: cause of this disconnection request
-    /// - Returns: true if the disconnection process has started, false otherwise.
+    /// - Returns: `true` if the disconnection process has started, `false` otherwise
     func doDisconnect(cause: DeviceState.ConnectionStateCause) -> Bool {
         if let activeProvider = activeProvider {
             if activeProvider.disconnect(deviceController: self) {
                 device.stateHolder.state?.update(connectionState: .disconnecting,
-                                              withCause: cause).notifyUpdated()
+                                                 withCause: cause).notifyUpdated()
                 connectionSession.state = .disconnecting
-                protocolWillDisconnect()
                 return true
             }
         }
@@ -565,11 +555,14 @@ class DeviceController: NSObject {
     /// Send a command to the drone
     ///
     /// - Parameter encoder: encoder of the command to send
-    final func sendCommand(_ encoder: ((OpaquePointer) -> Int32)!) {
+    /// - Returns: `true` if the command has been sent
+    final func sendCommand(_ encoder: ((OpaquePointer) -> Int32)!) -> Bool {
         if let backend = backend {
             backend.sendCommand(encoder)
+            return true
         } else {
             ULog.w(.ctrlTag, "sendCommand called without backend")
+            return false
         }
     }
 
@@ -646,7 +639,7 @@ class DeviceController: NSObject {
                     if status == .ok {
                         self?.firmwareDidUpload()
                     }
-            })
+                })
         } else {
             ULog.w(.ctrlTag, "update firmware called without backend")
         }
@@ -665,14 +658,14 @@ class DeviceController: NSObject {
     final func upload(
         file srcPath: String, to dstPath: String, serverType: ArsdkFtpServerType,
         progress: @escaping ArsdkFtpRequestProgress, completion: @escaping ArsdkFtpRequestCompletion) -> ArsdkRequest? {
-        if let backend = backend {
-            return backend.upload(file: srcPath, to: dstPath, model: deviceModel, serverType: serverType,
-                                  progress: progress, completion: completion)
-        } else {
-            ULog.w(.ctrlTag, "upload file called without backend")
+            if let backend = backend {
+                return backend.upload(file: srcPath, to: dstPath, model: deviceModel, serverType: serverType,
+                                      progress: progress, completion: completion)
+            } else {
+                ULog.w(.ctrlTag, "upload file called without backend")
+            }
+            return nil
         }
-        return nil
-    }
 
     /// Download crashmls from the controlled device
     ///
@@ -686,7 +679,7 @@ class DeviceController: NSObject {
         if let backend = backend {
             return backend.downloadCrashml(path: "\(path)/", model: deviceModel, progress: progress,
                                            completion: { status in
-                    completion(status)
+                completion(status)
             })
         } else {
             ULog.w(.ctrlTag, "crashml download called without backend")
@@ -706,8 +699,8 @@ class DeviceController: NSObject {
         if let backend = backend {
             return backend.downloadFlightLog(path: path, model: deviceModel, progress: progress,
                                              completion: { status in
-                                                completion(status)
-                                             })
+                completion(status)
+            })
         } else {
             ULog.w(.ctrlTag, "flight log download called without backend")
         }
@@ -734,9 +727,10 @@ class DeviceController: NSObject {
     final func transitToNextConnectionState(withCause cause: DeviceState.ConnectionStateCause? = nil) {
         switch connectionSession.state {
         case .disconnected,
-             .connecting:
+                .connecting,
+                .backupLink:
             connectionSession.state = .creatingDeviceHttpClient
-            ULog.i(.ctrlTag, "Device \(device.uid) connected, creating the device http client")
+            ULog.i(.ctrlTag, "\(self) connected, creating the device http client")
             protocolWillConnect()
             // can force unwrap backend since we are connecting
             backend!.createTcpProxy(model: deviceModel, port: 80) { [weak self] proxy, address, port in
@@ -751,19 +745,20 @@ class DeviceController: NSObject {
                 self.transitToNextConnectionState()
             }
         case .creatingDeviceHttpClient:
-            ULog.i(.ctrlTag, "Device \(device.uid) http client created, send date/time, getting AllSettings")
+            ULog.i(.ctrlTag, "\(self) http client created, send date/time, getting AllSettings")
             connectionSession.state = .gettingAllSettings
             sendDateAndTime()
+            sendLogsync(withRequest: true)
             sendGetAllSettings()
         case .gettingAllSettings:
             connectionSession.state = .gettingAllStates
-            ULog.i(.ctrlTag, "Device \(device.uid) AllSettingsChanged, getting AllStates")
+            ULog.i(.ctrlTag, "\(self) AllSettingsChanged, getting AllStates")
             sendGetAllStates()
         case .gettingAllStates:
             // state is first changed in order to let component controllers freely ask whether data sync is allowed,
             // but do not notify them yet (they will be notified right after).
             connectionSession.state = .connected
-            ULog.i(.ctrlTag, "Device \(device.uid) AllStates, ready")
+            ULog.i(.ctrlTag, "\(self) AllStates, ready")
             _dataSyncAllowed = true
             // calling didConnect on all component controllers.
             protocolDidConnect()
@@ -778,7 +773,9 @@ class DeviceController: NSObject {
             deviceStore.write(key: PersistentStore.deviceType, value: deviceModel.internalId)
             deviceStore.write(key: PersistentStore.devicePresetUid, value: presetStore.key)
             deviceStore.commit()
-            device.stateHolder.state?.update(connectionState: .connected).update(persisted: true).notifyUpdated()
+            device.stateHolder.state?.update(connectionState: .connected,
+                                             withCause: .none)
+                .update(persisted: true).notifyUpdated()
         default:
             break
         }
@@ -791,49 +788,66 @@ class DeviceController: NSObject {
     /// - Note: Note that this method does not publish changes made to the device state.
     ///   Caller has the responsibility to call `notifyUpdated`.
     final func transitToDisconnectedState(withCause cause: DeviceState.ConnectionStateCause? = nil) {
-        ULog.i(.ctrlTag, "Device \(device.uid) disconnected")
-        if connectionSession.state == .connected {
-            // Notify all component that the device controller will disconnect.
-            protocolWillDisconnect()
+        guard connectionSession.state != .disconnected else { return }
+
+        ULog.i(.ctrlTag, "\(self) disconnected")
+
+        let formerState = connectionSession.state
+        connectionSession.state = .disconnected
+
+        arsdkTcpProxy = nil
+        deviceServer = nil
+
+        // In "connecting" state the "protocol" connection is not yet initiated.
+        if formerState != .connecting {
+            // Notify the disconnection.
+            protocolDidDisconnect()
         }
-        if connectionSession.state != .disconnected {
-            let formerState = connectionSession.state
-            connectionSession.state = .disconnected
-
-            arsdkTcpProxy = nil
-            deviceServer = nil
-
-            // In "connecting" state the "protocol" connection is not yet initiated.
-            if formerState != .connecting {
-                // Notify the disconnection.
-                protocolDidDisconnect()
-            }
-            _dataSyncAllowed = false
-            dataSyncAllowanceMightHaveChanged()
-            if let cause = cause {
-                device.stateHolder.state?.update(connectionState: .disconnected, withCause: cause)
-            } else {
-                device.stateHolder.state?.update(connectionState: .disconnected)
-            }
-
-            if !autoReconnect || activeProvider == nil ||
-                !doConnect(provider: activeProvider!, password: "", cause: .connectionLost) {
-                activeProvider = nil
-                device.stateHolder.state?.update(activeConnector: nil)
-            }
+        _dataSyncAllowed = false
+        dataSyncAllowanceMightHaveChanged()
+        if let cause = cause {
+            device.stateHolder.state?.update(connectionState: .disconnected, withCause: cause)
+        } else {
+            device.stateHolder.state?.update(connectionState: .disconnected)
         }
+
+        // The device controller should automatically reconnect to the device when all the following conditions are met:
+        // - the autoReconnect flag is set,
+        // - the device controller has an active provider,
+        // - this provider has no parent provider.
+        // If the provider has a parent provider, the latter should handle the auto reconnection itself.
+        let shouldAutoReconnect = autoReconnect && activeProvider != nil && activeProvider?.parent == nil
+        if !shouldAutoReconnect ||
+            !doConnect(provider: activeProvider!, parameters: [], cause: .connectionLost) {
+            activeProvider = nil
+            device.stateHolder.state?.update(activeConnector: nil)
+        }
+    }
+
+    /// Send log synchronisation messages to the managed device
+    private final func sendLogsync(withRequest: Bool) {
+        if withRequest {
+            let cmd = ArsdkLogsyncCommandEncoder.encoder(.syncRequest(SwiftProtobuf.Google_Protobuf_Empty()))
+            _ = sendCommand(cmd)
+        }
+        var node = Arsdk_Logsync_Node()
+        node.bootID = GroundSdk.bootID()
+        node.model = UInt32(Arsdk_Logsync_Model.iosDevice.rawValue)
+        node.role = .controller
+        let evt = ArsdkLogsyncEventEncoder.encoder(.identifier(node))
+        _ = sendCommand(evt)
     }
 
     /// Ask to the managed drone to get all its settings
     /// This step is ended when AllSettingsChanged event is received
     private final func sendGetAllSettings() {
-        sendCommand(getAllSettingsEncoder)
+        _ = sendCommand(getAllSettingsEncoder)
     }
 
     /// Ask to the managed drone to get all its states
     /// This step is ended when AllStatesChanged event is received
     private final func sendGetAllStates() {
-        sendCommand(getAllStatesEncoder)
+        _ = sendCommand(getAllStatesEncoder)
     }
 
     // MARK: Methods managing connection state that subclass can implements
@@ -859,11 +873,6 @@ class DeviceController: NSObject {
         deviceEventLogger?.didConnect()
     }
 
-    /// About to disconnect protocol
-    func protocolWillDisconnect() {
-        componentControllers.forEach { $0.willDisconnect() }
-    }
-
     /// Device is disconnected
     func protocolDidDisconnect() {
         deviceEventLogger?.didDisconnect()
@@ -876,6 +885,12 @@ class DeviceController: NSObject {
     /// A command has been received
     /// - Parameter command: received command
     func protocolDidReceiveCommand(_ command: OpaquePointer) {
+        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureGenericUid {
+            let cmdDec = ArsdkLogsyncCommandDecoder(listener: self)
+            let evtDec = ArsdkLogsyncEventDecoder(listener: self)
+            ArsdkFeatureGeneric.decode(command, callback: cmdDec)
+            ArsdkFeatureGeneric.decode(command, callback: evtDec)
+        }
         blackBoxSession?.onCommandReceived(command)
         deviceEventLogger?.onCommandReceived(command: command)
     }
@@ -894,9 +909,9 @@ extension DeviceController: DeviceCoreDelegate {
         if connectionSession.state != .disconnected {
             _ = disconnect()
         }
-        ULog.i(.ctrlTag, "forgetting drone \(device.uid)]")
+        ULog.i(.ctrlTag, "Forgetting \(self)")
         componentControllers.forEach { component in component.willForget() }
-        providers.values.forEach { $0.forget(deviceController: self)}
+        providers.forEach { $0.forget(deviceController: self)}
         deviceStore.clear()
         deviceStore.commit()
         device.stateHolder.state?.update(persisted: false).notifyUpdated()
@@ -909,13 +924,13 @@ extension DeviceController: DeviceCoreDelegate {
     /// Connects the device.
     ///
     /// - Parameters:
-    ///    - connector: connector to use to establish the connection
-    ///    - password: password to use for authentication, nil if password is not required
+    ///    - connector: connector to use to connect this device
+    ///    - parameters: custom parameters to use to connect this device
     /// - Returns: true if the connection process has started
-    final func connect(connector: DeviceConnector, password: String?) -> Bool {
-         if let provider = providers[connector.uid] {
-            ULog.d(.ctrlTag, "connecting device \(device.uid) using provider \(provider)")
-            return doConnect(provider: provider, password: password ?? "", cause: .userRequest)
+    final func connect(connector: DeviceConnector, parameters: [DeviceConnectionParameter]) -> Bool {
+        if let provider = providers.first(where: { $0.connector == connector }) {
+            ULog.d(.ctrlTag, "Connecting device \(self) using provider \(provider)")
+            return doConnect(provider: provider, parameters: parameters, cause: .userRequest)
         }
         return false
     }
@@ -945,18 +960,31 @@ extension DeviceController {
         }
     }
 
-    final func linkWillConnect(provider: DeviceProvider) {
+    final func linkWillConnect(provider: DeviceProvider, backupLink: Bool) {
         // connectionSession.state can be set to .connecting before linkWillConnect call
-        guard connectionSession.state == .disconnected || connectionSession.state == .connecting else {
-            ULog.e(.ctrlTag, "Bad connection session state : \(connectionSession.state)")
+        guard connectionSession.state == .disconnected ||
+                connectionSession.state == .connectionRequested ||
+                connectionSession.state == .connecting ||
+                connectionSession.state == .backupLink else {
+            ULog.e(.ctrlTag, "Bad connection session state: \(connectionSession.state)")
             return
         }
+
+        let cause: DeviceState.ConnectionStateCause? = backupLink ? .backupLink : nil
+
         if activeProvider == nil || activeProvider == provider {
+            ULog.d(.ctrlTag, "\(self) link connecting [provider: \(provider)]")
+
             activeProvider = provider
             autoReconnect = false
             connectionSession.state = .connecting
-            device.stateHolder.state?.update(connectionState: .connecting)
-                .update(activeConnector: activeProvider!.connector)
+
+            if let cause = cause {
+                device.stateHolder.state?.update(connectionState: .connecting, withCause: cause)
+            } else {
+                device.stateHolder.state?.update(connectionState: .connecting)
+            }
+            device.stateHolder.state?.update(activeConnector: activeProvider!.connector)
                 .notifyUpdated()
         }
     }
@@ -964,25 +992,66 @@ extension DeviceController {
     final func linkDidConnect(provider: DeviceProvider, backend: DeviceControllerBackend) {
         // connectionSession.state can be set to .connecting before linkWillConnect call
         guard connectionSession.state == .connecting ||
-              connectionSession.state == .disconnecting ||
-              connectionSession.state == .disconnected else {
-            // a  proxy device controller may callback multiple times here in bad states, ignore.
-            ULog.w(.ctrlTag, "Bad connection session state : \(connectionSession.state)")
+                connectionSession.state == .disconnecting ||
+                connectionSession.state == .disconnected ||
+                connectionSession.state == .connectionRequested ||
+                connectionSession.state == .backupLink else {
+            // a proxy device controller may callback multiple times here in bad states, ignore.
+            ULog.w(.ctrlTag, "Bad connection session state: \(connectionSession.state)")
             return
         }
+
+        ULog.d(.ctrlTag, "\(self) link connected [provider: \(provider)]")
 
         self.backend = backend
 
         // a proxy device controller may callback directly here (without calling linkWillConnect), so make sure to
         // pass through connecting state
-        if device.stateHolder.state.connectionState != .connecting {
-            linkWillConnect(provider: provider)
+        if connectionSession.state != .connecting {
+            linkWillConnect(provider: provider, backupLink: false)
         }
 
         transitToNextConnectionState()
     }
 
+    /// Called when main link-level connection is lost, yet a backup link is still provided that allows for
+    /// basic/emergency telemetry and control.
+    final func backupLinkDidActivate(provider: DeviceProvider, backend: DeviceControllerBackend) {
+        guard connectionSession.state != .backupLink else {
+            // a proxy device controller may callback multiple times here in this state, ignore.
+            ULog.w(.ctrlTag, "Bad connection session state: \(connectionSession.state)")
+            return
+        }
+
+        ULog.d(.ctrlTag, "\(self) backup link activated [provider: \(provider)]")
+
+        self.backend = backend
+
+        // For the time being, we inline the transitToDisconnectedState routine here and we customize it for backup link
+        // scenario. We may consider factorizing back at a later time, once the feature is stable (and we have
+        // unit/integration tests for it).
+        activeProvider = provider
+        connectionSession.state = .backupLink
+        arsdkTcpProxy = nil
+        deviceServer = nil
+
+        // TODO: maybe we should keep the blackbox alive in backup link... dunno: blackboxes are planned to be removed.
+        blackBoxSession?.close()
+        blackBoxSession = nil
+        componentControllers.forEach { component in component.backupLinkDidActivate() }
+        _dataSyncAllowed = false
+        dataSyncAllowanceMightHaveChanged()
+
+        // In case the device was previously disconnected, we 'mock' its state as 'CONNECTED'
+        device.stateHolder.state?.update(connectionState: .connected,
+                                         withCause: .backupLink)
+            .update(persisted: true)
+            .notifyUpdated()
+    }
+
     final func linkDidDisconnect(removing: Bool) {
+        ULog.d(.ctrlTag, "\(self) link disconnected [removing: \(removing)]")
+
         autoReconnect = autoReconnect || removing
         transitToDisconnectedState(withCause: removing ? .connectionLost : nil)
         self.backend = nil
@@ -998,7 +1067,7 @@ extension DeviceController {
     }
 
     final func didLoseLink() {
-        ULog.i(.ctrlTag, "Device \(device.uid) did lose link")
+        ULog.i(.ctrlTag, "\(self) did lose link")
         componentControllers.forEach { component in component.didLoseLink() }
 
         autoReconnect = true
@@ -1010,6 +1079,23 @@ extension DeviceController {
         componentControllers.forEach { component in
             component.didReceiveCommand(command)
         }
+    }
+}
+
+/// Extension of DeviceController that implements ArsdkLogsyncEventDecoderListener
+extension DeviceController: ArsdkLogsyncEventDecoderListener {
+
+    func onIdentifier(_ identifier: Arsdk_Logsync_Node) {
+        ULog.n(.ctrlTag, "EVT:BOOTID_SYNC;bootid='\(identifier.bootID)';model=\(identifier.model)" +
+               ";role=\(identifier.role.rawValue)")
+    }
+}
+
+/// Extension of DeviceController that implements ArsdkLogsyncCommandDecoderListener
+extension DeviceController: ArsdkLogsyncCommandDecoderListener {
+
+    func onSyncRequest(_ syncRequest: SwiftProtobuf.Google_Protobuf_Empty) {
+        sendLogsync(withRequest: false)
     }
 }
 

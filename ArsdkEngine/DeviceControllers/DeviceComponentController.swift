@@ -38,6 +38,11 @@ public class DeviceComponentController: NSObject {
         return deviceController.connectionSession.state == .connected
     }
 
+    /// Whether or not the backup link's active.
+    var backupLinkIsActive: Bool {
+        return deviceController.connectionSession.state == .backupLink
+    }
+
     /// Device controller owning this component controller
     internal unowned let deviceController: DeviceController
 
@@ -61,7 +66,7 @@ public class DeviceComponentController: NSObject {
     func willForget() {
     }
 
-    /// Device is about to be connect
+    /// Device is about to be connected
     func willConnect() {
     }
 
@@ -69,12 +74,31 @@ public class DeviceComponentController: NSObject {
     func didConnect() {
     }
 
-    /// Device is about to be disconnected
-    func willDisconnect() {
-    }
-
     /// Device is disconnected
     func didDisconnect() {
+    }
+
+    /// Called when main link-level connection is lost, yet a backup link is still provided.
+    ///
+    /// - Note: default implementation mocks a disconnection; this behavior may be overridden by sub classes.
+    func backupLinkDidActivate() {
+        didDisconnect()
+    }
+
+    /// Called when a connected remote antenna becomes active.
+    ///
+    /// This can only happen if the controlled device is a remote control.
+    ///
+    /// - Note: default implementation does nothing; this behavior may be overridden by sub classes.
+    func remoteAntennaDidConnect() {
+    }
+
+    /// Called when a remote antenna becomes inactive or disconnected.
+    ///
+    /// This can only happen if the controlled device is a remote control.
+    ///
+    /// - Note: default implementation does nothing; this behavior may be overridden by sub classes.
+    func remoteAntennaDidDisconnect() {
     }
 
     /// Link to the device has been lost
@@ -107,7 +131,8 @@ public class DeviceComponentController: NSObject {
     /// Send a command to the device
     ///
     /// - Parameter encoder: encoder of the command to send
-    func sendCommand(_ encoder: @escaping ((OpaquePointer) -> Int32)) {
-        deviceController.sendCommand(encoder)
+    /// - Returns: `true` if the command has been sent
+    func sendCommand(_ encoder: @escaping ((OpaquePointer) -> Int32)) -> Bool {
+        return deviceController.sendCommand(encoder)
     }
 }

@@ -47,7 +47,7 @@ class ArsdkPointnflyEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
     }
 
-    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
     }
 
@@ -149,11 +149,13 @@ extension Arsdk_Pointnfly_Fly {
     static var maxHorizontalSpeedFieldNumber: Int32 { 9 }
     static var maxVerticalSpeedFieldNumber: Int32 { 10 }
     static var maxYawRotationSpeedFieldNumber: Int32 { 11 }
+    static var enabledLinksFieldNumber: Int32 { 12 }
 }
 extension Arsdk_Pointnfly_Event.State {
     static var unavailableFieldNumber: Int32 { 2 }
     static var idleFieldNumber: Int32 { 3 }
     static var activeFieldNumber: Int32 { 4 }
+    static var capabilitiesFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Pointnfly_Event.Execution {
     static var statusFieldNumber: Int32 { 1 }
@@ -168,4 +170,7 @@ extension Arsdk_Pointnfly_State.Unavailable {
 extension Arsdk_Pointnfly_State.Active {
     static var pointFieldNumber: Int32 { 1 }
     static var flyFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Pointnfly_Capabilities {
+    static var allowedLinksFieldNumber: Int32 { 1 }
 }

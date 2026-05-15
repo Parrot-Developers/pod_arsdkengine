@@ -52,7 +52,7 @@ class AnafiGuidedPilotingItf: GuidedPilotingItfController {
                 orientationModeValue = .headingDuring
                 heading = headingValue
             }
-            sendCommand(ArsdkFeatureMove.extendedMoveToEncoder(
+            _ = sendCommand(ArsdkFeatureMove.extendedMoveToEncoder(
                 latitude: locationDirective.latitude, longitude: locationDirective.longitude,
                 altitude: locationDirective.altitude, orientationMode: orientationModeValue,
                 heading: Float(heading), maxHorizontalSpeed: Float(speed.horizontalSpeed),
@@ -73,7 +73,7 @@ class AnafiGuidedPilotingItf: GuidedPilotingItfController {
                 orientationModeValue = .headingDuring
                 heading = headingValue
             }
-            sendCommand(ArsdkFeatureArdrone3Piloting.moveToEncoder(
+            _ = sendCommand(ArsdkFeatureArdrone3Piloting.moveToEncoder(
                 latitude: locationDirective.latitude, longitude: locationDirective.longitude,
                 altitude: locationDirective.altitude, orientationMode: orientationModeValue, heading: Float(heading)))
         }
@@ -81,12 +81,12 @@ class AnafiGuidedPilotingItf: GuidedPilotingItfController {
 
     // Send the command to cancel a MoveTo location
     override func sendCancelMoveToCommand() {
-        sendCommand(ArsdkFeatureArdrone3Piloting.cancelMoveToEncoder())
+        _ = sendCommand(ArsdkFeatureArdrone3Piloting.cancelMoveToEncoder())
     }
 
     // Send the command to cancel a Relative Move
     override func sendCancelRelativeMoveCommand() {
-        sendCommand(ArsdkFeatureArdrone3Piloting.moveByEncoder(dx: 0, dy: 0, dz: 0, dpsi: 0))
+        _ = sendCommand(ArsdkFeatureArdrone3Piloting.moveByEncoder(dx: 0, dy: 0, dz: 0, dpsi: 0))
     }
 
     // Send the command for a Relative Move
@@ -97,7 +97,7 @@ class AnafiGuidedPilotingItf: GuidedPilotingItfController {
 
         let headingRadians = Float(relativeMoveDirective.headingRotation.toRadians())
         if let speed = relativeMoveDirective.speed {
-            sendCommand(ArsdkFeatureMove.extendedMoveByEncoder(
+            _ = sendCommand(ArsdkFeatureMove.extendedMoveByEncoder(
                 dX: Float(relativeMoveDirective.forwardComponent),
                 dY: Float(relativeMoveDirective.rightComponent),
                 dZ: Float(relativeMoveDirective.downwardComponent),
@@ -106,7 +106,7 @@ class AnafiGuidedPilotingItf: GuidedPilotingItfController {
                 maxVerticalSpeed: Float(speed.verticalSpeed),
                 maxYawRotationSpeed: Float(speed.yawRotationSpeed)))
         } else {
-            sendCommand(ArsdkFeatureArdrone3Piloting.moveByEncoder(
+            _ = sendCommand(ArsdkFeatureArdrone3Piloting.moveByEncoder(
                 dx: Float(relativeMoveDirective.forwardComponent),
                 dy: Float(relativeMoveDirective.rightComponent),
                 dz: Float(relativeMoveDirective.downwardComponent),
@@ -148,63 +148,67 @@ extension AnafiGuidedPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
         orientationMode: ArsdkFeatureArdrone3PilotingstateMovetochangedOrientationMode, heading: Float,
         status: ArsdkFeatureArdrone3PilotingstateMovetochangedStatus) {
 
-        ULog.d(.ctrlTag, "GuidedPiloting: onMoveToChanged latitude=\(latitude) longitude=\(longitude)" +
-            " altitude=\(altitude) orientation=\(orientationMode) heading=\(heading) status=\(status)")
+            ULog.d(.ctrlTag, "GuidedPiloting: onMoveToChanged latitude=\(latitude) longitude=\(longitude)" +
+                   " altitude=\(altitude) orientation=\(orientationMode) heading=\(heading) status=\(status)")
 
-        guard latitude != AnafiGuidedPilotingItf.UnknownCoordinate &&
-            longitude != AnafiGuidedPilotingItf.UnknownCoordinate else {
+            guard latitude != AnafiGuidedPilotingItf.UnknownCoordinate &&
+                    longitude != AnafiGuidedPilotingItf.UnknownCoordinate else {
                 guidedPilotingItf.update(latestFinishedFlightInfo: nil).notifyUpdated()
                 return
-        }
-
-        let orientationDirective: OrientationDirective
-        switch orientationMode {
-        case .none:
-            orientationDirective = .none
-        case .toTarget:
-            orientationDirective = .toTarget
-        case .headingStart:
-            orientationDirective = .headingStart(Double(heading))
-        case .headingDuring:
-            orientationDirective = .headingStart(Double(heading))
-        case .sdkCoreUnknown:
-            fallthrough
-        @unknown default:
-            ULog.w(.tag, "Unknown onMoveToChanged orientation, skipping this event")
-            return
-        }
-
-        let onMoveChangedDirective = LocationDirective(
-            latitude: latitude, longitude: longitude, altitude: altitude, orientation: orientationDirective, speed: nil)
-        switch status {
-        case .running:
-            currentGuidedDirective = onMoveChangedDirective
-            // the .notifyUpdated() will be done in the  notifyActive()
-            notifyActive()
-
-        case .done, .canceled, .error:
-            // remove any current directive
-            currentGuidedDirective = nil
-            // set the finished information in the interface
-            let latestFinish = FinishedLocationFlightInfoCore(
-                directive: onMoveChangedDirective, wasSuccessful: status == .done )
-            guidedPilotingItf.update(latestFinishedFlightInfo: latestFinish)
-            if pilotingItf.state == .active
-                 && (guidedPilotingItf.unavailabilityReasons?.count ?? 0) == 0 {
-                // the .notifyUpdated() will be done in the  notifyIdle()
-                notifyIdle()
-            } else {
-                pilotingItf.notifyUpdated()
             }
 
-        case .sdkCoreUnknown:
-            fallthrough
-        @unknown default:
-            // don't change anything if value is unknown
-            ULog.w(.tag, "Unknown onMoveToChanged status, skipping this event.")
-            return
+            let orientationDirective: OrientationDirective
+            switch orientationMode {
+            case .none:
+                orientationDirective = .none
+            case .toTarget:
+                orientationDirective = .toTarget
+            case .headingStart:
+                orientationDirective = .headingStart(Double(heading))
+            case .headingDuring:
+                orientationDirective = .headingStart(Double(heading))
+            case .sdkCoreUnknown:
+                fallthrough
+            @unknown default:
+                ULog.w(.tag, "Unknown onMoveToChanged orientation, skipping this event")
+                return
+            }
+
+            let onMoveChangedDirective = LocationDirective(
+                latitude: latitude,
+                longitude: longitude,
+                altitude: altitude,
+                orientation: orientationDirective,
+                speed: nil)
+            switch status {
+            case .running:
+                currentGuidedDirective = onMoveChangedDirective
+                // the .notifyUpdated() will be done in the  notifyActive()
+                notifyActive()
+
+            case .done, .canceled, .error:
+                // remove any current directive
+                currentGuidedDirective = nil
+                // set the finished information in the interface
+                let latestFinish = FinishedLocationFlightInfoCore(
+                    directive: onMoveChangedDirective, wasSuccessful: status == .done )
+                guidedPilotingItf.update(latestFinishedFlightInfo: latestFinish)
+                if pilotingItf.state == .active
+                    && (guidedPilotingItf.unavailabilityReasons?.count ?? 0) == 0 {
+                    // the .notifyUpdated() will be done in the notifyIdle()
+                    notifyIdle()
+                } else {
+                    pilotingItf.notifyUpdated()
+                }
+
+            case .sdkCoreUnknown:
+                fallthrough
+            @unknown default:
+                // don't change anything if value is unknown
+                ULog.w(.tag, "Unknown onMoveToChanged status, skipping this event.")
+                return
+            }
         }
-    }
 
     /// Piloting State decode callback implementation
     func onFlyingStateChanged(state: ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState) {
@@ -237,51 +241,54 @@ extension AnafiGuidedPilotingItf: ArsdkFeatureArdrone3PilotingeventCallback {
     func onMoveByEnd(
         dx: Float, dy: Float, dz: Float, dpsi: Float, error: ArsdkFeatureArdrone3PilotingeventMovebyendError) {
 
-        ULog.d(.ctrlTag, "GuidedPiloting: onMoveByEnd dx=\(dx) dy=\(dy) dz=\(dz) dpsi=\(dpsi) error=\(error)")
+            ULog.d(.ctrlTag, "GuidedPiloting: onMoveByEnd dx=\(dx) dy=\(dy) dz=\(dz) dpsi=\(dpsi) error=\(error)")
 
-        switch error {
-        case .interrupted:
-            // If a relative move was started before the previous one ended, the interrupted move is the previous one.
-            let latestFinish = FinishedRelativeMoveFlightInfoCore(
-                wasSuccessful: false, directive: previousRelativeMove, actualForwardComponent: Double(dx),
-                actualRightComponent: Double(dy), actualDownwardComponent: Double(dz),
-                actualHeadingRotation: Double(dpsi).toDegrees())
+            switch error {
+            case .interrupted:
+                // If a relative move was started before the previous one ended, the interrupted
+                // move is the previous one.
+                let latestFinish = FinishedRelativeMoveFlightInfoCore(
+                    wasSuccessful: false, directive: previousRelativeMove,
+                    actualForwardComponent: Double(dx),
+                    actualRightComponent: Double(dy), actualDownwardComponent: Double(dz),
+                    actualHeadingRotation: Double(dpsi).toDegrees())
 
-            guidedPilotingItf.update(latestFinishedFlightInfo: latestFinish).notifyUpdated()
-            previousRelativeMove = nil
+                guidedPilotingItf.update(latestFinishedFlightInfo: latestFinish).notifyUpdated()
+                previousRelativeMove = nil
 
-        case .ok, .unknown, .busy, .notavailable:
-            // set the finished information in the interface
-            let success = error == .ok
-            let latestFinish = FinishedRelativeMoveFlightInfoCore(
-                wasSuccessful: success, directive: initialRelativeMove, actualForwardComponent: Double(dx),
-                actualRightComponent: Double(dy), actualDownwardComponent: Double(dz),
-                actualHeadingRotation: Double(dpsi).toDegrees())
+            case .ok, .unknown, .busy, .notavailable:
+                // set the finished information in the interface
+                let success = error == .ok
+                let latestFinish = FinishedRelativeMoveFlightInfoCore(
+                    wasSuccessful: success, directive: initialRelativeMove,
+                    actualForwardComponent: Double(dx),
+                    actualRightComponent: Double(dy), actualDownwardComponent: Double(dz),
+                    actualHeadingRotation: Double(dpsi).toDegrees())
 
-            // remove any current directive
-            currentGuidedDirective = nil
-            guidedPilotingItf.update(latestFinishedFlightInfo: latestFinish)
-            // no need to keep a previous directive (used for the interrupted state)
-            previousRelativeMove = nil
-            // clean the initialDirective
-            initialRelativeMove = nil
-            // create a final information for the guidedPilotingtf
-            if pilotingItf.state == .active
-                && (guidedPilotingItf.unavailabilityReasons?.count ?? 0) == 0 {
-                notifyIdle()
-            } else {
-                pilotingItf.notifyUpdated()
+                // remove any current directive
+                currentGuidedDirective = nil
+                guidedPilotingItf.update(latestFinishedFlightInfo: latestFinish)
+                // no need to keep a previous directive (used for the interrupted state)
+                previousRelativeMove = nil
+                // clean the initialDirective
+                initialRelativeMove = nil
+                // create a final information for the guidedPilotingtf
+                if pilotingItf.state == .active
+                    && (guidedPilotingItf.unavailabilityReasons?.count ?? 0) == 0 {
+                    notifyIdle()
+                } else {
+                    pilotingItf.notifyUpdated()
+                }
+
+            case .sdkCoreUnknown:
+                fallthrough
+            @unknown default:
+                // don't change anything if value is unknown
+                ULog.w(.tag, "Unknown ArsdkFeatureArdrone3PilotingeventMovebyendError status, skipping this event.")
+                return
             }
 
-        case .sdkCoreUnknown:
-            fallthrough
-        @unknown default:
-            // don't change anything if value is unknown
-            ULog.w(.tag, "Unknown ArsdkFeatureArdrone3PilotingeventMovebyendError status, skipping this event.")
-            return
         }
-
-    }
 }
 
 // Anafi move decode callback implementation
@@ -322,5 +329,5 @@ extension GuidedIssue: ArsdkMappableEnum {
         .droneOutOfGeofence: .droneGeofence,
         .droneTooCloseToGround: .droneMinAltitude,
         .droneAboveMaxAltitude: .droneMaxAltitude
-        ])
+    ])
 }

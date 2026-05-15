@@ -47,7 +47,7 @@ public class RawVideoSinkController: SinkController, RawVideoSinkBackend {
     private var mediaListener: StreamController.ListenerHandle?
 
     /// Media Info
-    /// Set a new media info will stop the sink on the older media and start a new sink on the new media set.
+    /// Set a new media info will update media id without restarting the sink.
     private var _mediaInfo: SdkCoreMediaInfo?
     private var mediaInfo: SdkCoreMediaInfo? {
         get {
@@ -57,15 +57,18 @@ public class RawVideoSinkController: SinkController, RawVideoSinkBackend {
             guard mediaInfo != newValue else { return }
 
             if mediaInfo != nil {
-                // stop sink on the old media
-                sdkCoreSink?.stop()
-            }
-
-            _mediaInfo = newValue
-            if let mediaInfo = newValue {
+                if let newValue {
+                    // sets the sink mediaId
+                    sdkCoreSink?.setMediaId(UInt32(newValue.mediaId))
+                } else {
+                    // stop sink on the old media
+                    sdkCoreSink?.stop()
+                }
+            } else if let newValue = newValue {
                 // start sink on the new media
-                sdkcoreStream?.start(sdkCoreSink, mediaId: UInt32(mediaInfo.mediaId))
+                sdkcoreStream?.start(sdkCoreSink, mediaId: UInt32(newValue.mediaId))
             }
+            _mediaInfo = newValue
         }
     }
 
@@ -299,21 +302,21 @@ extension VideoFormatRawPixelOrder: ArsdkMappableEnum {
         .ADBC: .ADBC,
         .ADCB: .ADCB,
 
-        .BACD: .BACD,
+            .BACD: .BACD,
         .BADC: .BADC,
         .BCAD: .BCAD,
         .BCDA: .BCDA,
         .BDAC: .BDAC,
         .BDCA: .BDCA,
 
-        .CABD: .CABD,
+            .CABD: .CABD,
         .CADB: .CADB,
         .CBAD: .CBAD,
         .CBDA: .CBDA,
         .CDAB: .CDAB,
         .CDBA: .CDBA,
 
-        .DABC: .DABC,
+            .DABC: .DABC,
         .DACB: .DACB,
         .DBAC: .DBAC,
         .DBCA: .DBCA,

@@ -54,6 +54,11 @@ class ActivablePilotingItfController: DeviceComponentController {
         return pilotingItf.state == .active
     }
 
+    /// Whether the piloting itf has an activation command. `true` by default
+    var hasActivationCommand: Bool {
+        return true
+    }
+
     /// Activation controller
     let activationController: PilotingItfActivationController
 
@@ -152,7 +157,7 @@ extension ActivablePilotingItfController {
 }
 
 extension ActivablePilotingItfController: ActivablePilotingItfBackend {
-       func deactivate() -> Bool {
+    func deactivate() -> Bool {
         return droneController.pilotingItfActivationController.deactivate(pilotingItf: self)
     }
 }

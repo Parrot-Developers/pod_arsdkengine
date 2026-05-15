@@ -34,9 +34,9 @@ import GroundSdk
 class FtpFirmwareUploader: UpdaterFirmwareUploader {
     /// DeviceController, used to upload the firmware.
     /// Not nil when uploader has been configured. Nil after a reset.
-    private var deviceController: DeviceController?
+    private unowned var deviceController: DeviceController?
 
-    func configure(updater: UpdaterController) {
+    func configure(updater: UpdaterController, deviceServer: DeviceServer?) {
         deviceController = updater.deviceController
     }
 
@@ -55,7 +55,7 @@ class FtpFirmwareUploader: UpdaterFirmwareUploader {
                 withFile: localUrl.path,
                 progress: { percent in
                     uploadProgress(Int(percent))
-            },
+                },
                 completion: { status in
                     switch status {
                     case .ok:
@@ -64,12 +64,12 @@ class FtpFirmwareUploader: UpdaterFirmwareUploader {
                     case .canceled:
                         updateEndStatus(.canceled)
                     case .failed,
-                         .aborted:
+                            .aborted:
                         fallthrough
                     @unknown default:
                         updateEndStatus(.failed)
                     }
-            })
+                })
         }
         return nil
     }

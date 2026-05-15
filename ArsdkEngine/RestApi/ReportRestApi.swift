@@ -85,7 +85,7 @@ class ReportRestApi {
                         } catch let error {
                             ULog.w(.crashMLTag,
                                    "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                                    error.localizedDescription)
+                                   error.localizedDescription)
                             completion(nil)
                         }
                     }
@@ -93,7 +93,7 @@ class ReportRestApi {
                     completion(nil)
                 }
             }
-    }
+        }
 
     /// Download a given report to a given directory
     ///
@@ -108,22 +108,22 @@ class ReportRestApi {
         _ report: Report, toDirectory directory: URL, type: ReportType = .light,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore {
 
-        let parameters: [String: String]
-        switch type {
-        case .light:
-            parameters = ["anonymous": "yes"]
-        case .full:
-            parameters = ["anonymous": "no"]
-        }
+            let parameters: [String: String]
+            switch type {
+            case .light:
+                parameters = ["anonymous": "yes"]
+            case .full:
+                parameters = ["anonymous": "no"]
+            }
 
-        return server.downloadFile(
-            api: report.urlPath, parameters: parameters,
-            destination: directory.appendingPathComponent(report.name + (type == .light ? ".anon" : "")),
-            progress: { _ in },
-            completion: { _, localFileUrl in
-                completion(localFileUrl)
-        })
-    }
+            return server.downloadFile(
+                api: report.urlPath, parameters: parameters,
+                destination: directory.appendingPathComponent(report.name + (type == .light ? ".anon" : "")),
+                progress: { _ in },
+                completion: { _, localFileUrl in
+                    completion(localFileUrl)
+                })
+        }
 
     /// Delete a given report on the device
     ///

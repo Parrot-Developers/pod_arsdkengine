@@ -64,11 +64,15 @@ class CellularController: DeviceComponentController, CellularBackend {
     /// Preset store for this component
     private var presetStore: SettingsStore?
 
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { !deviceStore.new }
+
     /// Store APN configuration values
     private var apnConfigurationPresets: ApnConfigurationPresets!
 
     /// All data that can be stored
     enum PersistedDataKey: String, StoreKey {
+        case isSupported = "isSupported"
         case imei = "imei"
     }
 
@@ -126,18 +130,10 @@ class CellularController: DeviceComponentController, CellularBackend {
         cellular = CellularCore(store: deviceController.device.peripheralStore, backend: self)
         apnConfigurationPresets = ApnConfigurationPresets(apnSetting: cellular.apnConfigurationSetting)
 
-        var publish = false
-        // load persisted data
-        if !deviceStore.new {
-            loadPersistedData()
-            publish = true
-        }
-        // load settings
-        if let presetStore = presetStore, !presetStore.new {
-            loadPresets()
-            publish = true
-        }
-        if publish {
+        loadPersistedData()
+        loadPresets()
+
+        if isPersisted {
             cellular.publish()
         }
     }
@@ -181,7 +177,11 @@ class CellularController: DeviceComponentController, CellularBackend {
         }
     }
 
-    /// Drone is connected
+    override func willConnect() {
+        // remove settings stored while connecting; we will get new one on next connection
+        droneSettings.removeAll()
+    }
+
     override func didConnect() {
         applyPresets()
         if isSupported {
@@ -191,7 +191,6 @@ class CellularController: DeviceComponentController, CellularBackend {
         }
     }
 
-    /// Drone is disconnected
     override func didDisconnect() {
         if cellular.resetState == .ongoing {
             cellular.update(resetState: .success).notifyUpdated()
@@ -213,24 +212,24 @@ class CellularController: DeviceComponentController, CellularBackend {
 
         isSupported = false
 
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            cellular.unpublish()
+        if isPersisted {
+            cellular.publish()
         } else {
-            cellular.notifyUpdated()
+            cellular.unpublish()
         }
     }
 
-    /// Drone is about to be forgotten
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        cellular.unpublish()
+    }
+
     override func willForget() {
         deviceStore.clear()
         cellular.unpublish()
-        super.willForget()
     }
 
-    /// Preset has been changed
     override func presetDidChange() {
-        super.presetDidChange()
         // reload preset store
         presetStore = deviceController.presetStore.getSettingsStore(key: CellularController.settingKey)
         loadPresets()
@@ -353,9 +352,9 @@ class CellularController: DeviceComponentController, CellularBackend {
     func set(apnConfiguration: (isManual: Bool, url: String, username: String, password: String)) -> Bool {
 
         let shouldSendCommand = apnConfiguration.isManual != apnConfigurationPresets.isManual
-            || apnConfiguration.url != apnConfigurationPresets.url
-            || apnConfiguration.username != apnConfigurationPresets.username
-            || apnConfiguration.password != apnConfigurationPresets.password
+        || apnConfiguration.url != apnConfigurationPresets.url
+        || apnConfiguration.username != apnConfigurationPresets.username
+        || apnConfiguration.password != apnConfigurationPresets.password
         apnConfigurationPresets.update(isManual: apnConfiguration.isManual,
                                        url: apnConfiguration.url,
                                        username: apnConfiguration.username,
@@ -405,8 +404,7 @@ class CellularController: DeviceComponentController, CellularBackend {
     /// - Returns: `true` if the command has been sent, `false` otherwise
     func resetSettings() -> Bool {
         if connected {
-            sendCommand(ArsdkFeatureCellular.resetConfigEncoder())
-            return true
+            return sendCommand(ArsdkFeatureCellular.resetConfigEncoder())
         }
         return false
     }
@@ -425,8 +423,7 @@ class CellularController: DeviceComponentController, CellularBackend {
         case .data:
             arsdMode = .data
         }
-        sendCommand(ArsdkFeatureCellular.setModeEncoder(modemId: MODEM_ID_MAIN, mode: arsdMode))
-        return true
+        return sendCommand(ArsdkFeatureCellular.setModeEncoder(modemId: MODEM_ID_MAIN, mode: arsdMode))
     }
 
     /// Send APN configuration command. Subclass must override this function to send the command
@@ -440,9 +437,8 @@ class CellularController: DeviceComponentController, CellularBackend {
     func sendApnConfigurationCommand(_ isManual: Bool, _ url: String,
                                      _ username: String,
                                      _ password: String) -> Bool {
-        sendCommand(ArsdkFeatureCellular.setApnEncoder(modemId: MODEM_ID_MAIN, mode: isManual ? 1 : 0,
+        return sendCommand(ArsdkFeatureCellular.setApnEncoder(modemId: MODEM_ID_MAIN, mode: isManual ? 1 : 0,
                                                        url: url, username: username, password: password))
-        return true
     }
 
     /// Send roaming allowed command. Subclass must override this function to send the command
@@ -450,9 +446,8 @@ class CellularController: DeviceComponentController, CellularBackend {
     /// - Parameter isRoamingAllowed: requested isRoamingAllowed.
     /// - Returns: true if the command has been sent
     func sendRoamingAllowedCommand(_ isRoamingAllowed: Bool) -> Bool {
-        sendCommand(ArsdkFeatureCellular.setRoamingAllowedEncoder(modemId: MODEM_ID_MAIN,
+        return sendCommand(ArsdkFeatureCellular.setRoamingAllowedEncoder(modemId: MODEM_ID_MAIN,
                                                                   allowed: isRoamingAllowed ? 1 : 0))
-        return true
     }
 
     /// Send network mode command. Subclass must override this function to send the command
@@ -471,8 +466,7 @@ class CellularController: DeviceComponentController, CellularBackend {
         case .mode5g:
             arsdNetworkMode = .mode5g
         }
-        sendCommand(ArsdkFeatureCellular.setNetworkModeEncoder(modemId: MODEM_ID_MAIN, networkMode: arsdNetworkMode))
-        return true
+        return sendCommand(ArsdkFeatureCellular.setNetworkModeEncoder(modemId: MODEM_ID_MAIN, networkMode: arsdNetworkMode))
     }
 
     /// Send PIN code command. Subclass must override this function to send the command
@@ -480,13 +474,9 @@ class CellularController: DeviceComponentController, CellularBackend {
     /// - Parameter pincode: new PIN code to unlock the SIM card.
     /// - Returns: true if the command has been sent
     func sendPinCodeCommand(_ pincode: String) -> Bool {
-        sendCommand(ArsdkFeatureCellular.setPinCodeEncoder(modemId: MODEM_ID_MAIN, pin: pincode))
-        return true
+        return sendCommand(ArsdkFeatureCellular.setPinCodeEncoder(modemId: MODEM_ID_MAIN, pin: pincode))
     }
 
-    /// A command has been received
-    ///
-    /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureCellularUid {
             ArsdkFeatureCellular.decode(command, callback: self)
@@ -503,6 +493,7 @@ extension CellularController: ArsdkFeatureCellularCallback {
         if ArsdkFeatureCellularSupportedCapabilitiesBitField.isSet(.capabilities4g,
                                                                    inBitField: supportedCapabilitiesBitField) {
             isSupported = true
+            deviceStore.write(key: PersistedDataKey.isSupported, value: true).commit()
         }
     }
 
@@ -793,10 +784,10 @@ private struct ApnConfigurationPresets {
         /// - Parameter content: store data
         init?(from content: AnyObject?) {
             if let content = StorableDict<String, AnyStorable>(from: content),
-                let isManual = Bool(content[Key.isManual]),
-                let url = String(content[Key.url]),
-                let username = String(content[Key.username]),
-                let password = String(content[Key.password]) {
+               let isManual = Bool(content[Key.isManual]),
+               let url = String(content[Key.url]),
+               let username = String(content[Key.username]),
+               let password = String(content[Key.password]) {
                 self.isManual = isManual
                 self.url = url
                 self.username = username

@@ -102,4 +102,11 @@ extension ULogTag {
 
     /// Logging tag of arsdk SecureElement
     static let secureElementTag = ULogTag(name: "arsdkengine.secureElement")
+
+    /// Logging tag of arsdk Dted
+    static let dtedTag = ULogTag(name: "arsdkengine.dted")
+
+    /// Logging tag of arsdk lineOfSight
+    static let lineOfSightTag = ULogTag(name: "arsdkengine.lineOfSight")
+
 }

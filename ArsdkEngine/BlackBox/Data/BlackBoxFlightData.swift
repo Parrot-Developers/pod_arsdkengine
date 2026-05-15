@@ -171,6 +171,6 @@ struct BlackBoxDronePilotingCommandData: Encodable, Equatable {
 
     static func == (lhs: BlackBoxDronePilotingCommandData, rhs: BlackBoxDronePilotingCommandData) -> Bool {
         return lhs.roll == rhs.roll && lhs.pitch == rhs.pitch && lhs.yaw == rhs.yaw && lhs.gaz == rhs.gaz &&
-            lhs.flag == rhs.flag
+        lhs.flag == rhs.flag
     }
 }

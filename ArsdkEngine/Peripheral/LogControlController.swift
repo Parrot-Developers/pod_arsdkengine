@@ -105,8 +105,7 @@ class LogControlController: DeviceComponentController, LogControlBackend {
 
     func deactivateLogs() -> Bool {
         if deactivateLogsIsSupported {
-            sendCommand(ArsdkFeatureSecurityEdition.deactivateLogsEncoder())
-            return true
+            return sendCommand(ArsdkFeatureSecurityEdition.deactivateLogsEncoder())
         }
         return false
     }
@@ -138,8 +137,7 @@ private extension LogControlController {
     /// - Returns: `true` if the command has been sent
     func sendCommand(_ command: Command.OneOf_ID) -> Bool {
         if let encoder = Encoder.encoder(command) {
-            sendCommand(encoder)
-            return true
+            return sendCommand(encoder)
         }
         return false
     }
@@ -201,6 +199,6 @@ extension LogControlSupportedCapabilities: ArsdkMappableEnum {
     }
 
     static var arsdkMapper = Mapper<LogControlSupportedCapabilities,
-        ArsdkFeatureSecurityEditionSupportedCapabilities>([
-        .deactivateLogs: .deactivateLogs])
+                                    ArsdkFeatureSecurityEditionSupportedCapabilities>([
+                                        .deactivateLogs: .deactivateLogs])
 }

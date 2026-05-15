@@ -81,14 +81,14 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageCallback {
         physicalState: ArsdkFeatureUserStoragePhyState, fileSystemState: ArsdkFeatureUserStorageFsState,
         attributeBitField: UInt, monitorEnabled: UInt, monitorPeriod: UInt) {
 
-        isEncrypted(isEncrypted: ArsdkFeatureUserStorageAttributeBitField.isSet(.encrypted,
-                                                                                inBitField: attributeBitField))
+            isEncrypted(isEncrypted: ArsdkFeatureUserStorageAttributeBitField.isSet(.encrypted,
+                                                                                    inBitField: attributeBitField))
 
-        state(physicalState: physicalState, fileSystemState: fileSystemState,
-              attributeBitField: attributeBitField, monitorEnabled: monitorEnabled, monitorPeriod: monitorPeriod)
+            state(physicalState: physicalState, fileSystemState: fileSystemState,
+                  attributeBitField: attributeBitField, monitorEnabled: monitorEnabled, monitorPeriod: monitorPeriod)
 
-        userStorage.notifyUpdated()
-    }
+            userStorage.notifyUpdated()
+        }
 
     func onFormatResult(result: ArsdkFeatureUserStorageFormattingResult) {
         formatResult(result: result)
@@ -119,7 +119,7 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageCallback {
 extension RemovableUserStorageController: ArsdkFeatureUserStorageV2Callback {
 
     func onCapabilities(storageId: UInt, supportedFeaturesBitField: UInt,
-        storageType: ArsdkFeatureUserStorageV2StorageType, listFlagsBitField: UInt) {
+                        storageType: ArsdkFeatureUserStorageV2StorageType, listFlagsBitField: UInt) {
         if storageType == .removableStorage {
             userStorageType = .removableStorage
             userStorageId = storageId
@@ -140,16 +140,16 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageV2Callback {
     }
 
     func onState(storageId: UInt, physicalState: ArsdkFeatureUserStorageV2PhyState,
-        fileSystemState: ArsdkFeatureUserStorageV2FsState, attributeBitField: UInt, monitorEnabled: UInt,
-        monitorPeriod: UInt, fstype: String, listFlagsBitField: UInt) {
+                 fileSystemState: ArsdkFeatureUserStorageV2FsState, attributeBitField: UInt, monitorEnabled: UInt,
+                 monitorPeriod: UInt, fstype: String, listFlagsBitField: UInt) {
         if userStorageId == storageId {
-            isEncrypted(isEncrypted: ArsdkFeatureUserStorageV2AttributeBitField.isSet(.encrypted,
-                                                                                    inBitField: attributeBitField))
-            hasCheckError(hasCheckError: ArsdkFeatureUserStorageV2AttributeBitField.isSet(.checkError,
-                                                                                      inBitField: attributeBitField))
+            isEncrypted(isEncrypted: ArsdkFeatureUserStorageV2AttributeBitField
+                .isSet(.encrypted, inBitField: attributeBitField))
+            hasCheckError(hasCheckError: ArsdkFeatureUserStorageV2AttributeBitField
+                .isSet(.checkError, inBitField: attributeBitField))
             state(physicalState: physicalState, fileSystemState: fileSystemState,
-                attributeBitField: attributeBitField, monitorEnabled: monitorEnabled,
-                monitorPeriod: monitorPeriod)
+                  attributeBitField: attributeBitField, monitorEnabled: monitorEnabled,
+                  monitorPeriod: monitorPeriod)
             userStorage.notifyUpdated()
         }
     }
@@ -167,7 +167,7 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageV2Callback {
     }
 
     func onFormatProgress(storageId: UInt, step: ArsdkFeatureUserStorageV2FormattingStep, percentage: UInt,
-        listFlagsBitField: UInt) {
+                          listFlagsBitField: UInt) {
         if userStorageId == storageId {
             formatProgress(step: step, percentage: percentage)
         }
@@ -177,7 +177,7 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageV2Callback {
         if userStorageId == storageId {
             sdcardUuid(uuid: uuid)
         }
-      }
+    }
 
     func onDecryption(storageId: UInt, result: ArsdkFeatureUserStorageV2PasswordResult, listFlagsBitField: UInt) {
         if userStorageId == storageId {

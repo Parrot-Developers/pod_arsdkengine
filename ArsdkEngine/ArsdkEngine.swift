@@ -50,6 +50,9 @@ public class ArsdkEngine: EngineBaseCore {
     /// File Replay provider
     private let fileReplayProvider = FileReplayProviderCore()
 
+    /// ServiceDiscovery browser utility.
+    private let serviceDiscoveryBrowser = ServiceDiscoveryBrowserCore()
+
     /// Constructor
     ///
     /// - Parameter enginesController: engine controller owning the engine
@@ -64,6 +67,8 @@ public class ArsdkEngine: EngineBaseCore {
         // Publish utilities by the engine initiative.
         publishUtility(fileReplayProvider)
         publishUtility(PlanUtilityBackendProviderCore())
+        publishUtility(StreamSharingManagerCore(pompLoopUtil: arsdk.arsdkCore.pompLoopUtil()))
+        publishUtility(serviceDiscoveryBrowser)
     }
 
     public override func startEngine() {
@@ -78,8 +83,8 @@ public class ArsdkEngine: EngineBaseCore {
             let deviceDict = SettingsStore(dictionary: persistentStore.getDevice(uid: uid))
 
             if let typeNumber: Int = deviceDict.read(key: PersistentStore.deviceType),
-                let model = DeviceModel.from(internalId: typeNumber),
-                let name: String = deviceDict.read(key: PersistentStore.deviceName) {
+               let model = DeviceModel.from(internalId: typeNumber),
+               let name: String = deviceDict.read(key: PersistentStore.deviceName) {
                 let deviceController = createDeviceController(uid: uid, model: model, name: name)
                 deviceControllers[uid] = deviceController
                 deviceController.start(stopListener: self)
@@ -107,7 +112,7 @@ public class ArsdkEngine: EngineBaseCore {
     func createArsdkCore(listener: ArsdkCoreListener) -> ArsdkCore {
         let controllerDescriptor = "APP,iOS,\(AppInfoCore.deviceModel),\(AppInfoCore.systemVersion)"
         let controllerVersion
-            = "\(AppInfoCore.appBundle),\(AppInfoCore.appVersion),\(AppInfoCore.sdkBundle),\(AppInfoCore.sdkVersion)"
+        = "\(AppInfoCore.appBundle),\(AppInfoCore.appVersion),\(AppInfoCore.sdkBundle),\(AppInfoCore.sdkVersion)"
         return ArsdkCore(backendControllers: createBackendControllers(), listener: listener,
                          controllerDescriptor: controllerDescriptor, controllerVersion: controllerVersion)
     }
@@ -116,22 +121,26 @@ public class ArsdkEngine: EngineBaseCore {
     ///
     /// - Returns: a list of backend controllers to use
     private func createBackendControllers() -> [ArsdkBackendController] {
-        var backendController = [ArsdkBackendController]()
+        var backendControllers = [ArsdkBackendController]()
         let supportedDevices = GroundSdkConfig.sharedInstance.supportedDevices
         if GroundSdkConfig.sharedInstance.enableWifi {
             let wifiModels = DeviceModel.supportingTechnology(models: supportedDevices, technology: .wifi)
-            backendController.append(ArsdkWifiBackendController(
-                supportedDeviceTypes: Set<NSNumber>(wifiModels.map { NSNumber(value: $0.internalId) })))
+            let wifiBackendController = ArsdkWifiBackendController(
+                supportedDeviceTypes: Set<NSNumber>(wifiModels.map { NSNumber(value: $0.internalId) }))
+            serviceDiscoveryBrowser.addSdkCoreBrowser(wifiBackendController)
+            backendControllers.append(wifiBackendController)
         }
         if GroundSdkConfig.sharedInstance.enableUsb {
             let usbModels = DeviceModel.supportingTechnology(models: supportedDevices, technology: .usb)
-            backendController.append(ArsdkMuxEaBackendController(
-                supportedDeviceTypes: Set<NSNumber>(usbModels.map { NSNumber(value: $0.internalId) })))
+            let muxBackendController = ArsdkMuxEaBackendController(
+                supportedDeviceTypes: Set<NSNumber>(usbModels.map { NSNumber(value: $0.internalId) }))
+            serviceDiscoveryBrowser.addPrioritySdkCoreBrowser(muxBackendController)
+            backendControllers.append(muxBackendController)
         }
-        return backendController
+        return backendControllers
     }
 
-    /// Factory function to create a persistent store
+    /// Factory function to create a persistent store.
     /// This is to allow mocking persistent store for unit tests
     ///
     /// - Returns: a persistent store instance
@@ -168,16 +177,24 @@ public class ArsdkEngine: EngineBaseCore {
         switch model {
         case .drone(let droneModel):
             switch droneModel {
-            case .anafi4k, .anafiThermal, .anafi2, .anafiUa, .anafiUsa, .anafi3, .anafi3Usa:
+            case .anafi4k, .anafiThermal, .anafi2, .anafiUa, .anafiUsa, .anafi3, .anafi3Mil, .anafi3Gov, .chuck3:
                 return AnafiFamilyDroneController(engine: self, deviceUid: uid, name: name, model: droneModel)
             }
         case .rc(let rcModel):
             switch rcModel {
-            case .skyCtrl3, .skyCtrl4, .skyCtrl4Black, .skyCtrlUA, .skyCtrl5:
+            case .skyCtrl3, .skyCtrl4, .skyCtrl4Black, .skyCtrlUA, .skyCtrl5, .skyCtrlUA2:
                 return SkyControllerFamilyController(engine: self, deviceUid: uid, model: rcModel, name: name)
             }
         }
     }
+
+    internal static let iso8601DateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeZone = NSTimeZone.system
+        formatter.locale = NSLocale.system
+        formatter.dateFormat = "yyyyMMdd'T'HHmmssZZZ"
+        return formatter
+    }()
 }
 
 /// Extension of ArsdkEngine that implements DeviceControllerStoppedListener

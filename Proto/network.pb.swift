@@ -89,6 +89,9 @@ enum Arsdk_Network_RoutingLink: SwiftProtobuf.Enum {
 
   /// Cellular link. 
   case cellular // = 2
+
+  /// Direct Cable Connection. 
+  case direct // = 3
   case UNRECOGNIZED(Int)
 
   init() {
@@ -100,6 +103,7 @@ enum Arsdk_Network_RoutingLink: SwiftProtobuf.Enum {
     case 0: self = .any
     case 1: self = .wlan
     case 2: self = .cellular
+    case 3: self = .direct
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -109,6 +113,7 @@ enum Arsdk_Network_RoutingLink: SwiftProtobuf.Enum {
     case .any: return 0
     case .wlan: return 1
     case .cellular: return 2
+    case .direct: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -123,6 +128,7 @@ extension Arsdk_Network_RoutingLink: CaseIterable {
     .any,
     .wlan,
     .cellular,
+    .direct,
   ]
 }
 
@@ -287,6 +293,15 @@ enum Arsdk_Network_LinkError: SwiftProtobuf.Enum {
 
   /// Failed to invite drone. 
   case invite // = 7
+
+  /// Failed to setup control link. 
+  case setup // = 8
+
+  /// Peer offline. 
+  case peerOffline // = 9
+
+  /// Peer not subscribed. 
+  case peerMismatch // = 10
   case UNRECOGNIZED(Int)
 
   init() {
@@ -303,6 +318,9 @@ enum Arsdk_Network_LinkError: SwiftProtobuf.Enum {
     case 5: self = .commLink
     case 6: self = .timeout
     case 7: self = .invite
+    case 8: self = .setup
+    case 9: self = .peerOffline
+    case 10: self = .peerMismatch
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -317,6 +335,9 @@ enum Arsdk_Network_LinkError: SwiftProtobuf.Enum {
     case .commLink: return 5
     case .timeout: return 6
     case .invite: return 7
+    case .setup: return 8
+    case .peerOffline: return 9
+    case .peerMismatch: return 10
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -336,6 +357,9 @@ extension Arsdk_Network_LinkError: CaseIterable {
     .commLink,
     .timeout,
     .invite,
+    .setup,
+    .peerOffline,
+    .peerMismatch,
   ]
 }
 
@@ -883,31 +907,6 @@ struct Arsdk_Network_CellularMaxBitrate {
   init() {}
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Network_RoutingPolicy: @unchecked Sendable {}
-extension Arsdk_Network_RoutingLink: @unchecked Sendable {}
-extension Arsdk_Network_LinkStatus: @unchecked Sendable {}
-extension Arsdk_Network_LinkType: @unchecked Sendable {}
-extension Arsdk_Network_LinkError: @unchecked Sendable {}
-extension Arsdk_Network_DirectConnectionMode: @unchecked Sendable {}
-extension Arsdk_Network_CellularStatus: @unchecked Sendable {}
-extension Arsdk_Network_Command: @unchecked Sendable {}
-extension Arsdk_Network_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Network_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Network_Command.SetRoutingPolicy: @unchecked Sendable {}
-extension Arsdk_Network_Command.SetCellularMaxBitrate: @unchecked Sendable {}
-extension Arsdk_Network_Command.SetDirectConnection: @unchecked Sendable {}
-extension Arsdk_Network_Event: @unchecked Sendable {}
-extension Arsdk_Network_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Network_Event.State: @unchecked Sendable {}
-extension Arsdk_Network_Capabilities: @unchecked Sendable {}
-extension Arsdk_Network_RoutingInfo: @unchecked Sendable {}
-extension Arsdk_Network_GlobalLinkQuality: @unchecked Sendable {}
-extension Arsdk_Network_LinksStatus: @unchecked Sendable {}
-extension Arsdk_Network_LinksStatus.LinkInfo: @unchecked Sendable {}
-extension Arsdk_Network_CellularMaxBitrate: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.network"
@@ -926,6 +925,7 @@ extension Arsdk_Network_RoutingLink: SwiftProtobuf._ProtoNameProviding {
     0: .same(proto: "ROUTING_LINK_ANY"),
     1: .same(proto: "ROUTING_LINK_WLAN"),
     2: .same(proto: "ROUTING_LINK_CELLULAR"),
+    3: .same(proto: "ROUTING_LINK_DIRECT"),
   ]
 }
 
@@ -960,6 +960,9 @@ extension Arsdk_Network_LinkError: SwiftProtobuf._ProtoNameProviding {
     5: .same(proto: "LINK_ERROR_COMM_LINK"),
     6: .same(proto: "LINK_ERROR_TIMEOUT"),
     7: .same(proto: "LINK_ERROR_INVITE"),
+    8: .same(proto: "LINK_ERROR_SETUP"),
+    9: .same(proto: "LINK_ERROR_PEER_OFFLINE"),
+    10: .same(proto: "LINK_ERROR_PEER_MISMATCH"),
   ]
 }
 

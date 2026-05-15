@@ -34,7 +34,7 @@ import GroundSdk
 class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
 
     /// Device controller.
-    private let deviceController: DeviceController
+    private unowned let deviceController: DeviceController
 
     /// Flight log storage utility, `nil` if `converterStorage` is not `nil`.
     private let storage: FlightLogStorageCore?
@@ -57,6 +57,9 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
 
     /// FlightLog downloaded count.
     private var downloadCount = 0
+
+    /// Current download retry counter.
+    private var retryCount = 0
 
     /// Whether or not the current overall task has been canceled.
     private var isCanceled = false
@@ -129,10 +132,6 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
 
         downloadCount = 0
         isCanceled = false
-        downloader?.update(completionStatus: .none)
-            .update(downloadingFlag: true)
-            .update(downloadedCount: downloadCount)
-            .notifyUpdated()
 
         queryFlightLogList()
     }
@@ -163,7 +162,11 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
     private func queryFlightLogList() {
         currentRequest = flightLogApi?.getFlightLogList { flightLogList in
             if let flightLogList = flightLogList {
-                self.pendingDownloads = flightLogList.sorted { $0.date > $1.date }
+                // Orders pending files by date and then by hasFlight.
+                self.pendingDownloads = flightLogList.sorted { $0.date < $1.date }
+                    .sorted { $0.hasFlight == true && $1.hasFlight != true }
+
+                self.retryCount = 0
 
                 let deviceModel = ((self.deviceController as? DroneController) != nil) ? "drone" : "ctrl"
                 let list = self.pendingDownloads.map { $0.name }.joined(separator: ",")
@@ -172,7 +175,7 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
                 self.downloadNextLog()
             } else {
                 self.downloader?.update(completionStatus: .interrupted)
-                    .update(downloadingFlag: false)
+                    .update(downloadingState: .none)
                     .notifyUpdated()
                 self.currentRequest = nil
             }
@@ -196,23 +199,38 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
                 progress: { _ in },
                 completion: { fileUrl in
                     if let fileUrl = fileUrl {
+                        self.retryCount = 0
                         // delete flight log and download next flight log
                         self.deleteFlightLogAndDownloadNext(flightLog: flightLog, fileUrl: fileUrl)
                     } else {
                         // even if the download failed, process next log
+                        if self.retryCount < 2 {
+                            self.retryCount += 1
+                            Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
+                                self.downloadNextLog()
+                            }
+                            return
+                        }
                         if !self.pendingDownloads.isEmpty {
+                            // after 3 failures, skip this record without deleting it,
+                            // we will try to download it next time
                             self.pendingDownloads.removeFirst()
                         }
+                        self.retryCount = 0
                         self.downloadNextLog()
                     }
                 })
+            self.downloader?.update(completionStatus: .none)
+                .update(downloadingState: .downloading(hasFlight: flightLog.hasFlight == true))
+                .update(downloadedCount: self.downloadCount)
+                .notifyUpdated()
         } else {
             if isCanceled {
                 self.downloader?.update(completionStatus: .interrupted)
             } else {
                 self.downloader?.update(completionStatus: .success)
             }
-            self.downloader?.update(downloadingFlag: false).notifyUpdated()
+            self.downloader?.update(downloadingState: .none).notifyUpdated()
             currentRequest = nil
             isCanceled = false
         }
@@ -223,17 +241,19 @@ class HttpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
     /// - Parameters:
     ///   - flightLog: flight log to delete
     ///   - fileUrl: URL of the uploaded file
-    private func deleteFlightLogAndDownloadNext(flightLog: FlightLogRestApi.FlightLog, fileUrl: URL) {
+    private func deleteFlightLogAndDownloadNext(flightLog: FlightLogRestApi.FlightLog, fileUrl: URL? = nil) {
         currentRequest = flightLogApi?.deleteFlightLog(flightLog) { _ in
-            self.downloadCount += 1
-            self.downloader?.update(downloadedCount: self.downloadCount).notifyUpdated()
+            if let fileUrl {
+                self.downloadCount += 1
+                self.downloader?.update(downloadedCount: self.downloadCount).notifyUpdated()
 
-            self.storage?.notifyFlightLogReady(flightLogUrl: URL(fileURLWithPath: fileUrl.path))
-            self.converterStorage?.notifyFlightLogReady(flightLogUrl: URL(fileURLWithPath: fileUrl.path))
+                self.storage?.notifyFlightLogReady(flightLogUrl: URL(fileURLWithPath: fileUrl.path))
+                self.converterStorage?.notifyFlightLogReady(flightLogUrl: URL(fileURLWithPath: fileUrl.path))
 
-            let deviceModel = ((self.deviceController as? DroneController) != nil) ? "drone" : "ctrl"
-            GroundSdkCore.logEvent(message: "EVT:LOGS;event='download';source='\(deviceModel)';" +
-                "file='\(fileUrl.lastPathComponent)'")
+                let deviceModel = ((self.deviceController as? DroneController) != nil) ? "drone" : "ctrl"
+                GroundSdkCore.logEvent(message: "EVT:LOGS;event='download';source='\(deviceModel)';" +
+                                       "file='\(fileUrl.lastPathComponent)'")
+            }
 
             // even if the deletion failed, process next log
             if !self.pendingDownloads.isEmpty {

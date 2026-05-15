@@ -237,7 +237,7 @@ struct StorableArray<T: StorableProtocol>: Storable {
 
 /// Extension when the StorableArray data type is AnyStorable
 extension StorableArray where T == AnyStorable {
-    init<T: Storable>(_ value: [T]) {
+    init<S: Storable>(_ value: [S]) {
         self.storableValue = value.map {AnyStorable($0)}
     }
 }
@@ -273,7 +273,7 @@ struct StorableDict<K: StorableProtocol & Hashable, V: StorableProtocol>: Storab
     /// Create a storable from any object
     ///
     /// - Parameter content: content to use to create the storable
-   init?(from content: AnyObject?) {
+    init?(from content: AnyObject?) {
         if let content = content as? [String: AnyObject] {
             var result = [K: V]()
             for (key, value) in content {

@@ -42,7 +42,7 @@ class ArsdkPrivacyEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
     }
 
-    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
     }
 
@@ -107,6 +107,8 @@ extension Arsdk_Privacy_Command.OneOf_ID {
         switch self {
         case .getState: return 16
         case .setLogMode: return 17
+        case .enableLogEncryption: return 18
+        case .disableLogEncryption: return 19
         }
     }
 }
@@ -117,14 +119,23 @@ extension Arsdk_Privacy_Command.SetLogMode {
     static var logStorageFieldNumber: Int32 { 1 }
     static var logConfigPersistenceFieldNumber: Int32 { 2 }
 }
+extension Arsdk_Privacy_Command.EnableLogEncryption {
+    static var publicKeyFieldNumber: Int32 { 1 }
+}
 extension Arsdk_Privacy_Command {
     static var getStateFieldNumber: Int32 { 16 }
     static var setLogModeFieldNumber: Int32 { 17 }
+    static var enableLogEncryptionFieldNumber: Int32 { 18 }
+    static var disableLogEncryptionFieldNumber: Int32 { 19 }
 }
 extension Arsdk_Privacy_Event.State {
     static var defaultCapabilitiesFieldNumber: Int32 { 1 }
     static var logStorageFieldNumber: Int32 { 2 }
     static var logConfigPersistenceFieldNumber: Int32 { 3 }
+    static var logEncryptionFieldNumber: Int32 { 4 }
+}
+extension Arsdk_Privacy_Event.LogEncryption {
+    static var enabledFieldNumber: Int32 { 1 }
 }
 extension Arsdk_Privacy_Event {
     static var stateFieldNumber: Int32 { 16 }

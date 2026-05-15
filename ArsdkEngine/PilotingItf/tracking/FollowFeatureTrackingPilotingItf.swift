@@ -107,7 +107,7 @@ class FollowFeatureTrackingPilotingItf: ActivablePilotingItfController {
 
     /// The set of reasons that preclude this piloting interface from being available at present.
     private var availabilityIssues = Set<TrackingIssue>() {
-         didSet {
+        didSet {
             if availabilityIssues != oldValue {
                 trackingPilotingItf.update(availabilityIssues: availabilityIssues)
                 updateState()
@@ -283,7 +283,7 @@ extension FollowFeatureTrackingPilotingItf: ArsdkFeatureFollowMeCallback {
     func onState(
         mode: ArsdkFeatureFollowMeMode, behavior: ArsdkFeatureFollowMeBehavior,
         animation: ArsdkFeatureFollowMeAnimation, animationAvailableBitField: UInt) {
-    }
+        }
 }
 
 // MARK: - ArsdkFeatureArdrone3PilotingstateCallback

@@ -40,6 +40,11 @@ protocol RadioComponentController {
     ///
     /// - Parameter state: received state
     func processStateEvent(state: Arsdk_Connectivity_Event.State)
+
+    /// Processes `System` event
+    ///
+    /// - Parameter state: received state
+    func processSystemEvent(state: Arsdk_System_Event.State)
 }
 
 /// Connectivity router for Anafi 2 family drones.
@@ -49,7 +54,10 @@ protocol RadioComponentController {
 class Anafi2ConnectivityRouter: DeviceComponentController {
 
     /// Decoder for connectivity events.
-    private var arsdkDecoder: ArsdkConnectivityEventDecoder!
+    private var connectivityDecoder: ArsdkConnectivityEventDecoder!
+
+    /// Decoder for system connectivity
+    private var systemDecoder: ArsdkSystemEventDecoder!
 
     /// Known radio types, by radio identifier.
     private var radios: [UInt32: Arsdk_Connectivity_RadioType] = [:]
@@ -57,16 +65,22 @@ class Anafi2ConnectivityRouter: DeviceComponentController {
     /// Radio controllers, by radio identifier.
     private var radioControllers: [UInt32: [any RadioComponentController]] = [:]
 
+    /// Keep the system state if there is no radioController when it is received, and process it when a connectivity
+    /// event is received.
+    private var systemState: Arsdk_System_Event.State?
+
     /// Constructor.
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
 
-        arsdkDecoder = ArsdkConnectivityEventDecoder(listener: self)
+        connectivityDecoder = ArsdkConnectivityEventDecoder(listener: self)
+        systemDecoder = ArsdkSystemEventDecoder(listener: self)
     }
 
     override func willConnect() {
+        systemState = nil
         _ = sendListRadiosCommand()
     }
 
@@ -79,13 +93,15 @@ class Anafi2ConnectivityRouter: DeviceComponentController {
     }
 
     override func didReceiveCommand(_ command: OpaquePointer) {
-        arsdkDecoder.decode(command)
+        connectivityDecoder.decode(command)
+        systemDecoder.decode(command)
     }
 }
 
-/// Wifi access point, wifi station and wifi scanner command delegates implementation.
+/// Command delegates implementation of all radio components.
 extension Anafi2ConnectivityRouter: WifiAccessPointCommandDelegate, WifiStationCommandDelegate,
-                                    WifiScannerCommandDelegate {
+                                    WifiScannerCommandDelegate, MarsMasterCommandDelegate,
+                                    MarsSlaveCommandDelegate {
 
     func set(radioId: UInt32, mode: Arsdk_Connectivity_Mode) -> Bool {
         var setMode = Arsdk_Connectivity_Command.SetMode()
@@ -125,8 +141,7 @@ extension Anafi2ConnectivityRouter {
     func sendConnectivityCommand(_ command: Arsdk_Connectivity_Command.OneOf_ID) -> Bool {
         if deviceController.backend != nil,
            let encoder = ArsdkConnectivityCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            return true
+            return sendCommand(encoder)
         }
         return false
     }
@@ -146,6 +161,7 @@ extension Anafi2ConnectivityRouter {
         var getState = Arsdk_Connectivity_Command.GetState()
         getState.radioID = radioId
         getState.includeDefaultCapabilities = true
+        getState.supportsPackedChannels = true
         return sendConnectivityCommand(.getState(getState))
     }
 }
@@ -166,6 +182,7 @@ extension Anafi2ConnectivityRouter: ArsdkConnectivityEventDecoderListener {
     }
 
     func onState(_ state: Arsdk_Connectivity_Event.State) {
+
         guard let radioType = radios[state.radioID] else {
             ULog.e(.connectivityTag, "Ignoring unknown radio [id: \(state.radioID)]")
             return
@@ -183,21 +200,35 @@ extension Anafi2ConnectivityRouter: ArsdkConnectivityEventDecoderListener {
                 }
                 if state.defaultCapabilities.supportedModes.contains(.sta) {
                     controllers.append(WifiStationController(store: deviceController.device.peripheralStore,
+                                                             utilities: deviceController.engine.utilities,
                                                              delegate: self, radioId: state.radioID))
                 }
                 controllers.append(WifiScannerController(store: deviceController.device.peripheralStore,
                                                          delegate: self, radioId: state.radioID))
+                radioControllers[state.radioID] = controllers
+            } else if radioType == .mars {
+                var controllers = [any RadioComponentController]()
+                if state.defaultCapabilities.supportedModes.contains(.ap) {
+                    controllers.append(MarsMasterController(store: deviceController.device.peripheralStore,
+                                                                utilities: deviceController.engine.utilities,
+                                                                delegate: self, radioId: state.radioID))
+                }
+                if state.defaultCapabilities.supportedModes.contains(.sta) {
+                    controllers.append(MarsSlaveController(store: deviceController.device.peripheralStore,
+                                                               utilities: deviceController.engine.utilities,
+                                                               delegate: self, radioId: state.radioID))
+                }
                 radioControllers[state.radioID] = controllers
             }
         }
 
         radioControllers[state.radioID]?.forEach {
             $0.processStateEvent(state: state)
+            if let systemState {
+                $0.processSystemEvent(state: systemState)
+            }
         }
-    }
-
-    func onCommandResponse(_ commandResponse: Arsdk_Connectivity_Event.CommandResponse) {
-
+        systemState = nil
     }
 
     func onConnection(_ connection: Arsdk_Connectivity_Event.Connection) {
@@ -209,6 +240,17 @@ extension Anafi2ConnectivityRouter: ArsdkConnectivityEventDecoderListener {
             if let controller = $0 as? WifiScannerController {
                 controller.processScanResult(scanResult: scanResult)
             }
+        }
+    }
+}
+
+/// Extension for events processing.
+extension Anafi2ConnectivityRouter: ArsdkSystemEventDecoderListener {
+    func onState(_ state: Arsdk_System_Event.State) {
+        if radioControllers.isEmpty {
+            systemState = state
+        } else {
+            radioControllers.values.flatMap { $0 }.forEach { $0.processSystemEvent(state: state) }
         }
     }
 }

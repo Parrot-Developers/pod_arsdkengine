@@ -34,6 +34,7 @@ extension Arsdk_Security_Command.OneOf_ID {
         switch self {
         case .registerApcToken: return 16
         case .registerApcDroneList: return 17
+        case .registerApcCloudAntennaList: return 18
         }
     }
 }
@@ -43,7 +44,11 @@ extension Arsdk_Security_Command.RegisterApcToken {
 extension Arsdk_Security_Command.RegisterApcDroneList {
     static var listFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Security_Command.RegisterApcCloudAntennaList {
+    static var listFieldNumber: Int32 { 1 }
+}
 extension Arsdk_Security_Command {
     static var registerApcTokenFieldNumber: Int32 { 16 }
     static var registerApcDroneListFieldNumber: Int32 { 17 }
+    static var registerApcCloudAntennaListFieldNumber: Int32 { 18 }
 }

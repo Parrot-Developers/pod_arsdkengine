@@ -110,6 +110,23 @@ protocol Camera2CommandDelegate: AnyObject {
     ///
     /// - Parameter id: camera id
     func resetZoomLevel(id: UInt64)
+
+    /// Sets user location from image coordinates value.
+    ///
+    /// - Parameters:
+    ///   - id: camera id
+    ///   - userLficCoordinates: coordinates in the picture, in range [0, 1], or `nil` to clear
+    func set(id: UInt64, userLficCoordinates: CGPoint?) -> Bool
+
+    /// Sets the thermal alignment offset on a given axis
+    ///
+    /// - Parameters:
+    ///   - id: camera id
+    ///   - offset: the desired alignment offset
+    ///   - axis: the axis
+    /// - Returns: true if the new alignment offset has been asked
+    func setThermalAlignment(id: UInt64, offset: Double, axis: AlignmentAxis) -> Bool
+
 }
 
 /// Camera2 controller.
@@ -236,6 +253,15 @@ class Camera2Controller {
                     if exposureReceived {
                         camera.exposureIndicator.publish()
                     }
+                    if effectiveFramerateReceived {
+                        camera.effectiveFramerate.publish()
+                    }
+                    if userLficReceived {
+                        camera.userLfic.publish()
+                    }
+                    if alignmentOffsetsReceived {
+                        camera.alignment.publish()
+                    }
                 } else {
                     camera.photoCapture.unpublish()
                     camera.recording.unpublish()
@@ -245,6 +271,9 @@ class Camera2Controller {
                     camera.photoProgressIndicator.unpublish()
                     camera.exposureIndicator.unpublish()
                     camera.zoom.unpublish()
+                    camera.effectiveFramerate.unpublish()
+                    camera.userLfic.unpublish()
+                    camera.alignment.unpublish()
                 }
             }
         }
@@ -301,6 +330,15 @@ class Camera2Controller {
     /// Whether a zoom event or zoom state event has been received since connection to drone.
     private var zoomReceived = false
 
+    /// Whether an effective framerate event has been received since connection to drone.
+    private var effectiveFramerateReceived = false
+
+    /// Whether a user location from image coordinates event has been received since connection to drone.
+    private var userLficReceived = false
+
+    /// Whether alignment offsets event has been received since connection to drone.
+    private var alignmentOffsetsReceived = false
+
     /// Flight plan execution state.
     ///
     /// At connection, camera presets should not be sent to drone if a flight plan is playing.
@@ -347,7 +385,7 @@ class Camera2Controller {
                                      initialConfig: currentConfig, capabilities: emptyCapabilities)
         case .blendedThermal:
             camera = BlendedThermalCamera2Core(store: store, backend: self,
-                                        initialConfig: currentConfig, capabilities: emptyCapabilities)
+                                               initialConfig: currentConfig, capabilities: emptyCapabilities)
         }
 
         // load settings
@@ -486,16 +524,21 @@ class Camera2Controller {
         photoProgressReceived = false
         exposureReceived = false
         zoomReceived = false
+        effectiveFramerateReceived = false
+        userLficReceived = false
+        alignmentOffsetsReceived = false
         droneConfig = Camera2Controller.emptyConfig
         flightPlanState = nil
         // set camera as inactive, this will unpublish components
         active = false
+        _ = camera.effectiveFramerate.update(current: nil)
+        _ = camera.userLfic.update(current: nil)
         camera.cancelRollback()
         // restore default capabilities for offline mode
         if let defaultCapabilities = defaultCapabilities {
             camera.update(capabilities: defaultCapabilities)
         }
-        camera.notifyUpdated()
+        camera.publish()
     }
 
     /// Drone is about to be forgotten.
@@ -506,6 +549,9 @@ class Camera2Controller {
         camera.whiteBalanceLock.unpublish()
         camera.mediaMetadata.unpublish()
         camera.zoom.unpublish()
+        camera.effectiveFramerate.unpublish()
+        camera.userLfic.unpublish()
+        camera.alignment.unpublish()
         camera.unpublish()
     }
 
@@ -521,6 +567,7 @@ class Camera2Controller {
 
 /// Extension implementing Camera2Backend.
 extension Camera2Controller: Camera2Backend {
+
     func configure(config: Camera2ConfigCore.Config) -> Bool {
         presetStore?.write(key: SettingKey.configKey, value: config).commit()
         if connected {
@@ -560,9 +607,14 @@ extension Camera2Controller: Camera2Backend {
     }
 
     func control(mode: Camera2ZoomControlMode, target: Double) {
+        let target = mode == .hfov ? target.toRadians() : target
         if active {
             zoomBackend.control(mode: mode, target: target)
         }
+    }
+
+    func set(userLficCoordinates: CGPoint?) -> Bool {
+        return active && backend.set(id: id, userLficCoordinates: userLficCoordinates)
     }
 
     func resetZoomLevel() {
@@ -573,11 +625,14 @@ extension Camera2Controller: Camera2Backend {
             backend.resetZoomLevel(id: id)
         }
     }
+
+    func setThermalAlignment(offset: Double, axis: AlignmentAxis) -> Bool {
+        return active && backend.setThermalAlignment(id: id, offset: offset, axis: axis)
+    }
 }
 
 /// Extension for Camera2 events processing.
 extension Camera2Controller {
-
     /// Processes a `State` event.
     ///
     /// - Parameter state: event to process
@@ -585,9 +640,25 @@ extension Camera2Controller {
         if state.defaultCapabilitiesSelected {
             defaultCapabilities = state.defaultCapabilities.gsdkCapabilities
             capabilitiesDidChange(.capabilities(defaultCapabilities!))
+            if state.defaultCapabilities.hasThermalAlignmentOffsetRanges {
+                let ranges = state.defaultCapabilities.thermalAlignmentOffsetRanges
+                if ranges.hasPitch {
+                    let pitch = ranges.pitch
+                    camera.alignment.update(thermalSetting: (pitch.min, nil, pitch.max), onAxis: .pitch)
+                }
+                if ranges.hasYaw {
+                    let yaw = ranges.yaw
+                    camera.alignment.update(thermalSetting: (yaw.min, nil, yaw.max), onAxis: .yaw)
+                }
+                if ranges.hasRoll {
+                    let roll = ranges.roll
+                    camera.alignment.update(thermalSetting: (roll.min, nil, roll.max), onAxis: .roll)
+                }
+            }
         }
+
         if state.currentCapabilitiesSelected,
-            let defaultCapabilities = defaultCapabilities {
+           let defaultCapabilities = defaultCapabilities {
             let capabilities = defaultCapabilities.overriddenBy(other: state.currentCapabilities.gsdkCapabilities)
             camera.update(capabilities: capabilities)
         }
@@ -621,6 +692,18 @@ extension Camera2Controller {
         if state.zoomSelected {
             onZoomState(state.zoom)
         }
+        if state.zoomIsLockedSelected {
+            camera.zoom.update(isLocked: state.zoomIsLocked.value).notifyUpdated()
+        }
+        if state.effectiveFramerateSelected {
+            onEffectiveFramerate(state.effectiveFramerate)
+        }
+        if state.userLficSelected {
+            onUserLfic(state.userLfic)
+        }
+        if state.thermalAlignmentOffsetsSelected {
+            onThermalAlignmentOffsets(state.thermalAlignmentOffsets)
+        }
 
         // check connection state because we have to know flight plan state to apply presets
         if !stateReceived && connected {
@@ -639,36 +722,32 @@ extension Camera2Controller {
         photoStateReceived = true
         switch photo.state {
         case .active:
-            if case .stopping = camera.photoCapture.state {
-                return
-            }
+            if camera.photoCapture.published && camera.photoCapture.state.isStopping { return }
+
             let startTime = TimeProvider.dispatchTime.uptimeSeconds - Double(photo.duration.value) / 1000.0
             camera.photoCapture.update(state: .started(
                 startTimeOnSystemClock: startTime,
-                duration: {
-                  TimeProvider.dispatchTime.uptimeSeconds - startTime
-                },
+                duration: { TimeProvider.dispatchTime.uptimeSeconds - startTime },
                 photoCount: Int(photo.photoCount),
                 mediaStorage: StorageType(fromArsdk: photo.storage)
             ))
-            if active {
-                camera.photoCapture.publish()
-            }
         case .inactive:
             var latestSavedMediaId: String?
             if case .stopping(_, let savedMediaId) = camera.photoCapture.state {
                 latestSavedMediaId = savedMediaId
             }
             camera.photoCapture.update(state: .stopped(latestSavedMediaId: latestSavedMediaId))
-            if active {
-                camera.photoCapture.publish()
-            }
         case .unavailable:
             camera.photoCapture.unpublish()
+            return
         case .UNRECOGNIZED:
             ULog.w(.cameraTag, "Unknown photo state, skipping this event.")
+            return
         }
-        camera.photoCapture.notifyUpdated()
+
+        if active {
+            camera.photoCapture.publish()
+        }
     }
 
     /// Processes a `Recording` state.
@@ -678,33 +757,30 @@ extension Camera2Controller {
         recordingStateReceived = true
         switch recording.state {
         case .active:
+            if camera.recording.published && camera.recording.state.isStopping { return }
+
             let startTime = TimeProvider.dispatchTime.uptimeSeconds - Double(recording.duration.value) / 1000.0
             camera.recording.update(state: .started(
                 startTimeOnSystemClock: startTime,
-                duration: {
-                    TimeProvider.dispatchTime.uptimeSeconds - startTime
-                },
+                duration: { TimeProvider.dispatchTime.uptimeSeconds - startTime },
                 videoBitrate: UInt(recording.videoBitrate),
                 mediaStorage: StorageType(fromArsdk: recording.storage)
             ))
-            if active {
-                camera.recording.publish()
-            }
         case .inactive:
-            var latestSavedMediaId: String?
-            if case .stopping(_, let savedMediaId) = camera.recording.state {
-                latestSavedMediaId = savedMediaId
-            }
-            camera.recording.update(state: .stopped(latestSavedMediaId: latestSavedMediaId))
-            if active {
-                camera.recording.publish()
-            }
+            if camera.recording.published && !camera.recording.state.isStarted { return }
+
+            camera.recording.update(state: .stopped(latestSavedMediaId: nil))
         case .unavailable:
             camera.recording.unpublish()
+            return
         case .UNRECOGNIZED:
             ULog.w(.cameraTag, "Unknown recording state, skipping this event.")
+            return
         }
-        camera.recording.notifyUpdated()
+
+        if active {
+            camera.recording.publish()
+        }
     }
 
     /// Processes an `ExposureLock` state.
@@ -735,7 +811,7 @@ extension Camera2Controller {
             ULog.w(.cameraTag, "Unknown white balance lock mode, ignoring.")
         }
         let supportModes
-            = Set(whiteBalanceLock.supportedModes.compactMap { Camera2WhiteBalanceLockMode(fromArsdk: $0) })
+        = Set(whiteBalanceLock.supportedModes.compactMap { Camera2WhiteBalanceLockMode(fromArsdk: $0) })
         camera.whiteBalanceLock.update(supportedModes: supportModes).notifyUpdated()
         if active {
             camera.whiteBalanceLock.publish()
@@ -770,7 +846,10 @@ extension Camera2Controller {
         zoomReceived = true
         camera.zoom.update(maxLevel: zoom.zoomLevelMax)
             .update(maxLossLessLevel: zoom.zoomHighQualityLevelMax)
+            .update(presets: Dictionary(zoom.presets.compactMap { $0.gsdk }, uniquingKeysWith: { _, new in new }))
+            .update(ranges: Dictionary(zoom.camRanges.compactMap { $0.gsdk }, uniquingKeysWith: { _, new in new }))
             .notifyUpdated()
+        camera.zoom.notifyUpdated()
         if active {
             if registeredZoomEncoder == nil {
                 registeredZoomEncoder = backend.registerNoAckEncoder(encoder: zoomBackend)
@@ -798,14 +877,22 @@ extension Camera2Controller {
     ///
     /// - Parameter recording: event to process
     func onRecording(_ recording: Arsdk_Camera_Event.Recording) {
+        let savedMediaId = recording.mediaID.isEmpty ? nil : recording.mediaID
         switch recording.type {
-        case .stop, .stopping:
+        case .stopping:
             let reason = Camera2RecordingState.StopReason(fromArsdk: recording.stopReason) ?? .errorInternal
-            let savedMediaId = recording.mediaID.isEmpty ? nil : recording.mediaID
             camera.recording.update(state: .stopping(reason: reason, savedMediaId: savedMediaId))
-                .notifyUpdated()
+        case .stop:
+            camera.recording.update(state: .stopped(reason: Camera2RecordingState.StopReason(
+                fromArsdk: recording.stopReason), latestSavedMediaId: savedMediaId))
         default:
             break
+        }
+        camera.recording.notifyUpdated()
+
+        // clear stop reason as it is transient
+        if case .stopped = camera.recording.state {
+            camera.recording.update(state: .stopped(latestSavedMediaId: savedMediaId))
         }
     }
 
@@ -842,7 +929,7 @@ extension Camera2Controller {
             camera.exposureIndicator.update(shutterSpeed: shutterSpeed)
         }
         if exposure.hasExposureLockRegion,
-            exposure.exposureLockRegion.hasCenter {
+           exposure.exposureLockRegion.hasCenter {
             camera.exposureIndicator.update(centerX: exposure.exposureLockRegion.center.x,
                                             centerY: exposure.exposureLockRegion.center.y,
                                             width: exposure.exposureLockRegion.width,
@@ -856,11 +943,73 @@ extension Camera2Controller {
         }
     }
 
-    /// Processes an `ZoomLevel` event.
+    /// Processes a `ZoomLevel` event.
     ///
     /// - Parameter zoom: event to process
     func onZoom(_ zoom: Arsdk_Camera_Event.ZoomLevel) {
-        camera.zoom.update(level: zoom.level).notifyUpdated()
+        camera.zoom.update(level: zoom.level)
+            .update(hfov: zoom.hasHfov ? zoom.hfov.value.toDegrees() : nil).notifyUpdated()
+    }
+
+    /// Processes a `WhiteBalance` event.
+    ///
+    /// - Parameter whiteBalance: event to process
+    func onWhitebalance(_ whiteBalance: Arsdk_Camera_Event.WhiteBalance) {
+        if let whiteBalanceTemperature = Camera2WhiteBalanceTemperature(fromArsdk: whiteBalance.temperature) {
+            currentConfig[Camera2Params.whiteBalanceTemperature] = whiteBalanceTemperature
+        }
+        camera.update(config: currentConfig).notifyUpdated()
+    }
+
+    /// Processes an `EffectiveFramerate` event.
+    ///
+    /// - Parameter effectiveFramerate: event to process
+    private func onEffectiveFramerate(_ effectiveFramerate: Arsdk_Camera_Event.State.EffectiveFramerate) {
+        effectiveFramerateReceived = true
+        if let effectiveFramerate = Camera2RecordingFramerate(fromArsdk: effectiveFramerate.effectiveFramerate) {
+            camera.effectiveFramerate.update(current: effectiveFramerate).notifyUpdated()
+        }
+        if active {
+            camera.effectiveFramerate.publish()
+        }
+    }
+
+    /// Processes a `UserLfic` event.
+    ///
+    /// - Parameter userLficCoords: event to process
+    private func onUserLfic(_ userLficCoords: Arsdk_Camera_Event.State.UserLfic) {
+        userLficReceived = true
+        if userLficCoords.hasCoords {
+            let userLficCoords = CGPoint(x: Double(userLficCoords.coords.x), y: Double(userLficCoords.coords.y))
+            _ = camera.userLfic.update(current: userLficCoords)
+        } else {
+            _ = camera.userLfic.update(current: nil)
+        }
+        if active {
+            camera.userLfic.publish()
+        }
+    }
+
+    /// Processes a `ThermalAlignmentOffsets` event.
+    ///
+    /// - Parameter alignmentOffsets: event to process
+    private func onThermalAlignmentOffsets(_ alignmentOffsets: Arsdk_Camera_AlignmentOffsets) {
+        alignmentOffsetsReceived = true
+        if alignmentOffsets.hasYaw {
+            _ = camera.alignment.update(
+                        thermalSetting: (min: nil, value: alignmentOffsets.yaw.value, max: nil), onAxis: .yaw)
+        }
+        if alignmentOffsets.hasPitch {
+            _ = camera.alignment.update(
+                        thermalSetting: (min: nil, value: alignmentOffsets.pitch.value, max: nil), onAxis: .pitch)
+        }
+        if alignmentOffsets.hasRoll {
+            _ = camera.alignment.update(
+                        thermalSetting: (min: nil, value: alignmentOffsets.roll.value, max: nil), onAxis: .roll)
+        }
+        if active {
+            camera.alignment.publish()
+        }
     }
 }
 
@@ -871,8 +1020,8 @@ extension Camera2Controller {
     /// - Parameter state: flight plan state
     func onMavlinkFilePlayingStateChanged(
         state: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState) {
-        flightPlanState = state
-    }
+            flightPlanState = state
+        }
 }
 
 /// Extension that adds conversion to gsdk.
@@ -897,70 +1046,70 @@ extension Arsdk_Camera_Capabilities.Rule {
         }
         if photoDynamicRangesSelected {
             rule[Camera2Params.photoDynamicRange]
-                = Set(photoDynamicRanges.compactMap {Camera2DynamicRange(fromArsdk: $0)})
+            = Set(photoDynamicRanges.compactMap {Camera2DynamicRange(fromArsdk: $0)})
         }
         if photoModesSelected {
             rule[Camera2Params.photoMode] = Set(photoModes.compactMap {Camera2PhotoMode(fromArsdk: $0)})
         }
         if photoResolutionsSelected {
             rule[Camera2Params.photoResolution]
-                = Set(photoResolutions.compactMap {Camera2PhotoResolution(fromArsdk: $0)})
+            = Set(photoResolutions.compactMap {Camera2PhotoResolution(fromArsdk: $0)})
         }
         if photoFormatsSelected {
             rule[Camera2Params.photoFormat] = Set(photoFormats.compactMap {Camera2PhotoFormat(fromArsdk: $0)})
         }
         if photoFileFormatsSelected {
             rule[Camera2Params.photoFileFormat]
-                = Set(photoFileFormats.compactMap {Camera2PhotoFileFormat(fromArsdk: $0)})
+            = Set(photoFileFormats.compactMap {Camera2PhotoFileFormat(fromArsdk: $0)})
         }
         if photoSignaturesSelected {
             rule[Camera2Params.photoDigitalSignature]
-                = Set(photoSignatures.compactMap {Camera2DigitalSignature(fromArsdk: $0)})
+            = Set(photoSignatures.compactMap {Camera2DigitalSignature(fromArsdk: $0)})
         }
         if photoBracketingPresetsSelected {
             rule[Camera2Params.photoBracketing]
-                = Set(photoBracketingPresets.compactMap {Camera2BracketingValue(fromArsdk: $0)})
+            = Set(photoBracketingPresets.compactMap {Camera2BracketingValue(fromArsdk: $0)})
         }
         if photoBurstValuesSelected {
             rule[Camera2Params.photoBurst] = Set(photoBurstValues.compactMap {Camera2BurstValue(fromArsdk: $0)})
         }
         if photoTimeLapseIntervalRangeSelected {
             rule[Camera2Params.photoTimelapseInterval]
-                = photoTimeLapseIntervalRange.min...photoTimeLapseIntervalRange.max
+            = photoTimeLapseIntervalRange.min...photoTimeLapseIntervalRange.max
         }
         if photoGpsLapseIntervalRangeSelected {
             rule[Camera2Params.photoGpslapseInterval] = photoGpsLapseIntervalRange.min...photoGpsLapseIntervalRange.max
         }
         if photoStreamingModesSelected {
             rule[Camera2Params.photoStreamingMode]
-                = Set(photoStreamingModes.compactMap {Camera2PhotoStreamingMode(fromArsdk: $0)})
+            = Set(photoStreamingModes.compactMap {Camera2PhotoStreamingMode(fromArsdk: $0)})
         }
         if videoRecordingModesSelected {
             rule[Camera2Params.videoRecordingMode]
-                = Set(videoRecordingModes.compactMap {Camera2VideoRecordingMode(fromArsdk: $0)})
+            = Set(videoRecordingModes.compactMap {Camera2VideoRecordingMode(fromArsdk: $0)})
         }
         if videoRecordingDynamicRangesSelected {
             rule[Camera2Params.videoRecordingDynamicRange]
-                = Set(videoRecordingDynamicRanges.compactMap {Camera2DynamicRange(fromArsdk: $0)})
+            = Set(videoRecordingDynamicRanges.compactMap {Camera2DynamicRange(fromArsdk: $0)})
         }
         if videoRecordingCodecsSelected {
             rule[Camera2Params.videoRecordingCodec]
-                = Set(videoRecordingCodecs.compactMap {Camera2VideoCodec(fromArsdk: $0)})
+            = Set(videoRecordingCodecs.compactMap {Camera2VideoCodec(fromArsdk: $0)})
         }
         if videoRecordingResolutionsSelected {
             rule[Camera2Params.videoRecordingResolution]
-                = Set(videoRecordingResolutions.compactMap {Camera2RecordingResolution(fromArsdk: $0)})
+            = Set(videoRecordingResolutions.compactMap {Camera2RecordingResolution(fromArsdk: $0)})
         }
         if videoRecordingFrameratesSelected {
             rule[Camera2Params.videoRecordingFramerate]
-                = Set(videoRecordingFramerates.compactMap {Camera2RecordingFramerate(fromArsdk: $0)})
+            = Set(videoRecordingFramerates.compactMap {Camera2RecordingFramerate(fromArsdk: $0)})
         }
         if videoRecordingBitratesSelected {
             rule[Camera2Params.videoRecordingBitrate] = Set(videoRecordingBitrates.compactMap {UInt($0)})
         }
         if audioRecordingModesSelected {
             rule[Camera2Params.audioRecordingMode]
-                = Set(audioRecordingModes.compactMap {Camera2AudioRecordingMode(fromArsdk: $0)})
+            = Set(audioRecordingModes.compactMap {Camera2AudioRecordingMode(fromArsdk: $0)})
         }
         if autoRecordModesSelected {
             rule[Camera2Params.autoRecordMode] = Set(autoRecordModes.compactMap {Camera2AutoRecordMode(fromArsdk: $0)})
@@ -970,27 +1119,27 @@ extension Arsdk_Camera_Capabilities.Rule {
         }
         if exposureMaximumIsoSensitivitiesSelected {
             rule[Camera2Params.maximumIsoSensitivity]
-                = Set(exposureMaximumIsoSensitivities.compactMap {Camera2Iso(fromArsdk: $0)})
+            = Set(exposureMaximumIsoSensitivities.compactMap {Camera2Iso(fromArsdk: $0)})
         }
         if exposureManualIsoSensitivitiesSelected {
             rule[Camera2Params.isoSensitivity]
-                = Set(exposureManualIsoSensitivities.compactMap {Camera2Iso(fromArsdk: $0)})
+            = Set(exposureManualIsoSensitivities.compactMap {Camera2Iso(fromArsdk: $0)})
         }
         if exposureManualShutterSpeedsSelected {
             rule[Camera2Params.shutterSpeed]
-                = Set(exposureManualShutterSpeeds.compactMap {Camera2ShutterSpeed(fromArsdk: $0)})
+            = Set(exposureManualShutterSpeeds.compactMap {Camera2ShutterSpeed(fromArsdk: $0)})
         }
         if evCompensationsSelected {
             rule[Camera2Params.exposureCompensation]
-                = Set(evCompensations.compactMap {Camera2EvCompensation(fromArsdk: $0)})
+            = Set(evCompensations.compactMap {Camera2EvCompensation(fromArsdk: $0)})
         }
         if whiteBalanceModesSelected {
             rule[Camera2Params.whiteBalanceMode]
-                = Set(whiteBalanceModes.compactMap {Camera2WhiteBalanceMode(fromArsdk: $0)})
+            = Set(whiteBalanceModes.compactMap {Camera2WhiteBalanceMode(fromArsdk: $0)})
         }
         if whiteBalanceTemperaturesSelected {
             rule[Camera2Params.whiteBalanceTemperature]
-                = Set(whiteBalanceTemperatures.compactMap {Camera2WhiteBalanceTemperature(fromArsdk: $0)})
+            = Set(whiteBalanceTemperatures.compactMap {Camera2WhiteBalanceTemperature(fromArsdk: $0)})
         }
         if imageStylesSelected {
             rule[Camera2Params.imageStyle] = Set(imageStyles.compactMap {Camera2Style(fromArsdk: $0)})
@@ -1009,16 +1158,7 @@ extension Arsdk_Camera_Capabilities.Rule {
         }
         if zoomVelocityControlQualityModesSelected {
             rule[Camera2Params.zoomVelocityControlQualityMode]
-                = Set(zoomVelocityControlQualityModes.compactMap {Camera2ZoomVelocityControlQualityMode(fromArsdk: $0)})
-        }
-        if alignmentOffsetPitchRangeSelected {
-            rule[Camera2Params.alignmentOffsetPitch] = alignmentOffsetPitchRange.min...alignmentOffsetPitchRange.max
-        }
-        if alignmentOffsetRollRangeSelected {
-            rule[Camera2Params.alignmentOffsetRoll] = alignmentOffsetRollRange.min...alignmentOffsetRollRange.max
-        }
-        if alignmentOffsetYawRangeSelected {
-            rule[Camera2Params.alignmentOffsetYaw] = alignmentOffsetYawRange.min...alignmentOffsetYawRange.max
+            = Set(zoomVelocityControlQualityModes.compactMap {Camera2ZoomVelocityControlQualityMode(fromArsdk: $0)})
         }
         if exposureMeteringsSelected {
             rule[Camera2Params.autoExposureMeteringMode] = Set(exposureMeterings.compactMap {
@@ -1027,6 +1167,18 @@ extension Arsdk_Camera_Capabilities.Rule {
         }
         if storagePoliciesSelected {
             rule[Camera2Params.storagePolicy] = Set(storagePolicies.compactMap {Camera2StoragePolicy(fromArsdk: $0)})
+        }
+        if spectrumsSelected {
+            let spectrumsResult = Set(spectrums.compactMap {Camera2Spectrum(fromArsdk: $0)})
+            rule[Camera2Params.spectrum] = spectrumsResult.isEmpty ? Set([.visible]) : spectrumsResult
+        }
+        if lowLightModeSelectionsSelected {
+            rule[Camera2Params.lowLightModeSelection] = Set(lowLightModeSelections.compactMap {
+                Camera2LowLightModeSelection(fromArsdk: $0)
+            })
+        }
+        if lowLightModesSelected {
+            rule[Camera2Params.lowLightMode] = Set(lowLightModes.compactMap {Camera2LowLightMode(fromArsdk: $0)})
         }
 
         return rule
@@ -1058,11 +1210,11 @@ extension Arsdk_Camera_Config {
             config[Camera2Params.photoFileFormat] = photoFileFormat
         }
         if photoSignatureSelected,
-            let photoDigitalSignature = Camera2DigitalSignature(fromArsdk: photoSignature) {
+           let photoDigitalSignature = Camera2DigitalSignature(fromArsdk: photoSignature) {
             config[Camera2Params.photoDigitalSignature] = photoDigitalSignature
         }
         if photoBracketingPresetSelected,
-            let photoBracketing = Camera2BracketingValue(fromArsdk: photoBracketingPreset) {
+           let photoBracketing = Camera2BracketingValue(fromArsdk: photoBracketingPreset) {
             config[Camera2Params.photoBracketing] = photoBracketing
         }
         if photoBurstValueSelected, let photoBurst = Camera2BurstValue(fromArsdk: photoBurstValue) {
@@ -1075,33 +1227,33 @@ extension Arsdk_Camera_Config {
             config[Camera2Params.photoGpslapseInterval] = photoGpsLapseInterval
         }
         if photoStreamingModeSelected,
-            let photoStreamingMode = Camera2PhotoStreamingMode(fromArsdk: photoStreamingMode) {
+           let photoStreamingMode = Camera2PhotoStreamingMode(fromArsdk: photoStreamingMode) {
             config[Camera2Params.photoStreamingMode] = photoStreamingMode
         }
         if videoRecordingModeSelected,
-            let videoRecordingMode = Camera2VideoRecordingMode(fromArsdk: videoRecordingMode) {
+           let videoRecordingMode = Camera2VideoRecordingMode(fromArsdk: videoRecordingMode) {
             config[Camera2Params.videoRecordingMode] = videoRecordingMode
         }
         if videoRecordingDynamicRangeSelected,
-            let videoRecordingDynamicRange = Camera2DynamicRange(fromArsdk: videoRecordingDynamicRange) {
+           let videoRecordingDynamicRange = Camera2DynamicRange(fromArsdk: videoRecordingDynamicRange) {
             config[Camera2Params.videoRecordingDynamicRange] = videoRecordingDynamicRange
         }
         if videoRecordingCodecSelected, let videoRecordingCodec = Camera2VideoCodec(fromArsdk: videoRecordingCodec) {
             config[Camera2Params.videoRecordingCodec] = videoRecordingCodec
         }
         if videoRecordingResolutionSelected,
-            let videoRecordingResolution = Camera2RecordingResolution(fromArsdk: videoRecordingResolution) {
+           let videoRecordingResolution = Camera2RecordingResolution(fromArsdk: videoRecordingResolution) {
             config[Camera2Params.videoRecordingResolution] = videoRecordingResolution
         }
         if videoRecordingFramerateSelected,
-            let videoRecordingFramerate = Camera2RecordingFramerate(fromArsdk: videoRecordingFramerate) {
+           let videoRecordingFramerate = Camera2RecordingFramerate(fromArsdk: videoRecordingFramerate) {
             config[Camera2Params.videoRecordingFramerate] = videoRecordingFramerate
         }
         if videoRecordingBitrateSelected {
             config[Camera2Params.videoRecordingBitrate] = UInt(videoRecordingBitrate)
         }
         if audioRecordingModeSelected,
-            let audioRecordingMode = Camera2AudioRecordingMode(fromArsdk: audioRecordingMode) {
+           let audioRecordingMode = Camera2AudioRecordingMode(fromArsdk: audioRecordingMode) {
             config[Camera2Params.audioRecordingMode] = audioRecordingMode
         }
         if autoRecordModeSelected, let autoRecordMode = Camera2AutoRecordMode(fromArsdk: autoRecordMode) {
@@ -1111,26 +1263,26 @@ extension Arsdk_Camera_Config {
             config[Camera2Params.exposureMode] = exposureMode
         }
         if exposureMaximumIsoSensitivitySelected,
-            let maximumIsoSensitivity = Camera2Iso(fromArsdk: exposureMaximumIsoSensitivity) {
+           let maximumIsoSensitivity = Camera2Iso(fromArsdk: exposureMaximumIsoSensitivity) {
             config[Camera2Params.maximumIsoSensitivity] = maximumIsoSensitivity
         }
         if exposureManualIsoSensitivitySelected,
-            let isoSensitivity = Camera2Iso(fromArsdk: exposureManualIsoSensitivity) {
+           let isoSensitivity = Camera2Iso(fromArsdk: exposureManualIsoSensitivity) {
             config[Camera2Params.isoSensitivity] = isoSensitivity
         }
         if exposureManualShutterSpeedSelected,
-            let shutterSpeed = Camera2ShutterSpeed(fromArsdk: exposureManualShutterSpeed) {
+           let shutterSpeed = Camera2ShutterSpeed(fromArsdk: exposureManualShutterSpeed) {
             config[Camera2Params.shutterSpeed] = shutterSpeed
         }
         if evCompensationSelected,
-            let exposureCompensation = Camera2EvCompensation(fromArsdk: evCompensation) {
+           let exposureCompensation = Camera2EvCompensation(fromArsdk: evCompensation) {
             config[Camera2Params.exposureCompensation] = exposureCompensation
         }
         if whiteBalanceModeSelected, let whiteBalanceMode = Camera2WhiteBalanceMode(fromArsdk: whiteBalanceMode) {
             config[Camera2Params.whiteBalanceMode] = whiteBalanceMode
         }
         if whiteBalanceTemperatureSelected,
-            let whiteBalanceTemperature = Camera2WhiteBalanceTemperature(fromArsdk: whiteBalanceTemperature) {
+           let whiteBalanceTemperature = Camera2WhiteBalanceTemperature(fromArsdk: whiteBalanceTemperature) {
             config[Camera2Params.whiteBalanceTemperature] = whiteBalanceTemperature
         }
         if imageStyleSelected, let imageStyle = Camera2Style(fromArsdk: imageStyle) {
@@ -1149,17 +1301,8 @@ extension Arsdk_Camera_Config {
             config[Camera2Params.zoomMaxSpeed] = zoomMaxSpeed
         }
         if zoomVelocityControlQualityModeSelected,
-            let controlQualityMode = Camera2ZoomVelocityControlQualityMode(fromArsdk: zoomVelocityControlQualityMode) {
+           let controlQualityMode = Camera2ZoomVelocityControlQualityMode(fromArsdk: zoomVelocityControlQualityMode) {
             config[Camera2Params.zoomVelocityControlQualityMode] = controlQualityMode
-        }
-        if alignmentOffsetPitchSelected {
-            config[Camera2Params.alignmentOffsetPitch] = alignmentOffsetPitch
-        }
-        if alignmentOffsetRollSelected {
-            config[Camera2Params.alignmentOffsetRoll] = alignmentOffsetRoll
-        }
-        if alignmentOffsetYawSelected {
-            config[Camera2Params.alignmentOffsetYaw] = alignmentOffsetYaw
         }
         if exposureMeteringSelected, let autoExposureMeteringMode = Camera2AutoExposureMeteringMode(
             fromArsdk: exposureMetering) {
@@ -1167,6 +1310,16 @@ extension Arsdk_Camera_Config {
         }
         if storagePolicySelected, let storagePolicy = Camera2StoragePolicy(fromArsdk: storagePolicy) {
             config[Camera2Params.storagePolicy] = storagePolicy
+        }
+        if spectrumSelected, let spectrum = Camera2Spectrum(fromArsdk: spectrum) {
+            config[Camera2Params.spectrum] = spectrum
+        }
+        if lowLightModeSelectionSelected,
+           let lowLightModeSelection = Camera2LowLightModeSelection(fromArsdk: lowLightModeSelection) {
+            config[Camera2Params.lowLightModeSelection] = lowLightModeSelection
+        }
+        if lowLightModeSelected, let lowLightMode = Camera2LowLightMode(fromArsdk: lowLightMode) {
+            config[Camera2Params.lowLightMode] = lowLightMode
         }
         return config
     }
@@ -1309,18 +1462,6 @@ extension Camera2ConfigCore.Config {
             config.zoomVelocityControlQualityMode = zoomVelocityControlQualityMode.arsdkValue!
             config.zoomVelocityControlQualityModeSelected = true
         }
-        if let alignmentOffsetPitch = self[Camera2Params.alignmentOffsetPitch] {
-            config.alignmentOffsetPitch = alignmentOffsetPitch
-            config.alignmentOffsetPitchSelected = true
-        }
-        if let alignmentOffsetRoll = self[Camera2Params.alignmentOffsetRoll] {
-            config.alignmentOffsetRoll = alignmentOffsetRoll
-            config.alignmentOffsetRollSelected = true
-        }
-        if let alignmentOffsetYaw = self[Camera2Params.alignmentOffsetYaw] {
-            config.alignmentOffsetYaw = alignmentOffsetYaw
-            config.alignmentOffsetYawSelected = true
-        }
         if let exposureMetering = self[Camera2Params.autoExposureMeteringMode] {
             config.exposureMetering = exposureMetering.arsdkValue!
             config.exposureMeteringSelected = true
@@ -1329,8 +1470,57 @@ extension Camera2ConfigCore.Config {
             config.storagePolicy = userStorage.arsdkValue!
             config.storagePolicySelected = true
         }
+        if let spectrum = self[Camera2Params.spectrum] {
+            config.spectrum = spectrum.arsdkValue!
+            config.spectrumSelected = true
+        }
+        if let lowLightModeSelection = self[Camera2Params.lowLightModeSelection] {
+            config.lowLightModeSelection = lowLightModeSelection.arsdkValue!
+            config.lowLightModeSelectionSelected = true
+        }
+        if let lowLightMode = self[Camera2Params.lowLightMode] {
+            config.lowLightMode = lowLightMode.arsdkValue!
+            config.lowLightModeSelected = true
+        }
         return config
     }
+}
+
+/// Extension that adds conversion to `Camera2ZoomPreset`.
+extension Arsdk_Camera_Event.State.Zoom.Preset {
+    var gsdk: (Camera2ZoomPreset, Double)? {
+        return  (Camera2ZoomPreset(fromArsdk: preset), Double(value)) as? (Camera2ZoomPreset, Double)
+    }
+}
+
+/// Extension that adds conversion to `Camera2ZoomRange`.
+extension Arsdk_Camera_Event.State.Zoom.CameraRange {
+    var gsdk: (Camera2Subtype, Camera2ZoomRange)? {
+        return(Camera2Subtype(fromArsdk: physCam),
+               Camera2ZoomRange(
+                minLevel: Double(levelMin),
+                maxLevel: Double(levelMax),
+                maxLosslessLevel: Double(highQualityLevelMax),
+                minHfov: hasHfovMin ? Double(hfovMin.value).toDegrees() : nil,
+                maxHfov: hasHfovMax ? Double(hfovMax.value).toDegrees() : nil)
+        ) as? (Camera2Subtype, Camera2ZoomRange)
+    }
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension Camera2ZoomPreset: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<Camera2ZoomPreset, Arsdk_Camera_ZoomPresetEnum>([
+        .wide: .zoomPresetWide,
+        .thermal: .zoomPresetThermal,
+        .tele: .zoomPresetTele,
+        .max: .zoomPresetMax])
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension Camera2Subtype: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<Camera2Subtype, Arsdk_Camera_CameraSubtype>([
+        .wide: .wide,
+        .tele: .tele])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
@@ -1369,7 +1559,9 @@ extension Camera2PhotoMode: ArsdkMappableEnum {
 extension Camera2PhotoResolution: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2PhotoResolution, Arsdk_Camera_PhotoResolution>([
         .res12MegaPixels: .photoResolution12MegaPixels,
-        .res48MegaPixels: .photoResolution48MegaPixels])
+        .res21MegaPixels: .photoResolution21MegaPixels,
+        .res48MegaPixels: .photoResolution48MegaPixels,
+        .res50MegaPixels: .photoResolution50MegaPixels])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
@@ -1430,7 +1622,8 @@ extension Camera2VideoRecordingMode: ArsdkMappableEnum {
 extension Camera2RecordingResolution: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2RecordingResolution, Arsdk_Camera_VideoResolution>([
         .resUhd4k: .videoResolution2160P,
-        .res1080p: .videoResolution1080P])
+        .res1080p: .videoResolution1080P,
+        .res720p: .videoResolution720P])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
@@ -1501,8 +1694,13 @@ extension Camera2PhotoCaptureState.StopReason: ArsdkMappableEnum {
         .captureDone: .captureDone,
         .configurationChange: .configurationChange,
         .errorInsufficientStorageSpace: .insufficientStorageSpace,
+        .errorInactiveCamera: .inactiveCamera,
+        .errorArbitration: .arbitration,
+        .errorAlready: .already,
+        .errorStorageUnavailable: .storageUnavailable,
         .errorInternal: .internalError,
-        .userRequest: .userRequest])
+        .userRequest: .userRequest,
+        .errorStorageEncrypted: .storageEncrypted])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
@@ -1510,9 +1708,15 @@ extension Camera2RecordingState.StopReason: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2RecordingState.StopReason, Arsdk_Camera_RecordingStopReason>([
         .configurationChange: .configurationChange,
         .errorInsufficientStorageSpace: .insufficientStorageSpace,
+        .errorInsufficientStorageSpaceFallback: .insufficientStorageSpaceFallback,
         .errorInsufficientStorageSpeed: .insufficientStorageSpeed,
+        .errorInactiveCamera: .inactiveCamera,
+        .errorArbitration: .arbitration,
+        .errorAlready: .already,
+        .errorStorageUnavailable: .storageUnavailable,
         .errorInternal: .internalError,
-        .userRequest: .userRequest])
+        .userRequest: .userRequest,
+        .errorStorageEncrypted: .storageEncrypted])
 }
 
 /// Extension that add conversion from/to arsdk enum.
@@ -1714,16 +1918,17 @@ extension Camera2Style: ArsdkMappableEnum {
 /// Extension that add conversion from/to arsdk enum.
 extension Camera2ZoomVelocityControlQualityMode: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2ZoomVelocityControlQualityMode,
-        Arsdk_Camera_ZoomVelocityControlQualityMode>([
-            .allowDegrading: .allowDegradation,
-            .stopBeforeDegrading: .stopBeforeDegradation])
+                                    Arsdk_Camera_ZoomVelocityControlQualityMode>([
+                                        .allowDegrading: .allowDegradation,
+                                        .stopBeforeDegrading: .stopBeforeDegradation])
 }
 
 /// Extension that add conversion from/to arsdk enum.
 extension Camera2ZoomControlMode: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2ZoomControlMode, Arsdk_Camera_ZoomControlMode>([
         .level: .level,
-        .velocity: .velocity])
+        .velocity: .velocity,
+        .hfov: .hfov])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
@@ -1736,9 +1941,31 @@ extension Camera2AutoExposureMeteringMode: ArsdkMappableEnum {
 /// Extension that adds conversion from/to arsdk enum.
 extension Camera2StoragePolicy: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2StoragePolicy, Arsdk_Camera_StoragePolicy>([
-        .automatic: .auto,
         .internal: .internal,
-        .removable: .removable])
+        .removable: .removable,
+        .internalPriority: .priorityInternal,
+        .removablePriority: .priorityRemovable])
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension Camera2Spectrum: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<Camera2Spectrum, Arsdk_Camera_Spectrum>([
+        .visible: .visible,
+        .thermal: .thermal])
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension Camera2LowLightModeSelection: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<Camera2LowLightModeSelection, Arsdk_Camera_LowLightModeSelection>([
+        .manual: .manual,
+        .automatic: .automatic])
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension Camera2LowLightMode: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<Camera2LowLightMode, Arsdk_Camera_LowLightMode>([
+        .enabled: .enabled,
+        .disabled: .disabled])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
@@ -1791,7 +2018,9 @@ extension Camera2DynamicRange: StorableEnum {
 extension Camera2PhotoResolution: StorableEnum {
     static var storableMapper = Mapper<Camera2PhotoResolution, String>([
         .res12MegaPixels: "res12MegaPixels",
-        .res48MegaPixels: "res48MegaPixels"])
+        .res21MegaPixels: "res21MegaPixels",
+        .res48MegaPixels: "res48MegaPixels",
+        .res50MegaPixels: "res50MegaPixels"])
 }
 
 /// Extension to make Camera2PhotoFormat storable.
@@ -1859,7 +2088,8 @@ extension Camera2VideoCodec: StorableEnum {
 extension Camera2RecordingResolution: StorableEnum {
     static var storableMapper = Mapper<Camera2RecordingResolution, String>([
         .resUhd4k: "uhd4k",
-        .res1080p: "1080p"])
+        .res1080p: "1080p",
+        .res720p: "720p"])
 }
 
 /// Extension to make Camera2RecordingFramerate storable.
@@ -1937,7 +2167,7 @@ extension Camera2Iso: StorableEnum {
         .iso32000: "iso 32000",
         .iso40000: "iso 40000",
         .iso51200: "iso 51200"
-        ])
+    ])
 }
 
 /// Extension to make Camera2ShutterSpeed storable.
@@ -1979,7 +2209,7 @@ extension Camera2ShutterSpeed: StorableEnum {
         .oneOver2: "1/2s",
         .oneOver1_5: "1/1.5s",
         .one: "1s"
-        ])
+    ])
 }
 
 /// Extension to make Camera2EvCompensation storable.
@@ -2004,7 +2234,7 @@ extension Camera2EvCompensation: StorableEnum {
         .ev2_33: "+2.33 ev",
         .ev2_67: "+2.67 ev",
         .ev3_00: "+3.00 ev"
-        ])
+    ])
 }
 
 /// Extension to make Camera2WhiteBalanceMode storable.
@@ -2118,9 +2348,33 @@ extension Camera2AutoExposureMeteringMode: StorableEnum {
 /// Extension to make Camera2UserStorage storable.
 extension Camera2StoragePolicy: StorableEnum {
     static var storableMapper = Mapper<Camera2StoragePolicy, String>([
-        .automatic: "automatic",
         .internal: "internal",
-        .removable: "removable"])
+        .removable: "removable",
+        .internalPriority: "internalPriority",
+        .removablePriority: "removablePriority"])
+}
+
+/// Extension to make Camera2Spectrum storable.
+extension Camera2Spectrum: StorableEnum {
+    static var storableMapper = Mapper<Camera2Spectrum, String>([
+        .visible: "visible",
+        .thermal: "thermal"])
+}
+
+/// Extension to make Camera2LowLightModeSelection storable.
+extension Camera2LowLightModeSelection: StorableEnum {
+    static var storableMapper = Mapper<Camera2LowLightModeSelection, String>([
+        .manual: "manual",
+        .automatic: "automatic"
+    ])
+}
+
+/// Extension to make Camera2LowLightMode storable.
+extension Camera2LowLightMode: StorableEnum {
+    static var storableMapper = Mapper<Camera2LowLightMode, String>([
+        .enabled: "enabled",
+        .disabled: "disabled"
+    ])
 }
 
 /// Extension to make Camera2ConfigCore.Config storable.
@@ -2128,13 +2382,13 @@ extension Camera2ConfigCore.Config: StorableType {
 
     private enum Key: String {
         case cameraMode, photoMode, photoDynamicRange, photoResolution, photoFormat, photoFileFormat,
-        photoDigitalSignature, photoBracketing, photoBurst, photoTimelapseInterval, photoGpslapseInterval,
-        photoStreamingMode, videoRecordingMode, videoRecordingDynamicRange, videoRecordingCodec,
-        videoRecordingResolution, videoRecordingFramerate, videoRecordingBitrate,
-        audioRecordingMode, autoRecordMode, exposureMode, maximumIsoSensitivity,
-        isoSensitivity, shutterSpeed, exposureCompensation, whiteBalanceMode, whiteBalanceTemperature, imageStyle,
-        imageContrast, imageSaturation, imageSharpness, zoomMaxSpeed, zoomVelocityControlQualityMode,
-        alignmentOffsetPitch, alignmentOffsetRoll, alignmentOffsetYaw, autoExposureMeteringMode, userStorage
+             photoDigitalSignature, photoBracketing, photoBurst, photoTimelapseInterval, photoGpslapseInterval,
+             photoStreamingMode, videoRecordingMode, videoRecordingDynamicRange, videoRecordingCodec,
+             videoRecordingResolution, videoRecordingFramerate, videoRecordingBitrate,
+             audioRecordingMode, autoRecordMode, exposureMode, maximumIsoSensitivity,
+             isoSensitivity, shutterSpeed, exposureCompensation, whiteBalanceMode, whiteBalanceTemperature, imageStyle,
+             imageContrast, imageSaturation, imageSharpness, zoomMaxSpeed, zoomVelocityControlQualityMode,
+             autoExposureMeteringMode, userStorage, spectrum, lowLightModeSelection, lowLightMode
     }
 
     init?(from content: AnyObject?) {
@@ -2239,20 +2493,20 @@ extension Camera2ConfigCore.Config: StorableType {
             if let param = Camera2ZoomVelocityControlQualityMode(content[Key.zoomVelocityControlQualityMode.rawValue]) {
                 self[Camera2Params.zoomVelocityControlQualityMode] = param.storableValue
             }
-            if let param = Double(content[Key.alignmentOffsetPitch.rawValue]) {
-                self[Camera2Params.alignmentOffsetPitch] = param.storableValue
-            }
-            if let param = Double(content[Key.alignmentOffsetRoll.rawValue]) {
-                self[Camera2Params.alignmentOffsetRoll] = param.storableValue
-            }
-            if let param = Double(content[Key.alignmentOffsetYaw.rawValue]) {
-                self[Camera2Params.alignmentOffsetYaw] = param.storableValue
-            }
             if let param = Camera2AutoExposureMeteringMode(content[Key.autoExposureMeteringMode.rawValue]) {
                 self[Camera2Params.autoExposureMeteringMode] = param.storableValue
             }
             if let param = Camera2StoragePolicy(content[Key.userStorage.rawValue]) {
                 self[Camera2Params.storagePolicy] = param.storableValue
+            }
+            if let param = Camera2Spectrum(content[Key.spectrum.rawValue]) {
+                self[Camera2Params.spectrum] = param.storableValue
+            }
+            if let param = Camera2LowLightModeSelection(content[Key.lowLightModeSelection.rawValue]) {
+                self[Camera2Params.lowLightModeSelection] = param.storableValue
+            }
+            if let param = Camera2LowLightMode(content[Key.lowLightMode.rawValue]) {
+                self[Camera2Params.lowLightMode] = param.storableValue
             }
         } else {
             return nil
@@ -2360,20 +2614,20 @@ extension Camera2ConfigCore.Config: StorableType {
         if let param = self[Camera2Params.zoomVelocityControlQualityMode] {
             configDict[Key.zoomVelocityControlQualityMode.rawValue] = AnyStorable(param)
         }
-        if let param = self[Camera2Params.alignmentOffsetPitch] {
-            configDict[Key.alignmentOffsetPitch.rawValue] = AnyStorable(param)
-        }
-        if let param = self[Camera2Params.alignmentOffsetRoll] {
-            configDict[Key.alignmentOffsetRoll.rawValue] = AnyStorable(param)
-        }
-        if let param = self[Camera2Params.alignmentOffsetYaw] {
-            configDict[Key.alignmentOffsetYaw.rawValue] = AnyStorable(param)
-        }
         if let param = self[Camera2Params.autoExposureMeteringMode] {
             configDict[Key.autoExposureMeteringMode.rawValue] = AnyStorable(param)
         }
         if let param = self[Camera2Params.storagePolicy] {
             configDict[Key.userStorage.rawValue] = AnyStorable(param)
+        }
+        if let param = self[Camera2Params.spectrum] {
+            configDict[Key.spectrum.rawValue] = AnyStorable(param)
+        }
+        if let param = self[Camera2Params.lowLightModeSelection] {
+            configDict[Key.lowLightModeSelection.rawValue] = AnyStorable(param)
+        }
+        if let param = self[Camera2Params.lowLightMode] {
+            configDict[Key.lowLightMode.rawValue] = AnyStorable(param)
         }
         return StorableDict(configDict)
     }
@@ -2384,18 +2638,18 @@ extension Camera2Rule: StorableType {
 
     private enum Key: String {
         case index, cameraMode, photoMode, photoDynamicRange, photoResolution, photoFormat, photoFileFormat,
-        photoDigitalSignature, photoBracketing, photoBurst, photoTimelapseInterval, photoGpslapseInterval,
-        photoStreamingMode, videoRecordingMode, videoRecordingDynamicRange, videoRecordingCodec,
-        videoRecordingResolution, videoRecordingFramerate, videoRecordingBitrate,
-        audioRecordingMode, autoRecordMode, exposureMode, maximumIsoSensitivity,
-        isoSensitivity, shutterSpeed, exposureCompensation, whiteBalanceMode, whiteBalanceTemperature, imageStyle,
-        imageContrast, imageSaturation, imageSharpness, zoomMaxSpeed, zoomVelocityControlQualityMode,
-        alignmentOffsetPitch, alignmentOffsetRoll, alignmentOffsetYaw, autoExposureMeteringMode, userStorage
+             photoDigitalSignature, photoBracketing, photoBurst, photoTimelapseInterval, photoGpslapseInterval,
+             photoStreamingMode, videoRecordingMode, videoRecordingDynamicRange, videoRecordingCodec,
+             videoRecordingResolution, videoRecordingFramerate, videoRecordingBitrate,
+             audioRecordingMode, autoRecordMode, exposureMode, maximumIsoSensitivity,
+             isoSensitivity, shutterSpeed, exposureCompensation, whiteBalanceMode, whiteBalanceTemperature, imageStyle,
+             imageContrast, imageSaturation, imageSharpness, zoomMaxSpeed, zoomVelocityControlQualityMode,
+             autoExposureMeteringMode, userStorage, spectrum, lowLightModeSelection, lowLightMode
     }
 
     init?(from content: AnyObject?) {
         if let content = StorableDict<String, AnyStorable>(from: content),
-            let index = Int(AnyStorable(content[Key.index.rawValue])) {
+           let index = Int(AnyStorable(content[Key.index.rawValue])) {
             self = Camera2Rule(index: index)
             if let domain = StorableArray<Camera2Mode>(content[Key.cameraMode.rawValue]) {
                 self[Camera2Params.mode] = Set(domain.storableValue)
@@ -2498,21 +2752,21 @@ extension Camera2Rule: StorableType {
                 content[Key.zoomVelocityControlQualityMode.rawValue]) {
                 self[Camera2Params.zoomVelocityControlQualityMode] = Set(domain.storableValue)
             }
-            if let domain = StorableArray<Double>(content[Key.alignmentOffsetPitch.rawValue]) {
-                self[Camera2Params.alignmentOffsetPitch] = domain.storableValue[0]...domain.storableValue[1]
-            }
-            if let domain = StorableArray<Double>(content[Key.alignmentOffsetRoll.rawValue]) {
-                self[Camera2Params.alignmentOffsetRoll] = domain.storableValue[0]...domain.storableValue[1]
-            }
-            if let domain = StorableArray<Double>(content[Key.alignmentOffsetYaw.rawValue]) {
-                self[Camera2Params.alignmentOffsetYaw] = domain.storableValue[0]...domain.storableValue[1]
-            }
             if let domain = StorableArray<Camera2AutoExposureMeteringMode>(content[
                 Key.autoExposureMeteringMode.rawValue]) {
                 self[Camera2Params.autoExposureMeteringMode] = Set(domain.storableValue)
             }
             if let domain = StorableArray<Camera2StoragePolicy>(content[Key.userStorage.rawValue]) {
                 self[Camera2Params.storagePolicy] = Set(domain.storableValue)
+            }
+            if let domain = StorableArray<Camera2Spectrum>(content[Key.spectrum.rawValue]) {
+                self[Camera2Params.spectrum] = Set(domain.storableValue)
+            }
+            if let domain = StorableArray<Camera2LowLightModeSelection>(content[Key.lowLightModeSelection.rawValue]) {
+                self[Camera2Params.lowLightModeSelection] = Set(domain.storableValue)
+            }
+            if let domain = StorableArray<Camera2LowLightMode>(content[Key.lowLightMode.rawValue]) {
+                self[Camera2Params.lowLightMode] = Set(domain.storableValue)
             }
         } else {
             return nil
@@ -2622,20 +2876,20 @@ extension Camera2Rule: StorableType {
         if let domain = self[Camera2Params.zoomVelocityControlQualityMode] {
             ruleDict[Key.zoomVelocityControlQualityMode.rawValue] = AnyStorable(Array(domain))
         }
-        if let domain: ClosedRange<Double> = self[Camera2Params.alignmentOffsetPitch] {
-            ruleDict[Key.alignmentOffsetPitch.rawValue] = AnyStorable([domain.lowerBound, domain.upperBound])
-        }
-        if let domain: ClosedRange<Double> = self[Camera2Params.alignmentOffsetRoll] {
-            ruleDict[Key.alignmentOffsetRoll.rawValue] = AnyStorable([domain.lowerBound, domain.upperBound])
-        }
-        if let domain: ClosedRange<Double> = self[Camera2Params.alignmentOffsetYaw] {
-            ruleDict[Key.alignmentOffsetYaw.rawValue] = AnyStorable([domain.lowerBound, domain.upperBound])
-        }
         if let domain = self[Camera2Params.autoExposureMeteringMode] {
             ruleDict[Key.autoExposureMeteringMode.rawValue] = AnyStorable(Array(domain))
         }
         if let domain = self[Camera2Params.storagePolicy] {
             ruleDict[Key.userStorage.rawValue] = AnyStorable(Array(domain))
+        }
+        if let domain = self[Camera2Params.spectrum] {
+            ruleDict[Key.spectrum.rawValue] = AnyStorable(Array(domain))
+        }
+        if let domain = self[Camera2Params.lowLightModeSelection] {
+            ruleDict[Key.lowLightModeSelection.rawValue] = AnyStorable(Array(domain))
+        }
+        if let domain = self[Camera2Params.lowLightMode] {
+            ruleDict[Key.lowLightMode.rawValue] = AnyStorable(Array(domain))
         }
         return StorableDict(ruleDict)
     }
@@ -2649,7 +2903,7 @@ extension Camera2ConfigCore.Capabilities: StorableType {
 
     convenience init?(from content: AnyObject?) {
         if let content = StorableDict<String, AnyStorable>(from: content),
-            let storedRules = StorableDict<String, Camera2Rule>(content[Key.rules.rawValue]) {
+           let storedRules = StorableDict<String, Camera2Rule>(content[Key.rules.rawValue]) {
             let rules = storedRules.storableValue.reduce(into: [Int: Camera2Rule]()) { result, value in
                 if let key = Int(value.key) {
                     result[key] = value.value

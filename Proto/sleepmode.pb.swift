@@ -249,19 +249,6 @@ struct Arsdk_Sleepmode_Event {
   init() {}
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Sleepmode_ActivationStatus: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Command: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Command.SetSecureMessage: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Command.Activate: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Event: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Event.State: @unchecked Sendable {}
-extension Arsdk_Sleepmode_Event.Activation: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.sleepmode"

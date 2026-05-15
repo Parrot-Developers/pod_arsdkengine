@@ -24,6 +24,7 @@ enum Arsdk_Devicemanager_ConnectionFailureReason: SwiftProtobuf.Enum {
   typealias RawValue = Int
   case peerLimit // = 0
   case authenticationFailed // = 1
+  case radioNotReady // = 2
   case UNRECOGNIZED(Int)
 
   init() {
@@ -34,6 +35,7 @@ enum Arsdk_Devicemanager_ConnectionFailureReason: SwiftProtobuf.Enum {
     switch rawValue {
     case 0: self = .peerLimit
     case 1: self = .authenticationFailed
+    case 2: self = .radioNotReady
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -42,6 +44,7 @@ enum Arsdk_Devicemanager_ConnectionFailureReason: SwiftProtobuf.Enum {
     switch self {
     case .peerLimit: return 0
     case .authenticationFailed: return 1
+    case .radioNotReady: return 2
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -55,6 +58,7 @@ extension Arsdk_Devicemanager_ConnectionFailureReason: CaseIterable {
   static var allCases: [Arsdk_Devicemanager_ConnectionFailureReason] = [
     .peerLimit,
     .authenticationFailed,
+    .radioNotReady,
   ]
 }
 
@@ -65,6 +69,7 @@ enum Arsdk_Devicemanager_Transport: SwiftProtobuf.Enum {
   case wifi // = 0
   case cellular // = 1
   case microhard // = 2
+  case mars // = 3
   case UNRECOGNIZED(Int)
 
   init() {
@@ -76,6 +81,7 @@ enum Arsdk_Devicemanager_Transport: SwiftProtobuf.Enum {
     case 0: self = .wifi
     case 1: self = .cellular
     case 2: self = .microhard
+    case 3: self = .mars
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -85,6 +91,7 @@ enum Arsdk_Devicemanager_Transport: SwiftProtobuf.Enum {
     case .wifi: return 0
     case .cellular: return 1
     case .microhard: return 2
+    case .mars: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -99,6 +106,7 @@ extension Arsdk_Devicemanager_Transport: CaseIterable {
     .wifi,
     .cellular,
     .microhard,
+    .mars,
   ]
 }
 
@@ -139,6 +147,100 @@ extension Arsdk_Devicemanager_WifiSecurity: CaseIterable {
   static var allCases: [Arsdk_Devicemanager_WifiSecurity] = [
     .none,
     .wpa2,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Devicemanager_DiscoveryStatus: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+
+  /// Successful scan 
+  case success // = 0
+
+  /// Radio is not ready or available. 
+  case errorRadioNotReady // = 1
+
+  /// Controller knows zero discoverable drone and cannot scan them. 
+  case errorNoDiscoverableDrone // = 2
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .success
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .success
+    case 1: self = .errorRadioNotReady
+    case 2: self = .errorNoDiscoverableDrone
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .success: return 0
+    case .errorRadioNotReady: return 1
+    case .errorNoDiscoverableDrone: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Devicemanager_DiscoveryStatus: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Devicemanager_DiscoveryStatus] = [
+    .success,
+    .errorRadioNotReady,
+    .errorNoDiscoverableDrone,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Devicemanager_PairingFailureReason: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+
+  /// Trying to pair but the controller radio is not ready 
+  case radioNotReady // = 0
+
+  /// Controller is in remote antenna mode without a remote antenna connected. 
+  case noRemoteAntenna // = 1
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .radioNotReady
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .radioNotReady
+    case 1: self = .noRemoteAntenna
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .radioNotReady: return 0
+    case .noRemoteAntenna: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Devicemanager_PairingFailureReason: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Devicemanager_PairingFailureReason] = [
+    .radioNotReady,
+    .noRemoteAntenna,
   ]
 }
 
@@ -192,6 +294,14 @@ struct Arsdk_Devicemanager_Command {
     set {id = .changeConnectionParameters(newValue)}
   }
 
+  var stopDiscovery: Arsdk_Devicemanager_Command.StopDiscovery {
+    get {
+      if case .stopDiscovery(let v)? = id {return v}
+      return Arsdk_Devicemanager_Command.StopDiscovery()
+    }
+    set {id = .stopDiscovery(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
@@ -200,6 +310,7 @@ struct Arsdk_Devicemanager_Command {
     case forgetDevice(Arsdk_Devicemanager_Command.ForgetDevice)
     case discoverDevices(Arsdk_Devicemanager_Command.DiscoverDevices)
     case changeConnectionParameters(Arsdk_Devicemanager_Command.ChangeConnectionParameters)
+    case stopDiscovery(Arsdk_Devicemanager_Command.StopDiscovery)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Devicemanager_Command.OneOf_ID, rhs: Arsdk_Devicemanager_Command.OneOf_ID) -> Bool {
@@ -227,6 +338,10 @@ struct Arsdk_Devicemanager_Command {
         guard case .changeConnectionParameters(let l) = lhs, case .changeConnectionParameters(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.stopDiscovery, .stopDiscovery): return {
+        guard case .stopDiscovery(let l) = lhs, case .stopDiscovery(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       default: return false
       }
     }
@@ -239,6 +354,16 @@ struct Arsdk_Devicemanager_Command {
     // methods supported on all messages.
 
     var includeDefaultCapabilities: Bool = false
+
+    /// If a client supporting the fast connection is connected when the
+    /// SkyController connects to a drone, it will pause its connection process
+    /// after sending the Connecting{sdk_ready=true} state. In this case, the
+    /// client is expected to send the other commands required to finish the
+    /// connection.
+    /// If the client does not support this, the legacy connection process will
+    /// be used, and the client is expected to wait for the Connected state
+    /// before sending any command.
+    var supportsFastConnection: Bool = false
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -278,12 +403,24 @@ struct Arsdk_Devicemanager_Command {
       set {transport = .microhard(newValue)}
     }
 
+    var mars: Arsdk_Devicemanager_Command.ConnectDevice.Mars {
+      get {
+        if case .mars(let v)? = transport {return v}
+        return Arsdk_Devicemanager_Command.ConnectDevice.Mars()
+      }
+      set {transport = .mars(newValue)}
+    }
+
+    /// For waking up remote devices via backup radio 
+    var wakeIdle: Bool = false
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     enum OneOf_Transport: Equatable {
       case wifi(Arsdk_Devicemanager_Command.ConnectDevice.Wifi)
       case cellular(Arsdk_Devicemanager_Command.ConnectDevice.Cellular)
       case microhard(Arsdk_Devicemanager_Command.ConnectDevice.Microhard)
+      case mars(Arsdk_Devicemanager_Command.ConnectDevice.Mars)
 
     #if !swift(>=4.1)
       static func ==(lhs: Arsdk_Devicemanager_Command.ConnectDevice.OneOf_Transport, rhs: Arsdk_Devicemanager_Command.ConnectDevice.OneOf_Transport) -> Bool {
@@ -301,6 +438,10 @@ struct Arsdk_Devicemanager_Command {
         }()
         case (.microhard, .microhard): return {
           guard case .microhard(let l) = lhs, case .microhard(let r) = rhs else { preconditionFailure() }
+          return l == r
+        }()
+        case (.mars, .mars): return {
+          guard case .mars(let l) = lhs, case .mars(let r) = rhs else { preconditionFailure() }
           return l == r
         }()
         default: return false
@@ -353,6 +494,16 @@ struct Arsdk_Devicemanager_Command {
       fileprivate var _power: SwiftProtobuf.Google_Protobuf_UInt32Value? = nil
     }
 
+    struct Mars {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      init() {}
+    }
+
     init() {}
   }
 
@@ -369,6 +520,22 @@ struct Arsdk_Devicemanager_Command {
   }
 
   struct DiscoverDevices {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    /// Look for idle devices, ie. powered off devices with the backup radio
+    /// active, which we can wake up remotely.
+    /// This will cause a disconnect if already connected to a drone.
+    /// This discovery will keep running until a connect or stop discovery cmd.
+    var useBackupRadio: Bool = false
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct StopDiscovery {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
@@ -411,12 +578,21 @@ struct Arsdk_Devicemanager_Command {
       set {transport = .microhard(newValue)}
     }
 
+    var mars: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Mars {
+      get {
+        if case .mars(let v)? = transport {return v}
+        return Arsdk_Devicemanager_Command.ChangeConnectionParameters.Mars()
+      }
+      set {transport = .mars(newValue)}
+    }
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     enum OneOf_Transport: Equatable {
       case wifi(Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi)
       case cellular(Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular)
       case microhard(Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard)
+      case mars(Arsdk_Devicemanager_Command.ChangeConnectionParameters.Mars)
 
     #if !swift(>=4.1)
       static func ==(lhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.OneOf_Transport, rhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.OneOf_Transport) -> Bool {
@@ -434,6 +610,10 @@ struct Arsdk_Devicemanager_Command {
         }()
         case (.microhard, .microhard): return {
           guard case .microhard(let l) = lhs, case .microhard(let r) = rhs else { preconditionFailure() }
+          return l == r
+        }()
+        case (.mars, .mars): return {
+          guard case .mars(let l) = lhs, case .mars(let r) = rhs else { preconditionFailure() }
           return l == r
         }()
         default: return false
@@ -509,6 +689,16 @@ struct Arsdk_Devicemanager_Command {
       fileprivate var _bandwidth: Arsdk_Microhard_BandwidthValue? = nil
     }
 
+    struct Mars {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      init() {}
+    }
+
     init() {}
   }
 
@@ -547,12 +737,30 @@ struct Arsdk_Devicemanager_Event {
     set {id = .discoveredDevices(newValue)}
   }
 
+  var pairingDone: Arsdk_Devicemanager_Event.PairingDone {
+    get {
+      if case .pairingDone(let v)? = id {return v}
+      return Arsdk_Devicemanager_Event.PairingDone()
+    }
+    set {id = .pairingDone(newValue)}
+  }
+
+  var pairingFailed: Arsdk_Devicemanager_Event.PairingFailed {
+    get {
+      if case .pairingFailed(let v)? = id {return v}
+      return Arsdk_Devicemanager_Event.PairingFailed()
+    }
+    set {id = .pairingFailed(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
     case state(Arsdk_Devicemanager_Event.State)
     case connectionFailure(Arsdk_Devicemanager_Event.ConnectionFailure)
     case discoveredDevices(Arsdk_Devicemanager_Event.DiscoveredDevices)
+    case pairingDone(Arsdk_Devicemanager_Event.PairingDone)
+    case pairingFailed(Arsdk_Devicemanager_Event.PairingFailed)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Devicemanager_Event.OneOf_ID, rhs: Arsdk_Devicemanager_Event.OneOf_ID) -> Bool {
@@ -570,6 +778,14 @@ struct Arsdk_Devicemanager_Event {
       }()
       case (.discoveredDevices, .discoveredDevices): return {
         guard case .discoveredDevices(let l) = lhs, case .discoveredDevices(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.pairingDone, .pairingDone): return {
+        guard case .pairingDone(let l) = lhs, case .pairingDone(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.pairingFailed, .pairingFailed): return {
+        guard case .pairingFailed(let l) = lhs, case .pairingFailed(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -734,6 +950,41 @@ struct Arsdk_Devicemanager_Event {
 
     var devices: [Arsdk_Devicemanager_DiscoveredDevice] = []
 
+    var status: Arsdk_Devicemanager_DiscoveryStatus = .success
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct PairingDone {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var pairedDevice: Arsdk_Devicemanager_KnownDevice {
+      get {return _pairedDevice ?? Arsdk_Devicemanager_KnownDevice()}
+      set {_pairedDevice = newValue}
+    }
+    /// Returns true if `pairedDevice` has been explicitly set.
+    var hasPairedDevice: Bool {return self._pairedDevice != nil}
+    /// Clears the value of `pairedDevice`. Subsequent reads from it will return its default value.
+    mutating func clearPairedDevice() {self._pairedDevice = nil}
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _pairedDevice: Arsdk_Devicemanager_KnownDevice? = nil
+  }
+
+  struct PairingFailed {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var reason: Arsdk_Devicemanager_PairingFailureReason = .radioNotReady
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
@@ -758,6 +1009,9 @@ struct Arsdk_Devicemanager_Capabilities {
   var hasMicrohard: Bool {return self._microhard != nil}
   /// Clears the value of `microhard`. Subsequent reads from it will return its default value.
   mutating func clearMicrohard() {self._microhard = nil}
+
+  /// Currently supported radios 
+  var availableTransports: [Arsdk_Devicemanager_Transport] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -802,6 +1056,9 @@ struct Arsdk_Devicemanager_ConnectionState {
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
+    /// Scanning for idle devices using backup radio 
+    var scanningIdleDevices: Bool = false
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
@@ -822,6 +1079,10 @@ struct Arsdk_Devicemanager_ConnectionState {
     mutating func clearDevice() {self._device = nil}
 
     var transport: Arsdk_Devicemanager_Transport = .wifi
+
+    var sdkReady: Bool = false
+
+    var backupLink: Arsdk_Backuplink_LinkState = .off
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -845,6 +1106,8 @@ struct Arsdk_Devicemanager_ConnectionState {
     mutating func clearDevice() {self._device = nil}
 
     var transport: Arsdk_Devicemanager_Transport = .wifi
+
+    var backupLink: Arsdk_Backuplink_LinkState = .off
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -937,6 +1200,26 @@ struct Arsdk_Devicemanager_MicrohardInfo {
   init() {}
 }
 
+struct Arsdk_Devicemanager_MarsInfo {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Arsdk_Devicemanager_BackupLinkInfo {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 struct Arsdk_Devicemanager_KnownDevice {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -978,6 +1261,24 @@ struct Arsdk_Devicemanager_KnownDevice {
   /// Clears the value of `microhard`. Subsequent reads from it will return its default value.
   mutating func clearMicrohard() {self._microhard = nil}
 
+  var mars: Arsdk_Devicemanager_MarsInfo {
+    get {return _mars ?? Arsdk_Devicemanager_MarsInfo()}
+    set {_mars = newValue}
+  }
+  /// Returns true if `mars` has been explicitly set.
+  var hasMars: Bool {return self._mars != nil}
+  /// Clears the value of `mars`. Subsequent reads from it will return its default value.
+  mutating func clearMars() {self._mars = nil}
+
+  var backupLink: Arsdk_Devicemanager_BackupLinkInfo {
+    get {return _backupLink ?? Arsdk_Devicemanager_BackupLinkInfo()}
+    set {_backupLink = newValue}
+  }
+  /// Returns true if `backupLink` has been explicitly set.
+  var hasBackupLink: Bool {return self._backupLink != nil}
+  /// Clears the value of `backupLink`. Subsequent reads from it will return its default value.
+  mutating func clearBackupLink() {self._backupLink = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -986,6 +1287,8 @@ struct Arsdk_Devicemanager_KnownDevice {
   fileprivate var _wifi: Arsdk_Devicemanager_WifiInfo? = nil
   fileprivate var _cellular: Arsdk_Devicemanager_CellularInfo? = nil
   fileprivate var _microhard: Arsdk_Devicemanager_MicrohardInfo? = nil
+  fileprivate var _mars: Arsdk_Devicemanager_MarsInfo? = nil
+  fileprivate var _backupLink: Arsdk_Devicemanager_BackupLinkInfo? = nil
 }
 
 struct Arsdk_Devicemanager_DiscoveredDevice {
@@ -1021,6 +1324,15 @@ struct Arsdk_Devicemanager_DiscoveredDevice {
   var hasCellularVisibility: Bool {return self._cellularVisibility != nil}
   /// Clears the value of `cellularVisibility`. Subsequent reads from it will return its default value.
   mutating func clearCellularVisibility() {self._cellularVisibility = nil}
+
+  var backupLinkVisibility: Arsdk_Devicemanager_DiscoveredDevice.BackupLinkVisibility {
+    get {return _backupLinkVisibility ?? Arsdk_Devicemanager_DiscoveredDevice.BackupLinkVisibility()}
+    set {_backupLinkVisibility = newValue}
+  }
+  /// Returns true if `backupLinkVisibility` has been explicitly set.
+  var hasBackupLinkVisibility: Bool {return self._backupLinkVisibility != nil}
+  /// Clears the value of `backupLinkVisibility`. Subsequent reads from it will return its default value.
+  mutating func clearBackupLinkVisibility() {self._backupLinkVisibility = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1068,56 +1380,26 @@ struct Arsdk_Devicemanager_DiscoveredDevice {
     fileprivate var _transportInfo: Arsdk_Devicemanager_CellularInfo? = nil
   }
 
+  struct BackupLinkVisibility {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    /// Whether the drone is booted, or idle and wake-able. 
+    var droneStarted: Bool = false
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
   init() {}
 
   fileprivate var _info: Arsdk_Devicemanager_DeviceInfo? = nil
   fileprivate var _wifiVisibility: Arsdk_Devicemanager_DiscoveredDevice.WifiVisibility? = nil
   fileprivate var _cellularVisibility: Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility? = nil
+  fileprivate var _backupLinkVisibility: Arsdk_Devicemanager_DiscoveredDevice.BackupLinkVisibility? = nil
 }
-
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Devicemanager_ConnectionFailureReason: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Transport: @unchecked Sendable {}
-extension Arsdk_Devicemanager_WifiSecurity: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ConnectDevice: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ConnectDevice.OneOf_Transport: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ConnectDevice.Wifi: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ConnectDevice.Cellular: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ConnectDevice.Microhard: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ForgetDevice: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.DiscoverDevices: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ChangeConnectionParameters: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.OneOf_Transport: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Wifi: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Cellular: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Event: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Event.State: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Event.State.OneOf_ConnectionState: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Event.State.KnownDevices: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Event.ConnectionFailure: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Event.DiscoveredDevices: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Capabilities: @unchecked Sendable {}
-extension Arsdk_Devicemanager_Capabilities.Microhard: @unchecked Sendable {}
-extension Arsdk_Devicemanager_ConnectionState: @unchecked Sendable {}
-extension Arsdk_Devicemanager_ConnectionState.Idle: @unchecked Sendable {}
-extension Arsdk_Devicemanager_ConnectionState.Searching: @unchecked Sendable {}
-extension Arsdk_Devicemanager_ConnectionState.Connecting: @unchecked Sendable {}
-extension Arsdk_Devicemanager_ConnectionState.Connected: @unchecked Sendable {}
-extension Arsdk_Devicemanager_ConnectionState.Disconnecting: @unchecked Sendable {}
-extension Arsdk_Devicemanager_DeviceInfo: @unchecked Sendable {}
-extension Arsdk_Devicemanager_WifiInfo: @unchecked Sendable {}
-extension Arsdk_Devicemanager_CellularInfo: @unchecked Sendable {}
-extension Arsdk_Devicemanager_MicrohardInfo: @unchecked Sendable {}
-extension Arsdk_Devicemanager_KnownDevice: @unchecked Sendable {}
-extension Arsdk_Devicemanager_DiscoveredDevice: @unchecked Sendable {}
-extension Arsdk_Devicemanager_DiscoveredDevice.WifiVisibility: @unchecked Sendable {}
-extension Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -1127,6 +1409,7 @@ extension Arsdk_Devicemanager_ConnectionFailureReason: SwiftProtobuf._ProtoNameP
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "CONNECTION_FAILURE_REASON_PEER_LIMIT"),
     1: .same(proto: "CONNECTION_FAILURE_REASON_AUTHENTICATION_FAILED"),
+    2: .same(proto: "CONNECTION_FAILURE_REASON_RADIO_NOT_READY"),
   ]
 }
 
@@ -1135,6 +1418,7 @@ extension Arsdk_Devicemanager_Transport: SwiftProtobuf._ProtoNameProviding {
     0: .same(proto: "TRANSPORT_WIFI"),
     1: .same(proto: "TRANSPORT_CELLULAR"),
     2: .same(proto: "TRANSPORT_MICROHARD"),
+    3: .same(proto: "TRANSPORT_MARS"),
   ]
 }
 
@@ -1142,6 +1426,21 @@ extension Arsdk_Devicemanager_WifiSecurity: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "WIFI_SECURITY_NONE"),
     1: .same(proto: "WIFI_SECURITY_WPA2"),
+  ]
+}
+
+extension Arsdk_Devicemanager_DiscoveryStatus: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "DISCOVERY_STATUS_SUCCESS"),
+    1: .same(proto: "DISCOVERY_STATUS_ERROR_RADIO_NOT_READY"),
+    2: .same(proto: "DISCOVERY_STATUS_ERROR_NO_DISCOVERABLE_DRONE"),
+  ]
+}
+
+extension Arsdk_Devicemanager_PairingFailureReason: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "PAIRING_FAILURE_REASON_RADIO_NOT_READY"),
+    1: .same(proto: "PAIRING_FAILURE_REASON_NO_REMOTE_ANTENNA"),
   ]
 }
 
@@ -1153,6 +1452,7 @@ extension Arsdk_Devicemanager_Command: SwiftProtobuf.Message, SwiftProtobuf._Mes
     18: .standard(proto: "forget_device"),
     19: .standard(proto: "discover_devices"),
     20: .standard(proto: "change_connection_parameters"),
+    21: .standard(proto: "stop_discovery"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1226,6 +1526,19 @@ extension Arsdk_Devicemanager_Command: SwiftProtobuf.Message, SwiftProtobuf._Mes
           self.id = .changeConnectionParameters(v)
         }
       }()
+      case 21: try {
+        var v: Arsdk_Devicemanager_Command.StopDiscovery?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .stopDiscovery(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .stopDiscovery(v)
+        }
+      }()
       default: break
       }
     }
@@ -1257,6 +1570,10 @@ extension Arsdk_Devicemanager_Command: SwiftProtobuf.Message, SwiftProtobuf._Mes
       guard case .changeConnectionParameters(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
+    case .stopDiscovery?: try {
+      guard case .stopDiscovery(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -1273,6 +1590,7 @@ extension Arsdk_Devicemanager_Command.GetState: SwiftProtobuf.Message, SwiftProt
   static let protoMessageName: String = Arsdk_Devicemanager_Command.protoMessageName + ".GetState"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "include_default_capabilities"),
+    2: .standard(proto: "supports_fast_connection"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1282,6 +1600,7 @@ extension Arsdk_Devicemanager_Command.GetState: SwiftProtobuf.Message, SwiftProt
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBoolField(value: &self.includeDefaultCapabilities) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.supportsFastConnection) }()
       default: break
       }
     }
@@ -1291,11 +1610,15 @@ extension Arsdk_Devicemanager_Command.GetState: SwiftProtobuf.Message, SwiftProt
     if self.includeDefaultCapabilities != false {
       try visitor.visitSingularBoolField(value: self.includeDefaultCapabilities, fieldNumber: 1)
     }
+    if self.supportsFastConnection != false {
+      try visitor.visitSingularBoolField(value: self.supportsFastConnection, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Devicemanager_Command.GetState, rhs: Arsdk_Devicemanager_Command.GetState) -> Bool {
     if lhs.includeDefaultCapabilities != rhs.includeDefaultCapabilities {return false}
+    if lhs.supportsFastConnection != rhs.supportsFastConnection {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1308,6 +1631,8 @@ extension Arsdk_Devicemanager_Command.ConnectDevice: SwiftProtobuf.Message, Swif
     2: .same(proto: "wifi"),
     3: .same(proto: "cellular"),
     4: .same(proto: "microhard"),
+    5: .same(proto: "mars"),
+    6: .standard(proto: "wake_idle"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1356,6 +1681,20 @@ extension Arsdk_Devicemanager_Command.ConnectDevice: SwiftProtobuf.Message, Swif
           self.transport = .microhard(v)
         }
       }()
+      case 5: try {
+        var v: Arsdk_Devicemanager_Command.ConnectDevice.Mars?
+        var hadOneofValue = false
+        if let current = self.transport {
+          hadOneofValue = true
+          if case .mars(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.transport = .mars(v)
+        }
+      }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.wakeIdle) }()
       default: break
       }
     }
@@ -1382,7 +1721,14 @@ extension Arsdk_Devicemanager_Command.ConnectDevice: SwiftProtobuf.Message, Swif
       guard case .microhard(let v)? = self.transport else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     }()
+    case .mars?: try {
+      guard case .mars(let v)? = self.transport else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
     case nil: break
+    }
+    if self.wakeIdle != false {
+      try visitor.visitSingularBoolField(value: self.wakeIdle, fieldNumber: 6)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1390,6 +1736,7 @@ extension Arsdk_Devicemanager_Command.ConnectDevice: SwiftProtobuf.Message, Swif
   static func ==(lhs: Arsdk_Devicemanager_Command.ConnectDevice, rhs: Arsdk_Devicemanager_Command.ConnectDevice) -> Bool {
     if lhs.uid != rhs.uid {return false}
     if lhs.transport != rhs.transport {return false}
+    if lhs.wakeIdle != rhs.wakeIdle {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1482,6 +1829,25 @@ extension Arsdk_Devicemanager_Command.ConnectDevice.Microhard: SwiftProtobuf.Mes
   }
 }
 
+extension Arsdk_Devicemanager_Command.ConnectDevice.Mars: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Command.ConnectDevice.protoMessageName + ".Mars"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Command.ConnectDevice.Mars, rhs: Arsdk_Devicemanager_Command.ConnectDevice.Mars) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Devicemanager_Command.ForgetDevice: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = Arsdk_Devicemanager_Command.protoMessageName + ".ForgetDevice"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -1516,6 +1882,38 @@ extension Arsdk_Devicemanager_Command.ForgetDevice: SwiftProtobuf.Message, Swift
 
 extension Arsdk_Devicemanager_Command.DiscoverDevices: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = Arsdk_Devicemanager_Command.protoMessageName + ".DiscoverDevices"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "use_backup_radio"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.useBackupRadio) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.useBackupRadio != false {
+      try visitor.visitSingularBoolField(value: self.useBackupRadio, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Command.DiscoverDevices, rhs: Arsdk_Devicemanager_Command.DiscoverDevices) -> Bool {
+    if lhs.useBackupRadio != rhs.useBackupRadio {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_Command.StopDiscovery: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Command.protoMessageName + ".StopDiscovery"
   static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1527,7 +1925,7 @@ extension Arsdk_Devicemanager_Command.DiscoverDevices: SwiftProtobuf.Message, Sw
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Arsdk_Devicemanager_Command.DiscoverDevices, rhs: Arsdk_Devicemanager_Command.DiscoverDevices) -> Bool {
+  static func ==(lhs: Arsdk_Devicemanager_Command.StopDiscovery, rhs: Arsdk_Devicemanager_Command.StopDiscovery) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1540,6 +1938,7 @@ extension Arsdk_Devicemanager_Command.ChangeConnectionParameters: SwiftProtobuf.
     2: .same(proto: "wifi"),
     3: .same(proto: "cellular"),
     4: .same(proto: "microhard"),
+    5: .same(proto: "mars"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1588,6 +1987,19 @@ extension Arsdk_Devicemanager_Command.ChangeConnectionParameters: SwiftProtobuf.
           self.transport = .microhard(v)
         }
       }()
+      case 5: try {
+        var v: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Mars?
+        var hadOneofValue = false
+        if let current = self.transport {
+          hadOneofValue = true
+          if case .mars(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.transport = .mars(v)
+        }
+      }()
       default: break
       }
     }
@@ -1613,6 +2025,10 @@ extension Arsdk_Devicemanager_Command.ChangeConnectionParameters: SwiftProtobuf.
     case .microhard?: try {
       guard case .microhard(let v)? = self.transport else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .mars?: try {
+      guard case .mars(let v)? = self.transport else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
     case nil: break
     }
@@ -1713,12 +2129,33 @@ extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard: Swif
   }
 }
 
+extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Mars: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Command.ChangeConnectionParameters.protoMessageName + ".Mars"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Mars, rhs: Arsdk_Devicemanager_Command.ChangeConnectionParameters.Mars) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Devicemanager_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Event"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .same(proto: "state"),
     17: .standard(proto: "connection_failure"),
     18: .standard(proto: "discovered_devices"),
+    19: .standard(proto: "pairing_done"),
+    20: .standard(proto: "pairing_failed"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1766,6 +2203,32 @@ extension Arsdk_Devicemanager_Event: SwiftProtobuf.Message, SwiftProtobuf._Messa
           self.id = .discoveredDevices(v)
         }
       }()
+      case 19: try {
+        var v: Arsdk_Devicemanager_Event.PairingDone?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .pairingDone(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .pairingDone(v)
+        }
+      }()
+      case 20: try {
+        var v: Arsdk_Devicemanager_Event.PairingFailed?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .pairingFailed(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .pairingFailed(v)
+        }
+      }()
       default: break
       }
     }
@@ -1788,6 +2251,14 @@ extension Arsdk_Devicemanager_Event: SwiftProtobuf.Message, SwiftProtobuf._Messa
     case .discoveredDevices?: try {
       guard case .discoveredDevices(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+    }()
+    case .pairingDone?: try {
+      guard case .pairingDone(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+    }()
+    case .pairingFailed?: try {
+      guard case .pairingFailed(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     case nil: break
     }
@@ -2021,6 +2492,7 @@ extension Arsdk_Devicemanager_Event.DiscoveredDevices: SwiftProtobuf.Message, Sw
   static let protoMessageName: String = Arsdk_Devicemanager_Event.protoMessageName + ".DiscoveredDevices"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "devices"),
+    2: .same(proto: "status"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2030,6 +2502,7 @@ extension Arsdk_Devicemanager_Event.DiscoveredDevices: SwiftProtobuf.Message, Sw
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.devices) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.status) }()
       default: break
       }
     }
@@ -2039,11 +2512,83 @@ extension Arsdk_Devicemanager_Event.DiscoveredDevices: SwiftProtobuf.Message, Sw
     if !self.devices.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.devices, fieldNumber: 1)
     }
+    if self.status != .success {
+      try visitor.visitSingularEnumField(value: self.status, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Devicemanager_Event.DiscoveredDevices, rhs: Arsdk_Devicemanager_Event.DiscoveredDevices) -> Bool {
     if lhs.devices != rhs.devices {return false}
+    if lhs.status != rhs.status {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_Event.PairingDone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Event.protoMessageName + ".PairingDone"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "paired_device"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._pairedDevice) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._pairedDevice {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Event.PairingDone, rhs: Arsdk_Devicemanager_Event.PairingDone) -> Bool {
+    if lhs._pairedDevice != rhs._pairedDevice {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_Event.PairingFailed: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_Event.protoMessageName + ".PairingFailed"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "reason"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.reason) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.reason != .radioNotReady {
+      try visitor.visitSingularEnumField(value: self.reason, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_Event.PairingFailed, rhs: Arsdk_Devicemanager_Event.PairingFailed) -> Bool {
+    if lhs.reason != rhs.reason {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2054,6 +2599,7 @@ extension Arsdk_Devicemanager_Capabilities: SwiftProtobuf.Message, SwiftProtobuf
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "discovery_transports"),
     2: .same(proto: "microhard"),
+    3: .standard(proto: "available_transports"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2064,6 +2610,7 @@ extension Arsdk_Devicemanager_Capabilities: SwiftProtobuf.Message, SwiftProtobuf
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedEnumField(value: &self.discoveryTransports) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._microhard) }()
+      case 3: try { try decoder.decodeRepeatedEnumField(value: &self.availableTransports) }()
       default: break
       }
     }
@@ -2080,12 +2627,16 @@ extension Arsdk_Devicemanager_Capabilities: SwiftProtobuf.Message, SwiftProtobuf
     try { if let v = self._microhard {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     } }()
+    if !self.availableTransports.isEmpty {
+      try visitor.visitPackedEnumField(value: self.availableTransports, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Devicemanager_Capabilities, rhs: Arsdk_Devicemanager_Capabilities) -> Bool {
     if lhs.discoveryTransports != rhs.discoveryTransports {return false}
     if lhs._microhard != rhs._microhard {return false}
+    if lhs.availableTransports != rhs.availableTransports {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2169,18 +2720,31 @@ extension Arsdk_Devicemanager_ConnectionState.Idle: SwiftProtobuf.Message, Swift
 
 extension Arsdk_Devicemanager_ConnectionState.Searching: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = Arsdk_Devicemanager_ConnectionState.protoMessageName + ".Searching"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "scanning_idle_devices"),
+  ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let _ = try decoder.nextFieldNumber() {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.scanningIdleDevices) }()
+      default: break
+      }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.scanningIdleDevices != false {
+      try visitor.visitSingularBoolField(value: self.scanningIdleDevices, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Devicemanager_ConnectionState.Searching, rhs: Arsdk_Devicemanager_ConnectionState.Searching) -> Bool {
+    if lhs.scanningIdleDevices != rhs.scanningIdleDevices {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2191,6 +2755,8 @@ extension Arsdk_Devicemanager_ConnectionState.Connecting: SwiftProtobuf.Message,
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "device"),
     2: .same(proto: "transport"),
+    3: .standard(proto: "sdk_ready"),
+    4: .standard(proto: "backup_link"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2201,6 +2767,8 @@ extension Arsdk_Devicemanager_ConnectionState.Connecting: SwiftProtobuf.Message,
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._device) }()
       case 2: try { try decoder.decodeSingularEnumField(value: &self.transport) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.sdkReady) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self.backupLink) }()
       default: break
       }
     }
@@ -2217,12 +2785,20 @@ extension Arsdk_Devicemanager_ConnectionState.Connecting: SwiftProtobuf.Message,
     if self.transport != .wifi {
       try visitor.visitSingularEnumField(value: self.transport, fieldNumber: 2)
     }
+    if self.sdkReady != false {
+      try visitor.visitSingularBoolField(value: self.sdkReady, fieldNumber: 3)
+    }
+    if self.backupLink != .off {
+      try visitor.visitSingularEnumField(value: self.backupLink, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Devicemanager_ConnectionState.Connecting, rhs: Arsdk_Devicemanager_ConnectionState.Connecting) -> Bool {
     if lhs._device != rhs._device {return false}
     if lhs.transport != rhs.transport {return false}
+    if lhs.sdkReady != rhs.sdkReady {return false}
+    if lhs.backupLink != rhs.backupLink {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2233,6 +2809,7 @@ extension Arsdk_Devicemanager_ConnectionState.Connected: SwiftProtobuf.Message, 
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "device"),
     2: .same(proto: "transport"),
+    3: .standard(proto: "backup_link"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2243,6 +2820,7 @@ extension Arsdk_Devicemanager_ConnectionState.Connected: SwiftProtobuf.Message, 
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._device) }()
       case 2: try { try decoder.decodeSingularEnumField(value: &self.transport) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.backupLink) }()
       default: break
       }
     }
@@ -2259,12 +2837,16 @@ extension Arsdk_Devicemanager_ConnectionState.Connected: SwiftProtobuf.Message, 
     if self.transport != .wifi {
       try visitor.visitSingularEnumField(value: self.transport, fieldNumber: 2)
     }
+    if self.backupLink != .off {
+      try visitor.visitSingularEnumField(value: self.backupLink, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Devicemanager_ConnectionState.Connected, rhs: Arsdk_Devicemanager_ConnectionState.Connected) -> Bool {
     if lhs._device != rhs._device {return false}
     if lhs.transport != rhs.transport {return false}
+    if lhs.backupLink != rhs.backupLink {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2463,6 +3045,44 @@ extension Arsdk_Devicemanager_MicrohardInfo: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
+extension Arsdk_Devicemanager_MarsInfo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".MarsInfo"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_MarsInfo, rhs: Arsdk_Devicemanager_MarsInfo) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_BackupLinkInfo: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".BackupLinkInfo"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_BackupLinkInfo, rhs: Arsdk_Devicemanager_BackupLinkInfo) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Devicemanager_KnownDevice: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".KnownDevice"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -2470,6 +3090,8 @@ extension Arsdk_Devicemanager_KnownDevice: SwiftProtobuf.Message, SwiftProtobuf.
     2: .same(proto: "wifi"),
     3: .same(proto: "cellular"),
     4: .same(proto: "microhard"),
+    5: .same(proto: "mars"),
+    6: .standard(proto: "backup_link"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2482,6 +3104,8 @@ extension Arsdk_Devicemanager_KnownDevice: SwiftProtobuf.Message, SwiftProtobuf.
       case 2: try { try decoder.decodeSingularMessageField(value: &self._wifi) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._cellular) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._microhard) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._mars) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._backupLink) }()
       default: break
       }
     }
@@ -2504,6 +3128,12 @@ extension Arsdk_Devicemanager_KnownDevice: SwiftProtobuf.Message, SwiftProtobuf.
     try { if let v = self._microhard {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
+    try { if let v = self._mars {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
+    try { if let v = self._backupLink {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2512,6 +3142,8 @@ extension Arsdk_Devicemanager_KnownDevice: SwiftProtobuf.Message, SwiftProtobuf.
     if lhs._wifi != rhs._wifi {return false}
     if lhs._cellular != rhs._cellular {return false}
     if lhs._microhard != rhs._microhard {return false}
+    if lhs._mars != rhs._mars {return false}
+    if lhs._backupLink != rhs._backupLink {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2524,6 +3156,7 @@ extension Arsdk_Devicemanager_DiscoveredDevice: SwiftProtobuf.Message, SwiftProt
     2: .same(proto: "known"),
     3: .standard(proto: "wifi_visibility"),
     4: .standard(proto: "cellular_visibility"),
+    5: .standard(proto: "backup_link_visibility"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2536,6 +3169,7 @@ extension Arsdk_Devicemanager_DiscoveredDevice: SwiftProtobuf.Message, SwiftProt
       case 2: try { try decoder.decodeSingularBoolField(value: &self.known) }()
       case 3: try { try decoder.decodeSingularMessageField(value: &self._wifiVisibility) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._cellularVisibility) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._backupLinkVisibility) }()
       default: break
       }
     }
@@ -2558,6 +3192,9 @@ extension Arsdk_Devicemanager_DiscoveredDevice: SwiftProtobuf.Message, SwiftProt
     try { if let v = self._cellularVisibility {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
+    try { if let v = self._backupLinkVisibility {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2566,6 +3203,7 @@ extension Arsdk_Devicemanager_DiscoveredDevice: SwiftProtobuf.Message, SwiftProt
     if lhs.known != rhs.known {return false}
     if lhs._wifiVisibility != rhs._wifiVisibility {return false}
     if lhs._cellularVisibility != rhs._cellularVisibility {return false}
+    if lhs._backupLinkVisibility != rhs._backupLinkVisibility {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2644,6 +3282,38 @@ extension Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility: SwiftProtobuf
 
   static func ==(lhs: Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility, rhs: Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility) -> Bool {
     if lhs._transportInfo != rhs._transportInfo {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Devicemanager_DiscoveredDevice.BackupLinkVisibility: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Devicemanager_DiscoveredDevice.protoMessageName + ".BackupLinkVisibility"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "drone_started"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.droneStarted) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.droneStarted != false {
+      try visitor.visitSingularBoolField(value: self.droneStarted, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Devicemanager_DiscoveredDevice.BackupLinkVisibility, rhs: Arsdk_Devicemanager_DiscoveredDevice.BackupLinkVisibility) -> Bool {
+    if lhs.droneStarted != rhs.droneStarted {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

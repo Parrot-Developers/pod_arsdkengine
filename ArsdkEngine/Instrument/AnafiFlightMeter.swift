@@ -75,6 +75,12 @@ class AnafiFlightMeter: DeviceComponentController {
         }
     }
 
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        flightMeter.unpublish()
+    }
+
     /// Drone is about to be forgotten
     override func willForget() {
         deviceStore.clear()

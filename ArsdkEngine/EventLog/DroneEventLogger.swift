@@ -48,10 +48,10 @@ class DroneEventLogger: DeviceEventLogger {
 
     override public func didConnect() {
         if let softwareVersion = softwareVersion, let hardwareVersion = hardwareVersion, let serialHigh = serialHigh,
-            let serialLow = serialLow {
+           let serialLow = serialLow {
             eventLog.log("EVT:DRONE;event='connected';" +
-                "model_id='\(String(format: "%04x", device.deviceModel.internalId))';" +
-                "sw_version='\(softwareVersion)';hw_version='\(hardwareVersion)'")
+                         "model_id='\(String(format: "%04x", device.deviceModel.internalId))';" +
+                         "sw_version='\(softwareVersion)';hw_version='\(hardwareVersion)'")
             eventLog.log("EVTS:DRONE;serial='\(serialHigh)\(serialLow)'")
         }
     }
@@ -94,9 +94,9 @@ extension DroneEventLogger: ArsdkFeatureArdrone3PilotingstateCallback {
             if let systemPositionUtility = systemPositionUtility {
                 if let userLocation = systemPositionUtility.userLocation {
                     eventLog.log("EVTS:GPS;lat='\(userLocation.coordinate.latitude)';" +
-                        "long='\(userLocation.coordinate.longitude)';" +
-                        "acc='\(userLocation.horizontalAccuracy)';" +
-                        "time='\(userLocation.timestamp.timeIntervalSince1970)'")
+                                 "long='\(userLocation.coordinate.longitude)';" +
+                                 "acc='\(userLocation.horizontalAccuracy)';" +
+                                 "time='\(userLocation.timestamp.timeIntervalSince1970)'")
                 }
             }
         }

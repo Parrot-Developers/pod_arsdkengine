@@ -29,6 +29,7 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
 /// Altimeter component controller for Anafi messages based drones
 class AnafiAltimeter: DeviceComponentController {
@@ -36,18 +37,32 @@ class AnafiAltimeter: DeviceComponentController {
     /// Altimeter component
     private var altimeter: AltimeterCore!
 
+    /// Decoder for backup link events.
+    private var arsdkDecoder: ArsdkBackuplinkEventDecoder!
+
+    /// Decoder for navigation events.
+    private var navigationDecoder: ArsdkNavigationEventDecoder!
+
     /// Special value returned by `latitude` or `longitude` when the coordinate is not known.
     private static var UnknownCoordinate: Double = 500
 
-    /// Whether the onGpsLocationChanged callback was triggered once.
-    private var useOnGpsLocationChanged = false
+    /// Whether ArsdkNavigation messages are supported by the drone.
+    private var arsdkNavigationSupported = false
+
+    /// Whether altitude ATO in navigation message is supported by the drone.
+    private var isAltitudeAtoInNavigationSupported = false
+
+    /// Whether altitude AGL in navigation message is supported by the drone.
+    private var isAltitudeAglInNavigationSupported = false
 
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        self.altimeter = AltimeterCore(store: deviceController.device.instrumentStore)
+        arsdkDecoder = ArsdkBackuplinkEventDecoder(listener: self)
+        navigationDecoder = ArsdkNavigationEventDecoder(listener: self)
+        altimeter = AltimeterCore(store: deviceController.device.instrumentStore)
     }
 
     /// Drone is connected
@@ -60,14 +75,35 @@ class AnafiAltimeter: DeviceComponentController {
         altimeter.unpublish()
     }
 
+    override func willConnect() {
+        arsdkNavigationSupported = false
+        isAltitudeAtoInNavigationSupported = false
+        isAltitudeAglInNavigationSupported = false
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        altimeter.update(groundRelativeAltitude: nil)
+            .update(absoluteAltitude: nil)
+            .update(terrainData: nil)
+            .update(verticalSpeed: nil)
+            .publish()
+    }
+
     /// A command has been received
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureArdrone3PilotingstateUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureArdrone3PilotingstateUid:
             ArsdkFeatureArdrone3Pilotingstate.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureTerrainUid {
+        case kArsdkFeatureTerrainUid:
             ArsdkFeatureTerrain.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkDecoder.decode(command)
+            navigationDecoder.decode(command)
+        default:
+            break
         }
     }
 }
@@ -75,6 +111,7 @@ class AnafiAltimeter: DeviceComponentController {
 /// Anafi Piloting State decode callback implementation
 extension AnafiAltimeter: ArsdkFeatureArdrone3PilotingstateCallback {
     func onAltitudeChanged(altitude: Double) {
+        guard !isAltitudeAtoInNavigationSupported else { return }
         // this event informs about the altitude above take off
         altimeter.update(takeoffRelativeAltitude: altitude).notifyUpdated()
     }
@@ -84,20 +121,12 @@ extension AnafiAltimeter: ArsdkFeatureArdrone3PilotingstateCallback {
     }
 
     func onPositionChanged(latitude: Double, longitude: Double, altitude: Double) {
-        if useOnGpsLocationChanged {
-            return
-        }
-
-        if (latitude != AnafiAltimeter.UnknownCoordinate) && (longitude != AnafiAltimeter.UnknownCoordinate) {
-            altimeter.update(absoluteAltitude: altitude).notifyUpdated()
-        } else {
-            altimeter.update(absoluteAltitude: nil).notifyUpdated()
-        }
+        // nothing to do
     }
 
     func onGpsLocationChanged(latitude: Double, longitude: Double, altitude: Double,
                               latitudeAccuracy: Int, longitudeAccuracy: Int, altitudeAccuracy: Int) {
-        useOnGpsLocationChanged = true
+        guard !arsdkNavigationSupported else { return }
         if (latitude != AnafiAltimeter.UnknownCoordinate) && (longitude != AnafiAltimeter.UnknownCoordinate) {
             altimeter.update(absoluteAltitude: altitude).notifyUpdated()
         } else {
@@ -106,6 +135,8 @@ extension AnafiAltimeter: ArsdkFeatureArdrone3PilotingstateCallback {
     }
 
     func onAltitudeAboveGroundChanged(altitude: Float) {
+        guard !isAltitudeAglInNavigationSupported else { return }
+
         altimeter.update(groundRelativeAltitude: Double(altitude)).notifyUpdated()
     }
 }
@@ -126,5 +157,46 @@ extension AnafiAltimeter: ArsdkFeatureTerrainCallback {
             return
         }
         altimeter.notifyUpdated()
+    }
+}
+
+/// Backup link decode callback implementation.
+extension AnafiAltimeter: ArsdkBackuplinkEventDecoderListener {
+    func onTelemetry(_ telemetry: Arsdk_Backuplink_Event.Telemetry) {
+        altimeter.update(takeoffRelativeAltitude: Double(telemetry.altitudeAto)).notifyUpdated()
+    }
+
+    func onMainRadioDisconnecting(_ mainRadioDisconnecting: SwiftProtobuf.Google_Protobuf_Empty) {
+        // nothing to do
+    }
+}
+
+extension AnafiAltimeter: ArsdkNavigationEventDecoderListener {
+    func onLocation(_ location: Arsdk_Navigation_Event.Location) {
+        arsdkNavigationSupported = true
+
+        if location.hasLatitude && location.hasLongitude && location.hasAltitudeAmsl {
+            altimeter.update(absoluteAltitude: location.altitudeAmsl.value)
+        } else {
+            altimeter.update(absoluteAltitude: nil)
+        }
+
+        if location.hasAltitudeAto {
+            isAltitudeAtoInNavigationSupported = true
+            altimeter.update(takeoffRelativeAltitude: location.altitudeAto.value)
+        }
+        if location.hasAltitudeAgl {
+            isAltitudeAglInNavigationSupported = true
+            altimeter.update(groundRelativeAltitude: location.altitudeAgl.value)
+        }
+        altimeter.notifyUpdated()
+    }
+
+    func onState(_ state: Arsdk_Navigation_Event.State) {
+        // nothing to do
+    }
+
+    func onRawGnssLocation(_ rawGnssLocation: Arsdk_Navigation_Event.RawGnssLocation) {
+        // nothing to do
     }
 }

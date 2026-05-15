@@ -114,8 +114,7 @@ private extension DebugShellController {
     /// - Returns: `true` if the command has been sent
     func sendCommand(_ command: Command.OneOf_ID) -> Bool {
         if let encoder = Encoder.encoder(command) {
-            sendCommand(encoder)
-            return true
+            return sendCommand(encoder)
         }
         return false
     }
@@ -128,7 +127,6 @@ extension DebugShellController: ArsdkDeveloperEventDecoderListener {
             processShell(state.shell)
         }
         debugShell.publish()
-        debugShell.notifyUpdated()
     }
 
     /// Processes a `Shell` message.

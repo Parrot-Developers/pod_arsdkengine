@@ -62,7 +62,7 @@ class FtpCrashmlDownloaderDelegate: ArsdkCrashmlDownloaderDelegate {
                     .update(downloadingFlag: false)
                     .notifyUpdated()
                 self.currentRequest = nil
-        })
+            })
 
         return currentRequest != nil
     }

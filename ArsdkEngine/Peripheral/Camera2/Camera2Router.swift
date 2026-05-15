@@ -61,9 +61,9 @@ class Camera2Router: DeviceComponentController {
                         let zoomBackend = Camera2ZoomCommandEncoder(cameraId: cameraId)
                         let cameraController = Camera2Controller(store: deviceController.device.peripheralStore,
                                                                  deviceStore: deviceController.deviceStore
-                                                                  .getSettingsStore(key: key),
+                            .getSettingsStore(key: key),
                                                                  presetStore: deviceController.presetStore
-                                                                  .getSettingsStore(key: key),
+                            .getSettingsStore(key: key),
                                                                  id: cameraId,
                                                                  model: nil,
                                                                  backend: self,
@@ -106,6 +106,14 @@ class Camera2Router: DeviceComponentController {
         super.didDisconnect()
     }
 
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        // TODO: we hijack the willForget cb because it simply does the unpublish action we want.
+        // This is a bit of a hack, though, so we might want to streamline it at some point.
+        willForget()
+    }
+
     /// Preset did change.
     override func presetDidChange() {
         cameraControllers.forEach {
@@ -137,12 +145,10 @@ extension Camera2Router {
     ///   - command: command to send
     /// - Returns: `true` if the command has been sent
     func sendCameraCommand(_ command: Arsdk_Camera_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkCameraCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends command to query the list of cameras.
@@ -246,6 +252,33 @@ extension Camera2Router: Camera2CommandDelegate {
         resetZoom.cameraID = id
         _ = sendCameraCommand(.resetZoom(resetZoom))
     }
+
+    func set(id: UInt64, userLficCoordinates: CGPoint?) -> Bool {
+        var setUserLfic = Arsdk_Camera_Command.SetUserLfic()
+        setUserLfic.cameraID = id
+        if let coordinates = userLficCoordinates {
+            setUserLfic.coords = Arsdk_Camera_Vec2()
+            setUserLfic.coords.x = Float(coordinates.x)
+            setUserLfic.coords.y = Float(coordinates.y)
+        }
+        return sendCameraCommand(.setUserLfic(setUserLfic))
+    }
+
+    func setThermalAlignment(id: UInt64, offset: Double, axis: AlignmentAxis) -> Bool {
+        var setThermalAlignment = Arsdk_Camera_Command.SetAlignmentOffsets()
+        setThermalAlignment.cameraID = id
+        var alignmentOffset = Arsdk_Camera_AlignmentOffsets()
+        switch axis {
+        case .pitch:
+            alignmentOffset.pitch.value = offset
+        case .yaw:
+            alignmentOffset.yaw.value = offset
+        case .roll:
+            alignmentOffset.roll.value = offset
+        }
+        setThermalAlignment.alignmentOffsets = alignmentOffset
+        return sendCameraCommand(.setThermalAlignmentOffsets(setThermalAlignment))
+    }
 }
 
 /// Extension for Camera2 events processing.
@@ -257,13 +290,13 @@ extension Camera2Router: ArsdkCameraEventDecoderListener {
         cameraList.cameras.forEach { descriptor in
             let settingsKey = "\(settingKeyPrefix)\(descriptor.key)"
             if cameraControllers[descriptor.key] == nil,
-                let model: Camera2Model = Camera2Model.from(model: descriptor.value) {
+               let model: Camera2Model = Camera2Model.from(model: descriptor.value) {
                 let zoomBackend = Camera2ZoomCommandEncoder(cameraId: descriptor.key)
                 let cameraController = Camera2Controller(store: deviceController.device.peripheralStore,
                                                          deviceStore: deviceController.deviceStore
-                                                          .getSettingsStore(key: settingsKey),
+                    .getSettingsStore(key: settingsKey),
                                                          presetStore: deviceController.presetStore
-                                                          .getSettingsStore(key: settingsKey),
+                    .getSettingsStore(key: settingsKey),
                                                          id: descriptor.key,
                                                          model: model,
                                                          backend: self,
@@ -339,6 +372,21 @@ extension Camera2Router: ArsdkCameraEventDecoderListener {
         }
         camera.onZoom(zoom)
     }
+
+    /// Processes a `WhiteBalance` event.
+    ///
+    /// - Parameter cameraWhiteBalance: event to process
+    func onCameraWhiteBalance(_ whiteBalance: Arsdk_Camera_Event.WhiteBalance) {
+        guard let camera = cameraControllers[whiteBalance.cameraID] else {
+            ULog.w(.cameraTag, "Unknown camera \(whiteBalance.cameraID)")
+            return
+        }
+        camera.onWhitebalance(whiteBalance)
+    }
+
+    func onRequestStreamCamera(_ requestStreamCamera: Arsdk_Camera_StreamCamera) {
+        // nothing to do
+    }
 }
 
 /// Extension for flight plan state events processing.
@@ -346,6 +394,6 @@ extension Camera2Router: ArsdkFeatureCommonMavlinkstateCallback {
     func onMavlinkFilePlayingStateChanged(
         state: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState,
         filepath: String, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
-        cameraControllers.forEach { $0.value.onMavlinkFilePlayingStateChanged(state: state) }
-    }
+            cameraControllers.forEach { $0.value.onMavlinkFilePlayingStateChanged(state: state) }
+        }
 }

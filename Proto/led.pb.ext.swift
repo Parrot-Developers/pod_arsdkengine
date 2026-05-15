@@ -11,6 +11,11 @@ protocol ArsdkLedEventDecoderListener: AnyObject {
     ///
     /// - Parameter luminosity: event to process
     func onLuminosity(_ luminosity: Arsdk_Led_Event.Luminosity)
+
+    /// Processes a `Arsdk_Led_Event.State` event.
+    ///
+    /// - Parameter state: event to process
+    func onState(_ state: Arsdk_Led_Event.State)
 }
 
 /// Decoder for arsdk.led.Event events.
@@ -42,7 +47,7 @@ class ArsdkLedEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
     }
 
-    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
     }
 
@@ -62,6 +67,8 @@ class ArsdkLedEventDecoder: NSObject, ArsdkFeatureGenericCallback {
             switch event.id {
             case .luminosity(let event):
                 listener?.onLuminosity(event)
+            case .state(let event):
+                listener?.onState(event)
             case .none:
                 ULog.w(.tag, "Unknown Arsdk_Led_Event, skipping this event")
             }
@@ -74,6 +81,7 @@ extension Arsdk_Led_Event.OneOf_ID {
     var number: Int32 {
         switch self {
         case .luminosity: return 16
+        case .state: return 17
         }
     }
 }
@@ -107,19 +115,42 @@ extension Arsdk_Led_Command.OneOf_ID {
         switch self {
         case .getLuminosity: return 16
         case .setLuminosity: return 17
+        case .getState: return 18
+        case .activate: return 19
         }
     }
 }
 extension Arsdk_Led_Command.SetLuminosity {
     static var valueFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Led_Command.GetState {
+    static var includeDefaultCapabilitiesFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Led_Command.Activate {
+    static var ledTypeFieldNumber: Int32 { 1 }
+    static var enabledFieldNumber: Int32 { 2 }
+}
 extension Arsdk_Led_Command {
     static var getLuminosityFieldNumber: Int32 { 16 }
     static var setLuminosityFieldNumber: Int32 { 17 }
+    static var getStateFieldNumber: Int32 { 18 }
+    static var activateFieldNumber: Int32 { 19 }
 }
 extension Arsdk_Led_Event.Luminosity {
     static var valueFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Led_Event.State {
+    static var defaultCapabilitiesFieldNumber: Int32 { 1 }
+    static var activationStateFieldNumber: Int32 { 2 }
+}
 extension Arsdk_Led_Event {
     static var luminosityFieldNumber: Int32 { 16 }
+    static var stateFieldNumber: Int32 { 17 }
+}
+extension Arsdk_Led_Capabilities {
+    static var supportedLedTypesFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Led_ActivationState {
+    static var ledTypeFieldNumber: Int32 { 1 }
+    static var enabledFieldNumber: Int32 { 2 }
 }

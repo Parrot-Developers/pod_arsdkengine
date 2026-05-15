@@ -30,6 +30,7 @@
 import Foundation
 import GroundSdk
 
+// swiftlint:disable type_name
 /// FlightCameraRecord downloader delegate
 protocol ArsdkFlightCameraRecordDownloaderDelegate: AnyObject {
     /// Configure the delegate
@@ -55,6 +56,7 @@ protocol ArsdkFlightCameraRecordDownloaderDelegate: AnyObject {
     /// Cancel current request and all following ones.
     func cancel()
 }
+// swiftlint:enable type_name
 
 /// Flight camera record downloader component controller subclass that does the download through http
 class HttpFlightCameraRecordDownloader: ArsdkFlightCameraRecordDownloader {

@@ -69,7 +69,7 @@ class InternalUserStorageController: UserStorageController {
 extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
 
     func onCapabilities(storageId: UInt, supportedFeaturesBitField: UInt,
-        storageType: ArsdkFeatureUserStorageV2StorageType, listFlagsBitField: UInt) {
+                        storageType: ArsdkFeatureUserStorageV2StorageType, listFlagsBitField: UInt) {
         if storageType == .internalStorage {
             userStorageType = .internalStorage
             userStorageId = storageId
@@ -90,16 +90,16 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
     }
 
     func onState(storageId: UInt, physicalState: ArsdkFeatureUserStorageV2PhyState,
-        fileSystemState: ArsdkFeatureUserStorageV2FsState, attributeBitField: UInt, monitorEnabled: UInt,
-        monitorPeriod: UInt, fstype: String, listFlagsBitField: UInt) {
+                 fileSystemState: ArsdkFeatureUserStorageV2FsState, attributeBitField: UInt, monitorEnabled: UInt,
+                 monitorPeriod: UInt, fstype: String, listFlagsBitField: UInt) {
         if userStorageId == storageId {
-            isEncrypted(isEncrypted: ArsdkFeatureUserStorageV2AttributeBitField.isSet(.encrypted,
-                                                                                      inBitField: attributeBitField))
-            hasCheckError(hasCheckError: ArsdkFeatureUserStorageV2AttributeBitField.isSet(.checkError,
-                                                                                      inBitField: attributeBitField))
+            isEncrypted(isEncrypted: ArsdkFeatureUserStorageV2AttributeBitField
+                .isSet(.encrypted, inBitField: attributeBitField))
+            hasCheckError(hasCheckError: ArsdkFeatureUserStorageV2AttributeBitField
+                .isSet(.checkError, inBitField: attributeBitField))
             state(physicalState: physicalState, fileSystemState: fileSystemState,
-                attributeBitField: attributeBitField, monitorEnabled: monitorEnabled,
-                monitorPeriod: monitorPeriod)
+                  attributeBitField: attributeBitField, monitorEnabled: monitorEnabled,
+                  monitorPeriod: monitorPeriod)
             userStorage.notifyUpdated()
         }
     }
@@ -117,7 +117,7 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
     }
 
     func onFormatProgress(storageId: UInt, step: ArsdkFeatureUserStorageV2FormattingStep,
-        percentage: UInt, listFlagsBitField: UInt) {
+                          percentage: UInt, listFlagsBitField: UInt) {
         if userStorageId == storageId {
             formatProgress(step: step, percentage: percentage)
         }
@@ -127,7 +127,7 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
         if userStorageId == storageId {
             sdcardUuid(uuid: uuid)
         }
-      }
+    }
 
     func onDecryption(storageId: UInt, result: ArsdkFeatureUserStorageV2PasswordResult, listFlagsBitField: UInt) {
         if userStorageId == storageId {

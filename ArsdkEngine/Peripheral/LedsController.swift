@@ -31,17 +31,19 @@ import Foundation
 import GroundSdk
 
 /// Leds supported capabilities
-@objc(GSLedsSupportedCapabilities)
 public enum LedsSupportedCapabilities: Int, CustomStringConvertible {
 
-    /// Leds switch is off
-    @objc(GSLedsSupportedCapabilitiesOnOff)
+    /// Leds state is off
     case onOff
+
+    /// Infrared leds state
+    case infrared
 
     /// Debug description.
     public var description: String {
         switch self {
         case .onOff:         return "onOff"
+        case .infrared:      return "infrared"
         }
     }
 
@@ -52,8 +54,20 @@ public enum LedsSupportedCapabilities: Int, CustomStringConvertible {
 
     /// Set containing all possible values
     public static let allCases: Set<LedsSupportedCapabilities> = [
-        .onOff]
+        .onOff, .infrared]
 
+}
+
+/// Leds support.
+public enum LedsSupport: String, CustomStringConvertible, CaseIterable {
+    /// Leds is unsupported (e.g. legacy capabilities bitfield is empty).
+    case unsupported
+    /// Legacy Leds support via `ArsdkFeatureLeds`.
+    case legacy
+    /// Leds support via `Led` proto messages
+    case proto
+    /// Debug description.
+    public var description: String { rawValue }
 }
 
 /// Base controller for leds peripheral
@@ -68,22 +82,34 @@ class LedsController: DeviceComponentController, LedsBackend {
     /// Preset store for this leds interface
     private var presetStore: SettingsStore?
 
+    /// Device store for this leds interface
+    private var deviceStore: SettingsStore?
+
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { deviceStore?.new == false }
+
     /// All settings that can be stored
     enum SettingKey: String, StoreKey {
         case stateKey = "state"
+        case infraredKey = "infrared"
+        case tofKey = "tof"
     }
 
     /// Stored settings
     enum Setting: Hashable {
         case state(Bool)
+        case infrared(Bool)
+        case tof(Bool)
         /// Setting storage key
         var key: SettingKey {
             switch self {
             case .state: return .stateKey
+            case .infrared: return .infraredKey
+            case .tof: return .tofKey
             }
         }
         /// All values to allow enumerating settings
-        static let allCases: Set<Setting> = [.state(false)]
+        static let allCases: Set<Setting> = [.state(false), .infrared(false)]
 
         func hash(into hasher: inout Hasher) {
             hasher.combine(key)
@@ -94,170 +120,345 @@ class LedsController: DeviceComponentController, LedsBackend {
         }
     }
 
-    /// Setting values as received from the drone
-    private var droneSettings = Set<Setting>()
+    /// Decoder for led events.
+    private var arsdkLedDecoder: ArsdkLedEventDecoder!
+
+    /// All setting backends of this peripheral
+    private var settings = [OfflineSetting]()
+
+    /// Standard leds setting backend
+    internal var standardSetting: OfflineBoolSetting?
+
+    /// Infrared leds setting backend
+    internal var infraredSetting: OfflineBoolSetting?
+
+    /// ToF leds setting backend
+    internal var tofSetting: OfflineBoolSetting?
+
+    /// Leds support and protocol selection for the current connection.
+    private(set) public var ledsSupport = LedsSupport.unsupported
 
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         if GroundSdkConfig.sharedInstance.offlineSettings == .off {
+            deviceStore = nil
             presetStore = nil
         } else {
+            deviceStore = deviceController.deviceStore.getSettingsStore(key: LedsController.settingKey)
             presetStore = deviceController.presetStore.getSettingsStore(key: LedsController.settingKey)
         }
 
         super.init(deviceController: deviceController)
+        arsdkLedDecoder = ArsdkLedEventDecoder(listener: self)
         leds = LedsCore(store: deviceController.device.peripheralStore, backend: self)
 
         // load settings
-        if let presetStore = presetStore, !presetStore.new {
-            loadPresets()
+        if deviceStore?.read(key: SettingKey.stateKey) == true {
+            leds.createStandard()
+            prepareOfflineSettingStandard()
+        }
+        if deviceStore?.read(key: SettingKey.infraredKey) == true {
+            leds.createInfrared()
+            prepareOfflineSettingInfrared()
+        }
+        if deviceStore?.read(key: SettingKey.tofKey) == true {
+            leds.createTof()
+            prepareOfflineSettingTof()
+        }
+
+        if isPersisted {
             leds.publish()
         }
     }
 
-    func set(state: Bool) -> Bool {
-        presetStore?.write(key: SettingKey.stateKey, value: state).commit()
-        if connected {
-            return sendStateCommand(state)
-        } else {
-            leds.update(state: state).notifyUpdated()
-            return false
+    private func prepareOfflineSettingStandard() {
+        if standardSetting == nil {
+            standardSetting = OfflineBoolSetting(
+                presetDict: presetStore, presetEntry: SettingKey.stateKey,
+                setting: leds.standard as! BoolSettingCore,
+                notifyComponent: {
+                    self.leds.notifyUpdated()
+                }, markChanged: {
+                    self.leds.markChanged()
+                }, sendCommand: { enabled in
+                    self.sendStandardCommand(enabled)
+                })
+            settings.append(standardSetting!)
         }
     }
 
-    /// Switch Activation or deactivation command
+    private func prepareOfflineSettingInfrared() {
+        if infraredSetting == nil {
+            infraredSetting = OfflineBoolSetting(
+                presetDict: presetStore, presetEntry: SettingKey.infraredKey,
+                setting: leds.infrared as! BoolSettingCore,
+                notifyComponent: {
+                    self.leds.notifyUpdated()
+                }, markChanged: {
+                    self.leds.markChanged()
+                }, sendCommand: { enabled in
+                    self.sendInfraredCommand(enabled)
+                })
+            settings.append(infraredSetting!)
+        }
+    }
+
+    private func prepareOfflineSettingTof() {
+        if tofSetting == nil {
+            tofSetting = OfflineBoolSetting(
+                presetDict: presetStore, presetEntry: SettingKey.tofKey,
+                setting: leds.tof as! BoolSettingCore,
+                notifyComponent: {
+                    self.leds.notifyUpdated()
+                }, markChanged: {
+                    self.leds.markChanged()
+                }, sendCommand: { enabled in
+                    self.sendSwitchCommand(type: .tof, enabled: enabled)
+                })
+            settings.append(tofSetting!)
+        }
+    }
+
+    func set(standard: Bool) -> Bool {
+        return standardSetting?.setValue(value: standard) == true
+    }
+
+    func set(infrared: Bool) -> Bool {
+        return infraredSetting?.setValue(value: infrared) == true
+    }
+
+    func set(tof: Bool) -> Bool {
+        return tofSetting?.setValue(value: tof) == true
+    }
+
+    /// Sends standard leds Activation or deactivation command
     ///
-    /// - Parameter state: requested state.
-    /// - Returns: true if the command has been sent
-    func sendStateCommand(_ state: Bool) -> Bool {
-        var commandSent = false
-        if state {
-            sendCommand(ArsdkFeatureLeds.activateEncoder())
-            commandSent = true
+    /// - Parameter enabled: requested state
+    /// - Returns: `true` if the command has been sent
+    func sendStandardCommand(_ enabled: Bool) -> Bool {
+        if ledsSupport == .proto {
+            return sendSwitchCommand(type: .standard, enabled: enabled)
         } else {
-            sendCommand(ArsdkFeatureLeds.deactivateEncoder())
-            commandSent = true
-        }
-        return commandSent
-    }
-
-    /// Load saved settings
-    private func loadPresets() {
-        if let presetStore = presetStore {
-            Setting.allCases.forEach {
-                switch $0 {
-                case .state:
-                    if let state: Bool = presetStore.read(key: $0.key) {
-                        leds.update(state: state)
-                    }
-                    leds.notifyUpdated()
-                }
+            if enabled {
+                return sendCommand(ArsdkFeatureLeds.activateEncoder())
+            } else {
+                return sendCommand(ArsdkFeatureLeds.deactivateEncoder())
             }
         }
     }
 
-    /// Drone is connected
+    /// Sends infrared leds Activation or deactivation command
+    ///
+    /// - Parameter enabled: requested state
+    /// - Returns: `true` if the command has been sent
+    func sendInfraredCommand(_ enabled: Bool) -> Bool {
+        if ledsSupport == .proto {
+            return sendSwitchCommand(type: .infrared, enabled: enabled)
+        } else {
+            return sendCommand(ArsdkFeatureLeds.setIrStateEncoder(ledState: enabled ? .on : .off))
+        }
+    }
+
+    override func willConnect() {
+        ledsSupport = .unsupported
+        // remove settings stored while connecting; we will get new one on next connection
+        settings.forEach { setting in
+            setting.resetDeviceValue()
+        }
+        _ = sendGetStateCommand()
+    }
+
     override func didConnect() {
-        applyPresets()
-        if leds.supportedSwitch {
+        if ledsSupport != LedsSupport.unsupported {
             leds.publish()
         } else {
-             leds.unpublish()
-        }
-    }
-
-    /// Drone is disconnected
-    override func didDisconnect() {
-        leds.cancelSettingsRollback()
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
             leds.unpublish()
         }
-        leds.notifyUpdated()
     }
 
-    /// Drone is about to be forgotten
+    override func didDisconnect() {
+        leds.cancelSettingsRollback()
+        if isPersisted {
+            leds.notifyUpdated()
+        } else {
+            leds.unpublish()
+        }
+    }
+
     override func willForget() {
+        standardSetting = nil
+        infraredSetting = nil
+        tofSetting = nil
+        settings.removeAll()
+        deviceStore?.clear()
         leds.unpublish()
         super.willForget()
     }
 
-    /// Preset has been changed
     override func presetDidChange() {
         super.presetDidChange()
-        // reload preset store
-        presetStore = deviceController.presetStore.getSettingsStore(key: LedsController.settingKey)
-        loadPresets()
         if connected {
-            applyPresets()
-        }
-    }
-
-    /// Apply a preset
-    ///
-    /// Iterate settings received during connection
-    private func applyPresets() {
-        // iterate settings received during the connection
-        for setting in droneSettings {
-            switch setting {
-            case .state(let state):
-                if let preset: Bool = presetStore?.read(key: setting.key) {
-                    if preset != state {
-                        _ = sendStateCommand(preset)
-                    }
-                    leds.update(state: preset).notifyUpdated()
-                } else {
-                    leds.update(state: state).notifyUpdated()
-                }
-            }
-        }
-    }
-
-    /// Called when a command that notify a setting change has been received
-    /// - Parameter setting: setting that changed
-    func settingDidChange(_ setting: Setting) {
-        droneSettings.insert(setting)
-        switch setting {
-        case .state(let state):
-            if connected {
-                leds.update(state: state).notifyUpdated()
+            settings.forEach { setting in
+                setting.applyPreset()
             }
         }
         leds.notifyUpdated()
     }
 
-    /// A command has been received
-    ///
-    /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureLedsUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureLedsUid:
             ArsdkFeatureLeds.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkLedDecoder.decode(command)
+        default:
+            break
         }
+    }
+}
+
+/// Extension for methods to send Led commands.
+extension LedsController {
+    /// Sends get state command.
+    ///
+    /// - Returns: `true` if the command has been sent
+    func sendGetStateCommand() -> Bool {
+        var getState = Arsdk_Led_Command.GetState()
+        getState.includeDefaultCapabilities = true
+        return sendLedCommand(.getState(getState))
+    }
+
+    /// Sends switch led command.
+    ///
+    /// - Parameters:
+    ///   - type: led type
+    ///   - enabled: `true` to enable tof led, `false` otherwise
+    /// - Returns: `true` if the command has been sent
+    func sendSwitchCommand(type: Arsdk_Led_LedType, enabled: Bool) -> Bool {
+        var activateLed = Arsdk_Led_Command.Activate()
+        activateLed.ledType = type
+        activateLed.enabled = enabled
+        return sendLedCommand(.activate(activateLed))
+    }
+
+    /// Sends to the drone a Led command.
+    ///
+    /// - Parameter command: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendLedCommand(_ command: Arsdk_Led_Command.OneOf_ID) -> Bool {
+        if let encoder = ArsdkLedCommandEncoder.encoder(command) {
+            return sendCommand(encoder)
+        }
+        return false
+    }
+}
+
+/// Extension for events processing.
+extension LedsController: ArsdkLedEventDecoderListener {
+    func onState(_ state: Arsdk_Led_Event.State) {
+        ledsSupport = .proto
+        if state.hasDefaultCapabilities {
+            let standardIsSupported = state.defaultCapabilities.supportedLedTypes.contains(.standard)
+            deviceStore?.write(key: SettingKey.stateKey, value: standardIsSupported)
+            if standardIsSupported {
+                leds.createStandard()
+                prepareOfflineSettingStandard()
+            }
+
+            let infraredIsSupported = state.defaultCapabilities.supportedLedTypes.contains(.infrared)
+            deviceStore?.write(key: SettingKey.infraredKey, value: infraredIsSupported)
+            if infraredIsSupported {
+                leds.createInfrared()
+                prepareOfflineSettingInfrared()
+            }
+
+            let tofIsSupported = state.defaultCapabilities.supportedLedTypes.contains(.tof)
+            deviceStore?.write(key: SettingKey.tofKey, value: tofIsSupported)
+            if tofIsSupported {
+                leds.createTof()
+                prepareOfflineSettingTof()
+            }
+
+            deviceStore?.commit()
+        }
+
+        if let standardState = state.activationState.first(where: { $0.ledType == .standard }) {
+            standardSetting?.handleNewValue(value: standardState.enabled)
+        }
+
+        if let infraredState = state.activationState.first(where: { $0.ledType == .infrared }) {
+            infraredSetting?.handleNewValue(value: infraredState.enabled)
+        }
+
+        if let tofState = state.activationState.first(where: { $0.ledType == .tof }) {
+            tofSetting?.handleNewValue(value: tofState.enabled)
+        }
+        leds.publish()
+    }
+
+    func onLuminosity(_ luminosity: Arsdk_Led_Event.Luminosity) {
+        // ignored
     }
 }
 
 /// Leds decode callback implementation
 extension LedsController: ArsdkFeatureLedsCallback {
 
+    func onIrState(ledState: ArsdkFeatureLedsSwitchState) {
+        if ledsSupport == .proto { return }
+        switch ledState {
+        case .off:
+            infraredSetting?.handleNewValue(value: false)
+        case .on:
+            infraredSetting?.handleNewValue(value: true)
+        case .sdkCoreUnknown:
+            fallthrough
+        @unknown default:
+            // don't change anything if value is unknown
+            ULog.w(.tag, "Unknown InfraredLedsState, skipping this event.")
+        }
+        leds.notifyUpdated()
+    }
+
     func onSwitchState(switchState: ArsdkFeatureLedsSwitchState) {
+        if ledsSupport == .proto { return }
         switch switchState {
         case .off:
-            settingDidChange(.state(false))
+            standardSetting?.handleNewValue(value: false)
         case .on:
-            settingDidChange(.state(true))
+            standardSetting?.handleNewValue(value: true)
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
             // don't change anything if value is unknown
             ULog.w(.tag, "Unknown LedsSwitchState, skipping this event.")
         }
+        leds.notifyUpdated()
     }
 
     func onCapabilities(supportedCapabilitiesBitField: UInt) {
-        leds.update(supportedSwitch: LedsSupportedCapabilities.createSetFrom(
-            bitField: supportedCapabilitiesBitField).contains(.onOff))
+        if ledsSupport == .proto { return }
+        ledsSupport = supportedCapabilitiesBitField != 0 ? .legacy : .unsupported
+
+        let capabilities = LedsSupportedCapabilities.createSetFrom(bitField: supportedCapabilitiesBitField)
+
+        let ledsStateIsSupported = capabilities.contains(.onOff)
+        deviceStore?.write(key: SettingKey.stateKey, value: ledsStateIsSupported)
+        if ledsStateIsSupported {
+            leds.createStandard()
+            prepareOfflineSettingStandard()
+        }
+
+        let infraredIsSupported = capabilities.contains(.infrared)
+        deviceStore?.write(key: SettingKey.infraredKey, value: infraredIsSupported)
+        if infraredIsSupported {
+            leds.createInfrared()
+            prepareOfflineSettingInfrared()
+        }
+
+        deviceStore?.commit()
     }
 }
 
@@ -277,5 +478,6 @@ extension LedsSupportedCapabilities: ArsdkMappableEnum {
         return result
     }
     static var arsdkMapper = Mapper<LedsSupportedCapabilities, ArsdkFeatureLedsSupportedCapabilities>([
-        .onOff: .onOff])
+        .onOff: .onOff,
+        .infrared: .infrared])
 }

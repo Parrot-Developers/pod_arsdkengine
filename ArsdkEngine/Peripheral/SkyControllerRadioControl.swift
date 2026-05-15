@@ -45,6 +45,9 @@ class SkyControllerRadioControl: DeviceComponentController, RadioControlBackend 
     /// Preset store for this peripheral
     private var presetStore: SettingsStore?
 
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { deviceStore?.new == false }
+
     /// All settings that can be stored
     enum SettingKey: String, StoreKey {
         case transportKey = "transport"
@@ -106,9 +109,9 @@ class SkyControllerRadioControl: DeviceComponentController, RadioControlBackend 
 
         super.init(deviceController: deviceController)
         radioControl = RadioControlCore(store: deviceController.device.peripheralStore, backend: self)
-        // load settings
-        if let presetStore = presetStore, !presetStore.new {
-            loadPresets()
+
+        loadPresets()
+        if isPersisted {
             radioControl.publish()
         }
     }
@@ -146,11 +149,10 @@ class SkyControllerRadioControl: DeviceComponentController, RadioControlBackend 
 
         radioControl.cancelSettingsRollback()
 
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            radioControl.unpublish()
-        } else {
+        if isPersisted {
             radioControl.notifyUpdated()
+        } else {
+            radioControl.unpublish()
         }
     }
 
@@ -183,7 +185,7 @@ class SkyControllerRadioControl: DeviceComponentController, RadioControlBackend 
                 switch setting {
                 case .transport:
                     if let supportedTransportsValues: StorableArray<LinkTransport> = deviceStore.read(key: setting.key),
-                        let transport: LinkTransport = presetStore.read(key: setting.key) {
+                       let transport: LinkTransport = presetStore.read(key: setting.key) {
                         let supportedTransports = Set(supportedTransportsValues.storableValue)
                         if supportedTransports.contains(transport) {
                             radioControl.update(supportedTransports: supportedTransports).update(transport: transport)
@@ -223,16 +225,12 @@ class SkyControllerRadioControl: DeviceComponentController, RadioControlBackend 
     /// - Parameter transport: requested transport
     /// - Returns: true if the command has been sent
     func sendTransportCommand(_ transport: LinkTransport) -> Bool {
-        var commandSent = false
         switch transport {
         case .wifi:
-            sendCommand(ArsdkFeatureRcTransport.setTransportEncoder(transport: .wifi))
-            commandSent = true
+            return sendCommand(ArsdkFeatureRcTransport.setTransportEncoder(transport: .wifi))
         case .radio:
-            sendCommand(ArsdkFeatureRcTransport.setTransportEncoder(transport: .microhard))
-            commandSent = true
+            return sendCommand(ArsdkFeatureRcTransport.setTransportEncoder(transport: .microhard))
         }
-        return commandSent
     }
 
     /// Called when a command that notify a setting change has been received

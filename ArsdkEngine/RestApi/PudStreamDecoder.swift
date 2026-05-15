@@ -99,8 +99,8 @@ class PudStreamDecoder: StreamDecoder {
 
         init?(properties: [String: Any]) {
             if let name = properties["name"] as? String,
-                let size = properties["size"] as? Int,
-                let binaryType = BinaryType(properties["type"] as? String ?? "") {
+               let size = properties["size"] as? Int,
+               let binaryType = BinaryType(properties["type"] as? String ?? "") {
 
                 self.name = name
                 self.size = size
@@ -389,7 +389,7 @@ class PudStreamDecoder: StreamDecoder {
             case "alert_state":
                 let intValue = addValue as? Int ?? -1
                 let alert: ArsdkFeatureArdrone3PilotingstateAlertstatechangedState =
-                    ArsdkFeatureArdrone3PilotingstateAlertstatechangedState(rawValue: intValue) ?? .none
+                ArsdkFeatureArdrone3PilotingstateAlertstatechangedState(rawValue: intValue) ?? .none
                 if alert != latestAlert {
                     switch alert {
                     case .user, .cutOut, .tooMuchAngle:
@@ -403,7 +403,7 @@ class PudStreamDecoder: StreamDecoder {
             case "flying_state":
                 let intValue = addValue as? Int ?? -1
                 let flyingState: ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState =
-                    ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState(rawValue: intValue) ?? .sdkCoreUnknown
+                ArsdkFeatureArdrone3PilotingstateFlyingstatechangedState(rawValue: intValue) ?? .sdkCoreUnknown
                 switch flyingState {
                 case .landed:
                     if let flightStartTime = flightStartTime, let timeRead = timeRead {
@@ -445,8 +445,8 @@ class PudStreamDecoder: StreamDecoder {
         // update known first device location
         if firstDeviceLocation == nil {
             if let productLatitude =  productLatitude, let productLongitude = productLongitude,
-                productLatitude != PudStreamDecoder.unknownCoordinate,
-                productLongitude != PudStreamDecoder.unknownCoordinate {
+               productLatitude != PudStreamDecoder.unknownCoordinate,
+               productLongitude != PudStreamDecoder.unknownCoordinate {
                 let productLocation = CLLocationCoordinate2D(latitude: productLatitude, longitude: productLongitude)
                 if CLLocationCoordinate2DIsValid(productLocation) {
                     firstDeviceLocation = productLocation
@@ -455,8 +455,8 @@ class PudStreamDecoder: StreamDecoder {
         }
         // update known lastest controller location
         if let controllerLatitude =  controllerLatitude, let controllerLongitude = controllerLongitude,
-            controllerLatitude != PudStreamDecoder.unknownCoordinate,
-            controllerLongitude != PudStreamDecoder.unknownCoordinate {
+           controllerLatitude != PudStreamDecoder.unknownCoordinate,
+           controllerLongitude != PudStreamDecoder.unknownCoordinate {
             let controllerLocation = CLLocationCoordinate2D(
                 latitude: controllerLatitude, longitude: controllerLongitude)
             if CLLocationCoordinate2DIsValid(controllerLocation) {
@@ -542,10 +542,10 @@ extension Data {
     func getFloat32(at index: Int) -> Float32 {
         let retFloat: Float32
 
-            let ret = self.subdata(in: index ..< (index + 4)).withUnsafeBytes {
-                $0.load(as: Float32.self)
-            }
-            retFloat = ret
+        let ret = self.subdata(in: index ..< (index + 4)).withUnsafeBytes {
+            $0.load(as: Float32.self)
+        }
+        retFloat = ret
 
         if retFloat.isNaN || retFloat.isInfinite {
             return 0.0

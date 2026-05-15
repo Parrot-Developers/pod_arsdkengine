@@ -34,8 +34,8 @@ import GroundSdk
 protocol ArsdkSecureElementDownloaderDelegate: AnyObject {
     /// Configure the delegate
     ///
-    /// - Parameter downloader: the downloader in charge
-    func configure(downloader: SecureElementController)
+    /// - Parameter deviceServer: the device server
+    func configure(deviceServer: DeviceServer?)
 
     /// Reset the delegate
     ///
@@ -47,10 +47,10 @@ protocol ArsdkSecureElementDownloaderDelegate: AnyObject {
     /// - Parameters:
     ///   - challenge: the challenge to be signed
     ///   - operation: the operation to use for signature
-    ///   - downloader: the downloader in charge
+    ///   - completion: the completion callback (called on the main thread)
     /// - Returns: true if the download has been started, false otherwise
     func sign(challenge: String, with operation: SecureElementSignatureOperation,
-              downloader: SecureElementController) -> Bool
+              completion: @escaping (_ token: String?) -> Void) -> Bool
 
     /// Download the drone's certificate
     ///

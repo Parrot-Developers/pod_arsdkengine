@@ -35,7 +35,7 @@ protocol UpdaterFirmwareUploader: AnyObject {
     /// Configure the delegate
     ///
     /// - Parameter updater: the updater in charge
-    func configure(updater: UpdaterController)
+    func configure(updater: UpdaterController, deviceServer: DeviceServer?)
     /// Reset the delegate
     ///
     /// - Parameter updater: the updater in charge
@@ -67,7 +67,7 @@ protocol UpdaterEventReceiver: AnyObject {
     ///   - isUnavailable: whether this reason appeared or disappeared
     func configure(
         updateUnavailabilityReasonChanged: @escaping (_ reason: UpdaterUpdateUnavailabilityReason,
-        _ isUnavailable: Bool) -> Void)
+                                                      _ isUnavailable: Bool) -> Void)
 
     /// informs the event receiver that a command has been received
     ///
@@ -104,14 +104,21 @@ class UpdaterController: DeviceComponentController {
         var messageReceiver: UpdaterEventReceiver {
             switch deviceModel {
             case .rc(.skyCtrl3),
-                 .rc(.skyCtrlUA): return Sc3UpdaterEventReceiver()
+                    .rc(.skyCtrlUA):
+                return Sc3UpdaterEventReceiver()
             case .rc(.skyCtrl4),
-                 .rc(.skyCtrl4Black),
-                 .rc(.skyCtrl5): return Sc4UpdaterEventReceiver()
+                    .rc(.skyCtrl4Black),
+                    .rc(.skyCtrl5),
+                    .rc(.skyCtrlUA2):
+                return Sc4UpdaterEventReceiver()
             case .drone(.anafi2),
-                 .drone(.anafi3),
-                 .drone(.anafi3Usa): return Anafi2UpdaterEventReceiver()
-            case .drone:          return AnafiUpdaterEventReceiver()
+                    .drone(.anafi3),
+                    .drone(.anafi3Mil),
+                    .drone(.anafi3Gov),
+                    .drone(.chuck3):
+                return Anafi2UpdaterEventReceiver()
+            case .drone:
+                return AnafiUpdaterEventReceiver()
             }
         }
     }
@@ -139,10 +146,10 @@ class UpdaterController: DeviceComponentController {
 
     /// Queue of firmwares that must be applied. Maintained across device reboot/reconnection to allow automated
     /// updating with multiple firmware in sequence.
-    private var updateQueue: [FirmwareInfoCore] = []
+    internal var updateQueue: [FirmwareInfoCore] = []
 
     /// Set of reasons that prevent to do an update
-    private var updateUnavailabilityReasons: Set<UpdaterUpdateUnavailabilityReason> = [] {
+    internal var updateUnavailabilityReasons: Set<UpdaterUpdateUnavailabilityReason> = [] {
         didSet {
             if updateUnavailabilityReasons != oldValue {
                 firmwareUpdater.update(updateUnavailabilityReasons: updateUnavailabilityReasons)
@@ -172,15 +179,15 @@ class UpdaterController: DeviceComponentController {
     ///   - config: constructor configuration
     ///   - firmwareStore: firmware store utility
     ///   - firmwareDownloader: firmware downloader utility
-    init(deviceController: DeviceController, config: Config, firmwareStore: FirmwareStoreCore,
-         firmwareDownloader: FirmwareDownloaderCore) {
+    init(desc: ComponentDescriptor, deviceController: DeviceController, config: Config,
+         firmwareStore: FirmwareStoreCore, firmwareDownloader: FirmwareDownloaderCore) {
         uploader = config.uploader
         eventReceiver = config.messageReceiver
         self.firmwareStore = firmwareStore
         self.downloader = firmwareDownloader
         super.init(deviceController: deviceController)
 
-        firmwareUpdater = UpdaterCore(store: deviceController.device.peripheralStore, backend: self)
+        firmwareUpdater = UpdaterCore(desc: desc, store: deviceController.device.peripheralStore, backend: self)
         firmwareStoreMonitor = firmwareStore.startMonitoring { [weak self] in
             self?.processFirmwareInfos()
             self?.firmwareUpdater.notifyUpdated()
@@ -207,14 +214,7 @@ class UpdaterController: DeviceComponentController {
                     self.downloadUnavailabilityReasons.insert(.internetUnavailable)
                 }
                 self.firmwareUpdater.notifyUpdated()
-        }
-
-        processFirmwareInfos()
-
-        // if the device is known, publish the component
-        if !deviceController.deviceStore.new {
-            firmwareUpdater.publish()
-        }
+            }
     }
 
     deinit {
@@ -231,10 +231,9 @@ class UpdaterController: DeviceComponentController {
         downloadUnavailabilityReasons.insert(.internetUnavailable)
     }
 
-    override func didConnect() {
-        super.didConnect()
-
-        uploader.configure(updater: self)
+    /// Called when the connection to the device to update is established.
+    internal func deviceDidConnect(deviceServer: DeviceServer?) {
+        uploader.configure(updater: self, deviceServer: deviceServer)
 
         updateUnavailabilityReasons.remove(.notConnected)
         // compute up-to-date update info (device firmware may have changed)
@@ -242,7 +241,7 @@ class UpdaterController: DeviceComponentController {
 
         if let expectedFirmware = updateQueue.first {
             updateQueue.removeFirst()
-            if deviceController.device.firmwareVersionHolder.version != expectedFirmware.firmwareIdentifier.version {
+            if firmwareIdentifier()?.version != expectedFirmware.firmwareIdentifier.version {
                 // inconsistent, mark update failed
                 updateDidEnd(withState: .failed)
             } else if updateQueue.isEmpty {
@@ -259,10 +258,10 @@ class UpdaterController: DeviceComponentController {
         }
 
         firmwareUpdater.publish()
-        firmwareUpdater.notifyUpdated()
     }
 
-    override func didDisconnect() {
+    /// Called when the connection to the device to update is closed.
+    internal func deviceDidDisconnect() {
         updateUnavailabilityReasons = [.notConnected]
 
         uploader.reset(updater: self)
@@ -271,21 +270,11 @@ class UpdaterController: DeviceComponentController {
             // if updates are in progress, move to .waitingForReboot state
             firmwareUpdater.update(updateState: .waitingForReboot)
         }
-        // call notifyUpdated before unpublishing the component to be sure that the waitingForReboot is received
-        firmwareUpdater.notifyUpdated()
-
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            firmwareUpdater.unpublish()
-        }
-
-        super.didDisconnect()
     }
 
     /// Drone is about to be forgotten
     override func willForget() {
         firmwareUpdater.unpublish()
-        super.willForget()
     }
 
     override func didReceiveCommand(_ command: OpaquePointer) {
@@ -307,33 +296,36 @@ class UpdaterController: DeviceComponentController {
                     self?.firmwareUpdater.update(updateState: .processing)
                 }
                 self?.firmwareUpdater.notifyUpdated()
-        }, updateEndStatus: { [weak self] state in
-            self?.currentUpdate = nil
-            if state == .success {
-                // in case of automatic reboot, state will be updated to .waitingForReboot on disconnection
-                if !reboot {
-                    self?.firmwareUpdater.update(updateState: .waitingForReboot).notifyUpdated()
+            }, updateEndStatus: { [weak self] state in
+                self?.currentUpdate = nil
+                if state == .success {
+                    // in case of automatic reboot, state will be updated to .waitingForReboot on disconnection
+                    if !reboot {
+                        self?.firmwareUpdater.update(updateState: .waitingForReboot).notifyUpdated()
+                    }
+                } else {
+                    self?.updateDidEnd(withState: state)
                 }
-            } else {
-                self?.updateDidEnd(withState: state)
-            }
-        })
+            })
     }
 
     /// Processes firmware store content and current device firmware version to update downloadable and applicable
     /// firmwares info.
     ///
     /// - Note: This method may update the component state, but does **not** call `notifyUpdated()`
-    private func processFirmwareInfos() {
-        let device = deviceController.device! // can force unwrap since device is a DeviceCore!
-        let currentVersion = deviceController.device.firmwareVersionHolder.version
-        let firmwareIdentifier = FirmwareIdentifier(deviceModel: device.deviceModel, version: currentVersion)
+    func processFirmwareInfos() {
+        guard let firmwareIdentifier = firmwareIdentifier() else { return }
         firmwareUpdater
             .update(idealVersion: firmwareStore.getIdealFirmware(
                 for: firmwareIdentifier)?.firmwareIdentifier.version)
             .update(downloadableFirmwares: firmwareStore.getDownloadableFirmwares(for: firmwareIdentifier))
             .update(applicableFirmwares: firmwareStore.getApplicableFirmwares(on: firmwareIdentifier))
+    }
 
+    /// Retrieves the firmware identifier of the device to update.
+    /// - Returns: the firmware identifier
+    internal func firmwareIdentifier() -> FirmwareIdentifier? {
+        fatalError("`firmwareVersion()` function implemented in subclass")
     }
 
     /// Called when the update process ends.
@@ -347,6 +339,7 @@ class UpdaterController: DeviceComponentController {
         firmwareUpdater.update(updateState: state).notifyUpdated()
         firmwareUpdater.endUpdate().notifyUpdated()
         updateQueue = []
+        deviceController.isUpdating = false
     }
 }
 
@@ -368,6 +361,7 @@ extension UpdaterController: UpdaterBackend {
 
         updateQueue = firmwares
         firmwareUpdater.beginUpdate(withFirmwares: updateQueue)
+        deviceController.isUpdating = true
         updateFirmware(toVersion: updateQueue.first!.firmwareIdentifier.version, reboot: reboot)
         firmwareUpdater.notifyUpdated()
     }

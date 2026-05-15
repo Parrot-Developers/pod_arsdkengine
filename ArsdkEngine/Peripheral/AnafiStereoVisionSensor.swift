@@ -105,7 +105,6 @@ extension AnafiStereoVisionSensor: ArsdkFeatureStereoVisionSensorCallback {
                 // don't change anything if value is unknown
                 ULog.w(.tag, "Unknown state, skipping this calibration state event.")
             }
-
         } else {
             ULog.w(.stereovisionTag, "Calibration state received for an unknown stereo vision sensor id=\(sensorId)")
         }

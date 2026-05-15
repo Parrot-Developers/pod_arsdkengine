@@ -79,7 +79,7 @@ class FollowFeatureFollowMePilotingItf: FollowFeatureTrackingPilotingItf, Follow
     /// - Parameter mode: desired follow mode
     func sendStartFollowCommand(mode: FollowMode) {
         if let droneMode =  mode.arsdkValue {
-            sendCommand(ArsdkFeatureFollowMe.startEncoder(mode: droneMode))
+            _ = sendCommand(ArsdkFeatureFollowMe.startEncoder(mode: droneMode))
         }
     }
 
@@ -109,7 +109,7 @@ class FollowFeatureFollowMePilotingItf: FollowFeatureTrackingPilotingItf, Follow
         guard trackingModeUsed!.contains(trackingSharing.latestModeReceived) else {
             return
         }
-        sendCommand(ArsdkFeatureFollowMe.stopEncoder())
+        _ = sendCommand(ArsdkFeatureFollowMe.stopEncoder())
     }
 }
 
@@ -124,36 +124,36 @@ extension FollowFeatureFollowMePilotingItf {
         mode: ArsdkFeatureFollowMeMode, behavior: ArsdkFeatureFollowMeBehavior,
         animation: ArsdkFeatureFollowMeAnimation, animationAvailableBitField: UInt) {
 
-        // shares the latest mode received
-        trackingSharing.latestModeReceived = mode
+            // shares the latest mode received
+            trackingSharing.latestModeReceived = mode
 
-        if let newFollowMode = FollowMode(fromArsdk: mode) {
-            followMode = newFollowMode
-        }
-        // allways update the followMode (this setting may be "updating" )
-        followMePilotingItf.update(followMode: followMode)
-
-        let newRunnigStatus = (trackingModeUsed!.contains(mode) && (behavior == .follow || behavior == .lookAt))
-
-        if newRunnigStatus {
-            // interface should be active (we are in FollowMe)
-            // update the behavior
-            switch behavior {
-            case .follow:
-                followMePilotingItf.update(followBehavior: .following)
-            case .lookAt:
-                followMePilotingItf.update(followBehavior: .stationary)
-            default:
-                break
+            if let newFollowMode = FollowMode(fromArsdk: mode) {
+                followMode = newFollowMode
             }
-        } else {
-            // interface should not be active (we are not in FollowMe)
-            followMePilotingItf.update(followBehavior: nil)
-        }
+            // allways update the followMode (this setting may be "updating" )
+            followMePilotingItf.update(followMode: followMode)
 
-        trackingIsRunning = newRunnigStatus
-        followMePilotingItf.notifyUpdated()
-    }
+            let newRunnigStatus = (trackingModeUsed!.contains(mode) && (behavior == .follow || behavior == .lookAt))
+
+            if newRunnigStatus {
+                // interface should be active (we are in FollowMe)
+                // update the behavior
+                switch behavior {
+                case .follow:
+                    followMePilotingItf.update(followBehavior: .following)
+                case .lookAt:
+                    followMePilotingItf.update(followBehavior: .stationary)
+                default:
+                    break
+                }
+            } else {
+                // interface should not be active (we are not in FollowMe)
+                followMePilotingItf.update(followBehavior: nil)
+            }
+
+            trackingIsRunning = newRunnigStatus
+            followMePilotingItf.notifyUpdated()
+        }
 }
 
 /// Extension that add conversion from/to arsdk enum

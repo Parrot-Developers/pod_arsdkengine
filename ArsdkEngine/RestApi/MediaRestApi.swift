@@ -58,40 +58,40 @@ class MediaRestApi {
         storage: StorageType? = nil,
         runId: String? = nil,
         completion: @escaping (_ mediaList: [MediaItemCore]?) -> Void) -> CancelableCore {
-        var api = "\(baseApi)/medias"
-        if let storage = storage {
-            switch storage {
-            case .internal:
-                api.append("/storage=internal")
-            case .removable:
-                api.append("/storage=sdcard")
+            var api = "\(baseApi)/medias"
+            if let storage = storage {
+                switch storage {
+                case .internal:
+                    api.append("/storage=internal")
+                case .removable:
+                    api.append("/storage=sdcard")
+                }
             }
-        }
-        return server.getData(api: api) { result, data in
-            switch result {
-            case .success:
-                // listing medias is successful
-                guard let data = data else { return }
-                let decoder = JSONDecoder()
-                // need to override the way date are parsed because default format is iso8601 extended
-                decoder.dateDecodingStrategy = .formatted(.iso8601Base)
-                do {
-                    // decode the media list, failed media will be ignored
-                    let throwables = try decoder.decode([Throwable<Media>].self, from: data)
-                    let mediaList = throwables.compactMap { try? $0.result.get() }
-                    // transform the json object media list into a `MediaItemCore` list
-                    let medias = mediaList.map { MediaItemCore.from(httpMedia: $0) }.compactMap { $0 }
-                    completion(medias)
-                } catch let error {
-                    ULog.w(.mediaTag, "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                           error.localizedDescription)
+            return server.getData(api: api) { result, data in
+                switch result {
+                case .success:
+                    // listing medias is successful
+                    guard let data = data else { return }
+                    let decoder = JSONDecoder()
+                    // need to override the way date are parsed because default format is iso8601 extended
+                    decoder.dateDecodingStrategy = .formatted(.iso8601Base)
+                    do {
+                        // decode the media list, failed media will be ignored
+                        let throwables = try decoder.decode([Throwable<Media>].self, from: data)
+                        let mediaList = throwables.compactMap { try? $0.result.get() }
+                        // transform the json object media list into a `MediaItemCore` list
+                        let medias = mediaList.map { MediaItemCore.from(httpMedia: $0) }.compactMap { $0 }
+                        completion(medias)
+                    } catch let error {
+                        ULog.w(.mediaTag, "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
+                               error.localizedDescription)
+                        completion(nil)
+                    }
+                default:
                     completion(nil)
                 }
-            default:
-                completion(nil)
             }
         }
-    }
 
     /// Fetch the thumbnail of a given media.
     ///
@@ -117,13 +117,13 @@ class MediaRestApi {
     func fetchThumbnail(
         _ resource: MediaItemResourceCore, completion: @escaping (_ data: Data?) -> Void) -> CancelableCore? {
 
-        if let httpResource = resource.backendData as? MediaResource,
-            let thumbnailUrlStr = httpResource.thumbnailUrlStr {
+            if let httpResource = resource.backendData as? MediaResource,
+               let thumbnailUrlStr = httpResource.thumbnailUrlStr {
 
-            return fetchThumbnail(at: thumbnailUrlStr, completion: completion)
+                return fetchThumbnail(at: thumbnailUrlStr, completion: completion)
+            }
+            return nil
         }
-        return nil
-    }
 
     /// Fetch the thumbnail at a given url
     ///
@@ -158,19 +158,37 @@ class MediaRestApi {
         progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore? {
 
-        if let httpResource = resource.backendData as? MediaResource,
-           let urlStr = type == .full ? httpResource.urlStr : httpResource.previewUrlStr {
-            return server.downloadFile(
-                api: urlStr,
-                destination: URL(fileURLWithPath: destDirectoryPath)
-                    .appendingPathComponent(httpResource.resId),
-                progress: progress,
-                completion: { _, localFileUrl in
-                    completion(localFileUrl)
-            })
+            if let httpResource = resource.backendData as? MediaResource {
+                let urlStr: String
+                var parameters = [String: String]()
+                switch type {
+                case .full:
+                    urlStr = httpResource.urlStr
+                case .preview(let resolution, let quality):
+                    if let url = httpResource.previewUrlStr {
+                        urlStr = url
+                    } else {
+                        return nil
+                    }
+                    if let resolution = resolution {
+                        parameters["resolution"] = resolution.description
+                    }
+                    if let quality = quality {
+                        parameters["quality"] = String(quality)
+                    }
+                }
+
+                return server.downloadFile(
+                    api: urlStr, parameters: parameters,
+                    destination: URL(fileURLWithPath: destDirectoryPath)
+                        .appendingPathComponent(httpResource.resId),
+                    progress: progress,
+                    completion: { _, localFileUrl in
+                        completion(localFileUrl)
+                    })
+            }
+            return nil
         }
-        return nil
-    }
 
     /// Download a resource signature.
     ///
@@ -184,31 +202,31 @@ class MediaRestApi {
         resource: MediaItemResourceCore, destDirectoryPath: String,
         completion: @escaping (_ signatureUrl: URL?) -> Void) -> CancelableCore? {
 
-        if let httpResource = resource.backendData as? MediaResource,
-            let signatureUrl = httpResource.signatureUrlStr {
+            if let httpResource = resource.backendData as? MediaResource,
+               let signatureUrl = httpResource.signatureUrlStr {
 
-            // extract signature file extension from url, or use default extension
-            var signatureExtension: String
-            if let extensionIndex = signatureUrl.lastIndex(of: "."),
-                !signatureUrl.suffix(from: extensionIndex).contains("/") {
-                signatureExtension = String(signatureUrl.suffix(from: extensionIndex))
-            } else {
-                signatureExtension = ".sig"
+                // extract signature file extension from url, or use default extension
+                var signatureExtension: String
+                if let extensionIndex = signatureUrl.lastIndex(of: "."),
+                   !signatureUrl.suffix(from: extensionIndex).contains("/") {
+                    signatureExtension = String(signatureUrl.suffix(from: extensionIndex))
+                } else {
+                    signatureExtension = ".sig"
+                }
+                // build signature file name based on resource id
+                let signatureFileName = "\(httpResource.resId)\(signatureExtension)"
+
+                return server.downloadFile(
+                    api: signatureUrl,
+                    destination: URL(fileURLWithPath: destDirectoryPath)
+                        .appendingPathComponent(signatureFileName),
+                    progress: { _ in },
+                    completion: { _, localSignatureUrl in
+                        completion(localSignatureUrl)
+                    })
             }
-            // build signature file name based on resource id
-            let signatureFileName = "\(httpResource.resId)\(signatureExtension)"
-
-            return server.downloadFile(
-                api: signatureUrl,
-                destination: URL(fileURLWithPath: destDirectoryPath)
-                    .appendingPathComponent(signatureFileName),
-                progress: { _ in },
-                completion: { _, localSignatureUrl in
-                    completion(localSignatureUrl)
-            })
+            return nil
         }
-        return nil
-    }
 
     /// Uploads a resource.
     ///
@@ -222,18 +240,18 @@ class MediaRestApi {
     func upload(
         resourceUrl: URL, target: MediaItemCore, progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ success: Bool) -> Void) -> CancelableCore? {
-        return server.putFile(api: "\(baseApi)/medias/\(target.uid)",
-                              fileUrl: resourceUrl,
-                              progress: progress,
-                              completion: { result, _ in
-                                switch result {
-                                case .success:
-                                    completion(true)
-                                default:
-                                    completion(false)
-                                }
-                              })
-    }
+            return server.putFile(api: "\(baseApi)/medias/\(target.uid)",
+                                  fileUrl: resourceUrl,
+                                  progress: progress,
+                                  completion: { result, _ in
+                switch result {
+                case .success:
+                    completion(true)
+                default:
+                    completion(false)
+                }
+            })
+        }
 
     /// Deletes a given media on the device.
     ///
@@ -260,20 +278,20 @@ class MediaRestApi {
     ///   - completion: the completion callback (called on the main thread)
     ///   - success: whether the delete task was successful or not
     /// - Returns: the request
-   func deleteResource(_ resource: MediaItemResourceCore, completion: @escaping (_ success: Bool) -> Void)
-        -> CancelableCore? {
-            if let httpResource = resource.backendData as? MediaResource {
-                return server.delete(api: "\(baseApi)/resources/\(httpResource.resId)") { result in
-                    switch result {
-                    case .success:
-                        completion(true)
-                    default:
-                        completion(false)
-                    }
+    func deleteResource(_ resource: MediaItemResourceCore, completion: @escaping (_ success: Bool) -> Void)
+    -> CancelableCore? {
+        if let httpResource = resource.backendData as? MediaResource {
+            return server.delete(api: "\(baseApi)/resources/\(httpResource.resId)") { result in
+                switch result {
+                case .success:
+                    completion(true)
+                default:
+                    completion(false)
                 }
-            } else {
-                return nil
             }
+        } else {
+            return nil
+        }
     }
 
     /// Deletes all medias on the device.
@@ -418,6 +436,7 @@ class MediaRestApi {
         enum CodingKeys: String, CodingKey {
             case resId = "resource_id"
             case type
+            case path
             case format
             case date = "datetime"
             case size
@@ -430,6 +449,7 @@ class MediaRestApi {
             case width
             case height
             case thermal
+            case cameraSpectrum = "camera_spectrum"
             case storage
             case signatureUrlStr = "signature"
         }
@@ -438,6 +458,8 @@ class MediaRestApi {
         let resId: String
         /// Type
         let type: ResourceType
+        /// Path
+        let path: String
         /// Format
         let format: ResourceFormat
         /// Resource date
@@ -462,6 +484,8 @@ class MediaRestApi {
         let height: Int
         /// `true` when the ressource contains thermal metadata, `false` otherwise
         let thermal: Bool?
+        /// Camera spectrum.
+        let cameraSpectrum: CameraSpectrum?
         /// Storage where the item is stored
         let storage: ResourceStorageType?
         /// Resource signature url as string
@@ -486,6 +510,7 @@ class MediaRestApi {
         case jpg = "JPG"
         case dng = "DNG"
         case mp4 = "MP4"
+        case png = "PNG"
     }
 
     /// Location as described by the REST api
@@ -512,6 +537,14 @@ class MediaRestApi {
         case spherical = "SPHERICAL"
         case super_wide = "SUPER_WIDE"
     }
+
+    /// Camera Spectrum as described by the REST api
+    internal enum CameraSpectrum: String, Decodable {
+        case unknown = "UNKNOWN"
+        case visible = "VISIBLE"
+        case blended = "BLENDED"
+        case thermal = "THERMAL"
+    }
 }
 
 /// Extension of MediaItemCore that adds creation from http media objects
@@ -530,14 +563,24 @@ internal extension MediaItemCore {
             }
             let photoMode = httpMedia.photoMode != nil ? photoModeMapper.map(from: httpMedia.photoMode!) : nil
 
+            var location: CLLocation?
+            if let httpLocation = httpMedia.location {
+                let location2D = CLLocationCoordinate2DMake(httpLocation.latitude,
+                                                            httpLocation.longitude)
+                if CLLocationCoordinate2DIsValid(location2D) {
+                    location = CLLocation(coordinate: location2D, altitude: httpLocation.altitude,
+                                          horizontalAccuracy: -1,
+                                          verticalAccuracy: -1, timestamp: httpMedia.date)
+                }
+            }
             let panoramaType = httpMedia.panoramaType != nil
-                                ? panoramaTypeMapper.map(from: httpMedia.panoramaType!) : nil
+            ? panoramaTypeMapper.map(from: httpMedia.panoramaType!) : nil
             let metadataTypes: Set<MetadataType> = httpMedia.thermal == true ? [.thermal] : []
             return MediaItemCore(
                 uid: httpMedia.mediaId, name: httpMedia.mediaId, type: type, runUid: httpMedia.runId,
                 customId: httpMedia.customId, customTitle: httpMedia.customTitle,
                 creationDate: httpMedia.date, bootDate: httpMedia.bootDate, flightDate: httpMedia.flightDate,
-                expectedCount: httpMedia.expectedCount,
+                location: location, expectedCount: httpMedia.expectedCount,
                 photoMode: photoMode, panoramaType: panoramaType, streamUrl: httpMedia.streamUrlStr,
                 resources: resources, backendData: httpMedia, metadataTypes: metadataTypes)
         }
@@ -586,6 +629,10 @@ internal extension MediaItemResourceCore {
                                           verticalAccuracy: -1, timestamp: httpResource.date)
                 }
             }
+            var cameraSpectrum: MediaItem.CameraSpectrum?
+            if let httpCameraSpectrum = httpResource.cameraSpectrum {
+                cameraSpectrum = cameraSpectrumMapper.map(from: httpCameraSpectrum)
+            }
             var storage: StorageType?
             if let httpStorage = httpResource.storage {
                 storage = storageMapper.map(from: httpStorage)
@@ -593,10 +640,10 @@ internal extension MediaItemResourceCore {
             let metadataTypes: Set<MediaItem.MetadataType> = httpResource.thermal == true ? [.thermal] : []
             let signed = httpResource.signatureUrlStr != nil
             return MediaItemResourceCore(
-                uid: httpResource.resId, type: type, format: format, size: httpResource.size, duration: duration,
-                streamUrl: httpResource.streamUrlStr, backendData: httpResource, location: location,
-                creationDate: httpResource.date, metadataTypes: metadataTypes,
-                storage: storage, signed: signed)
+                uid: httpResource.resId, type: type, path: httpResource.path, format: format, size: httpResource.size,
+                duration: duration, streamUrl: httpResource.streamUrlStr, backendData: httpResource,
+                location: location, creationDate: httpResource.date, metadataTypes: metadataTypes,
+                cameraSpectrum: cameraSpectrum, storage: storage, signed: signed)
         }
         return nil
     }
@@ -611,10 +658,18 @@ internal extension MediaItemResourceCore {
     static let formatMapper = Mapper<MediaRestApi.ResourceFormat, MediaItem.Format>([
         .jpg: .jpg,
         .dng: .dng,
-        .mp4: .mp4])
+        .mp4: .mp4,
+        .png: .png])
 
     /// Mapper that maps media storage from the REST api to the `MediaItem.StorageType`
     static let storageMapper = Mapper<MediaRestApi.ResourceStorageType, StorageType>([
         .internal: .internal,
         .sdcard: .removable])
+
+    /// Mapper that maps camera spectrum from the REST api to the `MediaItem.CameraSpectrum`
+    static let cameraSpectrumMapper = Mapper<MediaRestApi.CameraSpectrum, MediaItem.CameraSpectrum>([
+        .unknown: .unknown,
+        .visible: .visible,
+        .blended: .blended,
+        .thermal: .thermal])
 }

@@ -21,6 +21,16 @@ protocol ArsdkDevicemanagerEventDecoderListener: AnyObject {
     ///
     /// - Parameter discoveredDevices: event to process
     func onDiscoveredDevices(_ discoveredDevices: Arsdk_Devicemanager_Event.DiscoveredDevices)
+
+    /// Processes a `Arsdk_Devicemanager_Event.PairingDone` event.
+    ///
+    /// - Parameter pairingDone: event to process
+    func onPairingDone(_ pairingDone: Arsdk_Devicemanager_Event.PairingDone)
+
+    /// Processes a `Arsdk_Devicemanager_Event.PairingFailed` event.
+    ///
+    /// - Parameter pairingFailed: event to process
+    func onPairingFailed(_ pairingFailed: Arsdk_Devicemanager_Event.PairingFailed)
 }
 
 /// Decoder for arsdk.devicemanager.Event events.
@@ -52,7 +62,7 @@ class ArsdkDevicemanagerEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
     }
 
-    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
     }
 
@@ -76,6 +86,10 @@ class ArsdkDevicemanagerEventDecoder: NSObject, ArsdkFeatureGenericCallback {
                 listener?.onConnectionFailure(event)
             case .discoveredDevices(let event):
                 listener?.onDiscoveredDevices(event)
+            case .pairingDone(let event):
+                listener?.onPairingDone(event)
+            case .pairingFailed(let event):
+                listener?.onPairingFailed(event)
             case .none:
                 ULog.w(.tag, "Unknown Arsdk_Devicemanager_Event, skipping this event")
             }
@@ -90,6 +104,8 @@ extension Arsdk_Devicemanager_Event.OneOf_ID {
         case .state: return 16
         case .connectionFailure: return 17
         case .discoveredDevices: return 18
+        case .pairingDone: return 19
+        case .pairingFailed: return 20
         }
     }
 }
@@ -126,11 +142,13 @@ extension Arsdk_Devicemanager_Command.OneOf_ID {
         case .forgetDevice: return 18
         case .discoverDevices: return 19
         case .changeConnectionParameters: return 20
+        case .stopDiscovery: return 21
         }
     }
 }
 extension Arsdk_Devicemanager_Command.GetState {
     static var includeDefaultCapabilitiesFieldNumber: Int32 { 1 }
+    static var supportsFastConnectionFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Devicemanager_Command.ConnectDevice.Wifi {
     static var securityKeyFieldNumber: Int32 { 1 }
@@ -143,9 +161,14 @@ extension Arsdk_Devicemanager_Command.ConnectDevice {
     static var wifiFieldNumber: Int32 { 2 }
     static var cellularFieldNumber: Int32 { 3 }
     static var microhardFieldNumber: Int32 { 4 }
+    static var marsFieldNumber: Int32 { 5 }
+    static var wakeIdleFieldNumber: Int32 { 6 }
 }
 extension Arsdk_Devicemanager_Command.ForgetDevice {
     static var uidFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Devicemanager_Command.DiscoverDevices {
+    static var useBackupRadioFieldNumber: Int32 { 1 }
 }
 extension Arsdk_Devicemanager_Command.ChangeConnectionParameters.Microhard {
     static var powerFieldNumber: Int32 { 1 }
@@ -157,6 +180,7 @@ extension Arsdk_Devicemanager_Command.ChangeConnectionParameters {
     static var wifiFieldNumber: Int32 { 2 }
     static var cellularFieldNumber: Int32 { 3 }
     static var microhardFieldNumber: Int32 { 4 }
+    static var marsFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Devicemanager_Command {
     static var getStateFieldNumber: Int32 { 16 }
@@ -164,6 +188,7 @@ extension Arsdk_Devicemanager_Command {
     static var forgetDeviceFieldNumber: Int32 { 18 }
     static var discoverDevicesFieldNumber: Int32 { 19 }
     static var changeConnectionParametersFieldNumber: Int32 { 20 }
+    static var stopDiscoveryFieldNumber: Int32 { 21 }
 }
 extension Arsdk_Devicemanager_Event.State.KnownDevices {
     static var devicesFieldNumber: Int32 { 2 }
@@ -184,11 +209,20 @@ extension Arsdk_Devicemanager_Event.ConnectionFailure {
 }
 extension Arsdk_Devicemanager_Event.DiscoveredDevices {
     static var devicesFieldNumber: Int32 { 1 }
+    static var statusFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Devicemanager_Event.PairingDone {
+    static var pairedDeviceFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Devicemanager_Event.PairingFailed {
+    static var reasonFieldNumber: Int32 { 1 }
 }
 extension Arsdk_Devicemanager_Event {
     static var stateFieldNumber: Int32 { 16 }
     static var connectionFailureFieldNumber: Int32 { 17 }
     static var discoveredDevicesFieldNumber: Int32 { 18 }
+    static var pairingDoneFieldNumber: Int32 { 19 }
+    static var pairingFailedFieldNumber: Int32 { 20 }
 }
 extension Arsdk_Devicemanager_Capabilities.Microhard {
     static var powerMinFieldNumber: Int32 { 2 }
@@ -197,14 +231,21 @@ extension Arsdk_Devicemanager_Capabilities.Microhard {
 extension Arsdk_Devicemanager_Capabilities {
     static var discoveryTransportsFieldNumber: Int32 { 1 }
     static var microhardFieldNumber: Int32 { 2 }
+    static var availableTransportsFieldNumber: Int32 { 3 }
+}
+extension Arsdk_Devicemanager_ConnectionState.Searching {
+    static var scanningIdleDevicesFieldNumber: Int32 { 1 }
 }
 extension Arsdk_Devicemanager_ConnectionState.Connecting {
     static var deviceFieldNumber: Int32 { 1 }
     static var transportFieldNumber: Int32 { 2 }
+    static var sdkReadyFieldNumber: Int32 { 3 }
+    static var backupLinkFieldNumber: Int32 { 4 }
 }
 extension Arsdk_Devicemanager_ConnectionState.Connected {
     static var deviceFieldNumber: Int32 { 1 }
     static var transportFieldNumber: Int32 { 2 }
+    static var backupLinkFieldNumber: Int32 { 3 }
 }
 extension Arsdk_Devicemanager_ConnectionState.Disconnecting {
     static var deviceFieldNumber: Int32 { 1 }
@@ -230,6 +271,8 @@ extension Arsdk_Devicemanager_KnownDevice {
     static var wifiFieldNumber: Int32 { 2 }
     static var cellularFieldNumber: Int32 { 3 }
     static var microhardFieldNumber: Int32 { 4 }
+    static var marsFieldNumber: Int32 { 5 }
+    static var backupLinkFieldNumber: Int32 { 6 }
 }
 extension Arsdk_Devicemanager_DiscoveredDevice.WifiVisibility {
     static var transportInfoFieldNumber: Int32 { 1 }
@@ -238,9 +281,13 @@ extension Arsdk_Devicemanager_DiscoveredDevice.WifiVisibility {
 extension Arsdk_Devicemanager_DiscoveredDevice.CellularVisibility {
     static var transportInfoFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Devicemanager_DiscoveredDevice.BackupLinkVisibility {
+    static var droneStartedFieldNumber: Int32 { 1 }
+}
 extension Arsdk_Devicemanager_DiscoveredDevice {
     static var infoFieldNumber: Int32 { 1 }
     static var knownFieldNumber: Int32 { 2 }
     static var wifiVisibilityFieldNumber: Int32 { 3 }
     static var cellularVisibilityFieldNumber: Int32 { 4 }
+    static var backupLinkVisibilityFieldNumber: Int32 { 5 }
 }

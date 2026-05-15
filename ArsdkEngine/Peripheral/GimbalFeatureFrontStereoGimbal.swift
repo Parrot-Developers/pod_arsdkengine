@@ -51,6 +51,10 @@ class GimbalFeatureFrontStereoGimbal: GimbalFeatureCalibratableGimbal {
         gimbal = FrontStereoGimbalCore(store: deviceController.device.peripheralStore, backend: self)
     }
 
+    override func didDisconnect() {
+        gimbal.unpublish()
+        super.didDisconnect()
+    }
 }
 
 /// Front Stereo Gimbal backend implementation

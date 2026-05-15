@@ -121,8 +121,8 @@ class PersistentStore {
 
     fileprivate func notifyRootDictionaryChanged(_ dictionary: RootPersistentDictionary) {
         for ref in rootDictonnaries where ref.dictionary != dictionary &&
-            ref.dictionary.type == dictionary.type && ref.dictionary.key == dictionary.key {
-                ref.dictionary.didChangeListener?()
+        ref.dictionary.type == dictionary.type && ref.dictionary.key == dictionary.key {
+            ref.dictionary.didChangeListener?()
         }
     }
 
@@ -157,7 +157,7 @@ class PersistentDictionary {
     var exist: Bool { return content != nil }
 
     /// Checks if it's a new dictionary that has not been saved to the store
-    private (set) var new: Bool
+    private(set) var new: Bool
 
     /// Constructor
     ///

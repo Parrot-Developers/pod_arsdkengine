@@ -74,16 +74,20 @@ public extension MediaWsApi {
         enum Name: String, Decodable {
             /// The first resource of a new media has been created
             case mediaCreated = "media_created"
-            /// The last resource of a media has been removed
-            case mediaRemoved = "media_removed"
             /// A new resource of an existing media has been created
             case resourceCreated = "resource_created"
+            /// An existing media has been updated
+            case mediaUpdated = "media_updated"
+            /// The last resource of a media has been removed
+            case mediaRemoved = "media_removed"
             /// A resource of a media has been removed, the media still has remaining resource
             case resourceRemoved = "resource_removed"
             /// All media have been removed
             case allMediaRemoved = "all_media_removed"
             /// Media database indexing state has changed
             case indexingStateChanged = "indexing_state_changed"
+            /// Storage has been removed
+            case storageRemoved = "storage_removed"
         }
         enum CodingKeys: String, CodingKey {
             case name = "name"
@@ -101,31 +105,31 @@ public extension MediaWsApi {
             self.name = try topContainer.decode(Name.self, forKey: .name)
             let nestedContainer = try topContainer.nestedContainer(keyedBy: MediaStoreApiChangeEvent.CodingKeys.self,
                                                                    forKey: .data)
-            // depending on the type of the notification the `data` container can contain different
-            // types
+            // depending on the type of the notification the `data` container can contain different types
             switch self.name {
+            case .mediaCreated:
+                self.event = .createdMedia(try nestedContainer.decode(MediaRestApi.Media.self, forKey: .media))
+            case .resourceCreated:
+                let mediaIdContainer = try nestedContainer.nestedContainer(keyedBy: MediaIdCodinKeys.self,
+                                                                           forKey: .resource)
+                let mediaId = try mediaIdContainer.decode(String.self, forKey: .mediaId)
+                let resource = try nestedContainer.decode(MediaRestApi.MediaResource.self, forKey: .resource)
+                self.event = .createdResource(resource, mediaId: mediaId)
+            case .mediaUpdated:
+                self.event = .updatedMedia(try nestedContainer.decode(MediaRestApi.Media.self, forKey: .media))
+            case .mediaRemoved:
+                self.event = .removedMedia(mediaId: try nestedContainer.decode(String.self, forKey: .mediaId))
+            case .resourceRemoved:
+                self.event = .removedResource(resourceId: try nestedContainer.decode(String.self, forKey: .resourceId))
             case .allMediaRemoved:
                 self.event = .allMediaRemoved
             case .indexingStateChanged:
                 let old = try nestedContainer.decode(MediaStoreApiChangeEvent.IndexingState.self, forKey: .oldState)
                 let new = try nestedContainer.decode(MediaStoreApiChangeEvent.IndexingState.self, forKey: .newState)
                 self.event = .indexingStateChanged(oldState: old, newState: new)
-            case .mediaCreated:
-                self.event = .createdMedia(try nestedContainer.decode(MediaRestApi.Media.self,
-                                                                      forKey: .media))
-            case .mediaRemoved:
-                self.event = .removedMedia(mediaId: try nestedContainer.decode(String.self,
-                                                                               forKey: .mediaId))
-            case .resourceCreated:
-                let mediaIdContainer = try nestedContainer.nestedContainer(keyedBy: MediaIdCodinKeys.self,
-                                                                           forKey: .resource)
-                let mediaId = try mediaIdContainer.decode(String.self, forKey: .mediaId)
-                let resource = try nestedContainer.decode(MediaRestApi.MediaResource.self,
-                                                          forKey: .resource)
-                self.event = .createdResource(resource, mediaId: mediaId)
-            case .resourceRemoved:
-                self.event = .removedResource(resourceId: try nestedContainer.decode(String.self,
-                                                                                     forKey: .resourceId))
+            case .storageRemoved:
+                self.event = .storageRemoved(storage:
+                    try nestedContainer.decode(MediaStoreApiChangeEvent.MediaStoreStorageType.self, forKey: .storage))
             }
         }
     }
@@ -136,7 +140,9 @@ public extension MediaWsApi {
 extension MediaWsApi: WebSocketSessionDelegate {
 
     func webSocketSessionDidReceiveMessage(_ data: Data) {
-        ULog.d(.mediaTag, "webSocketSessionDidReceiveMessage received \(String(data: data, encoding: .utf8) ?? "<undecodable data>")")
+        ULog.d(.mediaTag,
+               "webSocketSessionDidReceiveMessage received"
+               + " \(String(data: data, encoding: .utf8) ?? "<undecodable data>")")
         // decode message
         do {
             let decoder = JSONDecoder()

@@ -61,38 +61,43 @@ class PlanUtilityBackendProviderCore: PlanUtility {
         encoder.nonConformingFloatEncodingStrategy = .convertToString(positiveInfinity: "Infinity",
                                                                       negativeInfinity: "-Infinity",
                                                                       nan: "NaN")
-        var commandIndex = 0
-        var configIndex = 0
+        // generate `Item`s and match the config indices with the corresponding commands
+        let configs = NSMutableOrderedSet()
         var missionItems = [PlanFormat.PlanItemWithIndexAndConfig]()
-        var configItems = [String: Config]()
+        var nextCommandConfigIndex: Int?
         let items = plan.items.map(Item.init)
-        for index in (items.startIndex..<items.endIndex) {
-            let item = items[index]
+        items.forEach { item in
             switch item {
             case .command(let command):
-                let config = index != items.startIndex
-                && configIndex > 0 && items[index - 1].isConfig ? configIndex - 1 : nil
                 missionItems.append(
                     PlanFormat.PlanItemWithIndexAndConfig(frame: command.frame.rawValue,
                                                           autocontinue: command.autocontinue,
                                                           type: command.rawType,
-                                                          parametres: command.parameters,
-                                                          index: commandIndex,
-                                                          config: config)
+                                                          parameters: command.parameters,
+                                                          index: missionItems.count,
+                                                          configIndex: nextCommandConfigIndex)
                 )
-                commandIndex += 1
+                nextCommandConfigIndex = nil
             case .config(let config):
-                configItems["\(configIndex)"] = config
-                configIndex += 1
+                let contained = configs.contains(config)
+                if !contained {
+                    configs.add(config)
+                    nextCommandConfigIndex = configs.count - 1
+                } else {
+                    nextCommandConfigIndex = configs.index(of: config)
+                }
             }
         }
+        let configItems = Dictionary<String, Config>(uniqueKeysWithValues: configs.enumerated().map { element in
+            ("\(element.offset)", element.element as! Config)
+        })
         let planFormat = PlanFormat(staticConfig: plan.staticConfig.map(StaticConfig.init),
-                              mission: PlanFormat.Mission(items: missionItems),
-                              configs: PlanFormat.Configs(items: configItems),
-                              version: Plan.Version,
-                              filetype: Plan.Filetype,
-                              groundStation: groundStation,
-                              itemsVersion: Plan.ItemsVersion)
+                                    mission: PlanFormat.Mission(items: missionItems),
+                                    configs: PlanFormat.Configs(items: configItems),
+                                    version: Plan.Version,
+                                    filetype: Plan.Filetype,
+                                    groundStation: groundStation,
+                                    itemsVersion: Plan.ItemsVersion)
         let resultData = try encoder.encode(planFormat)
         return resultData
     }
@@ -154,13 +159,15 @@ class PlanUtilityBackendProviderCore: PlanUtility {
     }
 
     /// The Plan.Config equivalent in the engine world.
-    fileprivate struct Config: Codable {
+    fileprivate struct Config: Codable, Hashable {
         let obstacleAvoidance: Bool?
         let evCompensation: Arsdk_Camera_EvCompensation?
         let whiteBalance: Arsdk_Camera_WhiteBalanceMode?
         let photoResolution: Arsdk_Camera_PhotoResolution?
         let videoResolution: Arsdk_Camera_VideoResolution?
         let frameRate: Arsdk_Camera_Framerate?
+        let thermalControlMode: ArsdkFeatureThermalMode?
+        let enabledLinks: Arsdk_Backuplink_EnabledLinks?
 
         init(_ other: Plan.Config) {
             self.obstacleAvoidance = other.obstacleAvoidance
@@ -179,12 +186,19 @@ class PlanUtilityBackendProviderCore: PlanUtility {
             self.frameRate = other.frameRate.map {
                 Camera2RecordingFramerate.arsdkMapper.map(from: $0)!
             }
+            self.thermalControlMode = other.thermalControlMode.map {
+                ThermalControlMode.arsdkMapper.map(from: $0)!
+            }
+            self.enabledLinks = other.radioConfiguration.map {
+                RadioConfiguration.arsdkMapper.map(from: $0)!
+            }
         }
     }
 
     /// The Plan.StaticConfig equivalent in the engine world.
     fileprivate struct StaticConfig: Codable {
         let customRth: Bool?
+        let rthCustomHomeLocation: CLLocationCoordinate2D?
         let rthType: ArsdkFeatureRthHomeType?
         let rthAltitude: Double?
         let rthEndAltitude: Double?
@@ -193,6 +207,8 @@ class PlanUtilityBackendProviderCore: PlanUtility {
         let digitalSignature: Arsdk_Camera_DigitalSignature?
         let customId: String?
         let customTitle: String?
+        let cameraZoomLocked: Bool?
+        let gimbalAxesLocked: Bool?
 
         init(_ other: Plan.StaticConfig) {
             self.customRth = other.customRth
@@ -212,6 +228,7 @@ class PlanUtilityBackendProviderCore: PlanUtility {
             } else {
                 self.rthType = nil
             }
+            self.rthCustomHomeLocation = other.rthCustomHomeLocation
             self.rthAltitude = other.rthAltitude
             self.rthEndAltitude = other.rthEndAltitude
             switch other.rthEndingBehavior {
@@ -228,6 +245,8 @@ class PlanUtilityBackendProviderCore: PlanUtility {
             }
             self.customId = other.customId
             self.customTitle = other.customTitle
+            self.cameraZoomLocked = other.cameraZoomLocked
+            self.gimbalAxesLocked = other.gimbalAxesLocked
         }
     }
 }
@@ -237,15 +256,15 @@ fileprivate extension Plan {
         var items = [Plan.Item]()
         items.reserveCapacity(plan.mission.items.count + plan.configs.items.count)
         for item in plan.mission.items {
+            if let configIndex = item.configIndex, let config = plan.configs.items["\(configIndex)"] {
+                items.append(Plan.Item.config(Plan.Config(config)))
+            }
             guard let frame = MavlinkStandard.MavlinkCommand.Frame(rawValue: item.frame) else {
                 throw Plan.Error.parseError("Unsupported mavlink command itemframe")
             }
             let command = try MavlinkStandard.MavlinkCommand.create(rawType: item.type,
                                                                     frame: frame,
-                                                                    parameters: item.parametres)
-            if let configIndex = item.config, let config = plan.configs.items["\(configIndex)"] {
-                items.append(Plan.Item.config(Plan.Config(config)))
-            }
+                                                                    parameters: item.parameters)
             items.append(Plan.Item.command(command))
         }
         self.init(staticConfig: plan.staticConfig.map(Plan.StaticConfig.init), items: items)
@@ -291,6 +310,7 @@ fileprivate extension Plan.StaticConfig {
             returnHomeEndingBehavior = nil
         }
         self.init(customRth: staticConfig.customRth,
+                  rthCustomHomeLocation: staticConfig.rthCustomHomeLocation,
                   rthType: rthType,
                   rthAltitude: staticConfig.rthAltitude,
                   rthEndAltitude: staticConfig.rthEndAltitude,
@@ -299,7 +319,11 @@ fileprivate extension Plan.StaticConfig {
         },
                   rthEndingBehavior: returnHomeEndingBehavior,
                   digitalSignature: staticConfig.digitalSignature.flatMap(
-                    Camera2DigitalSignature.arsdkMapper.reverseMap(from:)))
+                    Camera2DigitalSignature.arsdkMapper.reverseMap(from:)),
+                  customId: staticConfig.customId,
+                  customTitle: staticConfig.customTitle,
+                  cameraZoomLocked: staticConfig.cameraZoomLocked,
+                  gimbalAxesLocked: staticConfig.gimbalAxesLocked)
     }
 }
 
@@ -307,15 +331,17 @@ fileprivate extension Plan.Config {
     init(_ config: PlanUtilityBackendProviderCore.Config) {
         self.init(obstacleAvoidance: config.obstacleAvoidance,
                   evCompensation: config.evCompensation.flatMap(
-            Camera2EvCompensation.arsdkMapper.reverseMap(from:)),
+                    Camera2EvCompensation.arsdkMapper.reverseMap(from:)),
                   whiteBalance: config.whiteBalance.flatMap(
-            Camera2WhiteBalanceMode.arsdkMapper.reverseMap(from:)),
+                    Camera2WhiteBalanceMode.arsdkMapper.reverseMap(from:)),
                   photoResolution: config.photoResolution.flatMap(
-            Camera2PhotoResolution.arsdkMapper.reverseMap(from:)),
+                    Camera2PhotoResolution.arsdkMapper.reverseMap(from:)),
                   videoResolution: config.videoResolution.flatMap(
                     Camera2RecordingResolution.arsdkMapper.reverseMap(from:)),
                   frameRate: config.frameRate.flatMap(
-            Camera2RecordingFramerate.arsdkMapper.reverseMap(from:))
+                    Camera2RecordingFramerate.arsdkMapper.reverseMap(from:)),
+                  radioConfiguration: config.enabledLinks.flatMap(
+                    RadioConfiguration.arsdkMapper.reverseMap(from:))
         )
     }
 }
@@ -346,23 +372,23 @@ private extension PlanUtilityBackendProviderCore.PlanFormat {
             case type = "command"
             case parameters = "params"
             case index
-            case config
+            case config = "config"
         }
         let frame: UInt
         let autocontinue: Int
         let type: Int
-        let parametres: [Double]
+        let parameters: [Double]
         let index: Int
-        let config: Int?
+        let configIndex: Int?
 
-        internal init(frame: UInt, autocontinue: Int, type: Int, parametres: [Double],
-                      index: Int, config: Int? = nil) {
+        internal init(frame: UInt, autocontinue: Int, type: Int, parameters: [Double],
+                      index: Int, configIndex: Int? = nil) {
             self.frame = frame
             self.autocontinue = autocontinue
             self.type = type
-            self.parametres = parametres
+            self.parameters = parameters
             self.index = index
-            self.config = config
+            self.configIndex = configIndex
         }
 
         init(from decoder: Decoder) throws {
@@ -370,9 +396,9 @@ private extension PlanUtilityBackendProviderCore.PlanFormat {
             self.frame = try container.decode(UInt.self, forKey: .frame)
             self.autocontinue = try container.decode(Int.self, forKey: .autocontinue)
             self.type = try container.decode(Int.self, forKey: .type)
-            self.parametres = try container.decode([Double].self, forKey: .parameters)
+            self.parameters = try container.decode([Double].self, forKey: .parameters)
             self.index = try container.decode(Int.self, forKey: .index)
-            self.config = try container.decodeIfPresent(Int.self, forKey: .config)
+            self.configIndex = try container.decodeIfPresent(Int.self, forKey: .config)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -380,9 +406,9 @@ private extension PlanUtilityBackendProviderCore.PlanFormat {
             try container.encode(self.frame, forKey: .frame)
             try container.encode(self.autocontinue, forKey: .autocontinue)
             try container.encode(self.type, forKey: .type)
-            try container.encode(self.parametres, forKey: .parameters)
+            try container.encode(self.parameters, forKey: .parameters)
             try container.encode(self.index, forKey: .index)
-            try container.encodeIfPresent(self.config, forKey: .config)
+            try container.encodeIfPresent(self.configIndex, forKey: .config)
         }
     }
 
@@ -435,6 +461,8 @@ private extension PlanUtilityBackendProviderCore.Config {
         case photoResolution
         case videoResolution
         case frameRate
+        case thermalControlMode
+        case enabledLinks
     }
 
     init(from decoder: Decoder) throws {
@@ -450,6 +478,10 @@ private extension PlanUtilityBackendProviderCore.Config {
             .flatMap(Arsdk_Camera_VideoResolution.init(rawValue:))
         self.frameRate = try container.decodeIfPresent(Int.self, forKey: .frameRate)
             .flatMap(Arsdk_Camera_Framerate.init(rawValue:))
+        self.thermalControlMode = try container.decodeIfPresent(Int.self, forKey: .thermalControlMode)
+            .flatMap(ArsdkFeatureThermalMode.init(rawValue:))
+        self.enabledLinks = try container.decodeIfPresent(Int.self, forKey: .enabledLinks)
+            .flatMap(Arsdk_Backuplink_EnabledLinks.init(rawValue:))
     }
 
     func encode(to encoder: Encoder) throws {
@@ -460,12 +492,15 @@ private extension PlanUtilityBackendProviderCore.Config {
         try container.encodeIfPresent(self.photoResolution?.rawValue, forKey: .photoResolution)
         try container.encodeIfPresent(self.videoResolution?.rawValue, forKey: .videoResolution)
         try container.encodeIfPresent(self.frameRate?.rawValue, forKey: .frameRate)
+        try container.encodeIfPresent(self.thermalControlMode?.rawValue, forKey: .thermalControlMode)
+        try container.encodeIfPresent(self.enabledLinks?.rawValue, forKey: .enabledLinks)
     }
 }
 
 private extension PlanUtilityBackendProviderCore.StaticConfig {
     enum CodingKeys: String, CodingKey {
         case customRth = "customRth"
+        case rthCustomHomeLocation = "rthCustomHomeLocation"
         case rthType = "rthType"
         case rthAltitude = "rthAltitude"
         case rthEndAltitude = "rthEndAltitude"
@@ -474,11 +509,15 @@ private extension PlanUtilityBackendProviderCore.StaticConfig {
         case digitalSignature  = "digitalSignature"
         case customId = "customId"
         case customTitle = "customTitle"
+        case cameraZoomLocked = "cameraZoomLocked"
+        case gimbalAxesLocked = "gimbalAxesLocked"
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.customRth = try container.decodeIfPresent(Bool.self, forKey: .customRth)
+        self.rthCustomHomeLocation = try container.decodeIfPresent(CLLocationCoordinate2D.self,
+                                                                   forKey: .rthCustomHomeLocation)
         self.rthType = try container.decodeIfPresent(Int.self, forKey: .rthType)
             .flatMap(ArsdkFeatureRthHomeType.init(rawValue:))
         self.rthAltitude = try container.decodeIfPresent(Double.self, forKey: .rthAltitude)
@@ -490,11 +529,14 @@ private extension PlanUtilityBackendProviderCore.StaticConfig {
             .flatMap(Arsdk_Camera_DigitalSignature.init(rawValue:))
         self.customId = try container.decodeIfPresent(String.self, forKey: .customId)
         self.customTitle = try container.decodeIfPresent(String.self, forKey: .customTitle)
+        self.cameraZoomLocked = try container.decodeIfPresent(Bool.self, forKey: .cameraZoomLocked)
+        self.gimbalAxesLocked = try container.decodeIfPresent(Bool.self, forKey: .gimbalAxesLocked)
     }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encodeIfPresent(self.customRth, forKey: .customRth)
+        try container.encodeIfPresent(self.rthCustomHomeLocation, forKey: .rthCustomHomeLocation)
         try container.encodeIfPresent(self.rthType?.rawValue, forKey: .rthType)
         try container.encodeIfPresent(self.rthAltitude, forKey: .rthAltitude)
         try container.encodeIfPresent(self.rthEndAltitude, forKey: .rthEndAltitude)
@@ -503,5 +545,26 @@ private extension PlanUtilityBackendProviderCore.StaticConfig {
         try container.encodeIfPresent(self.digitalSignature?.rawValue, forKey: .digitalSignature)
         try container.encodeIfPresent(self.customId, forKey: .customId)
         try container.encodeIfPresent(self.customTitle, forKey: .customTitle)
+        try container.encodeIfPresent(self.cameraZoomLocked, forKey: .cameraZoomLocked)
+        try container.encodeIfPresent(self.gimbalAxesLocked, forKey: .gimbalAxesLocked)
+    }
+}
+
+extension CLLocationCoordinate2D: Codable {
+    enum CodingKeys: String, CodingKey {
+        case latitude, longitude
+    }
+
+     public func encode(to encoder: Encoder) throws {
+         var container = encoder.container(keyedBy: CodingKeys.self)
+         try container.encode(latitude, forKey: .latitude)
+         try container.encode(longitude, forKey: .longitude)
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init()
+        latitude = try container.decode(Double.self, forKey: .latitude)
+        longitude = try container.decode(Double.self, forKey: .longitude)
     }
 }

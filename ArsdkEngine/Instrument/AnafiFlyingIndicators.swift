@@ -29,19 +29,28 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
 /// Flying indicators component controller for Anafi messages based drones
 class AnafiFlyingIndicators: DeviceComponentController {
 
-    /// flyingIndicator component
+    /// FlyingIndicator component
     private var flyingIndicator: FlyingIndicatorsCore!
+
+    /// Decoder for backup link events.
+    private var arsdkDecoder: ArsdkBackuplinkEventDecoder!
+
+    /// Decoder for piloting events.
+    public var arsdkPilotingDecoder: ArsdkPilotingEventDecoder!
 
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        self.flyingIndicator = FlyingIndicatorsCore(store: deviceController.device.instrumentStore)
+        arsdkDecoder = ArsdkBackuplinkEventDecoder(listener: self)
+        arsdkPilotingDecoder = ArsdkPilotingEventDecoder(listener: self)
+        flyingIndicator = FlyingIndicatorsCore(store: deviceController.device.instrumentStore)
     }
 
     /// Drone is connected
@@ -51,21 +60,32 @@ class AnafiFlyingIndicators: DeviceComponentController {
 
     /// Drone is disconnected
     override func didDisconnect() {
-        flyingIndicator.unpublish()
+        flyingIndicator.update(vehicleMode: .copter).unpublish()
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        flyingIndicator.update(landedState: nil)
+            .update(isHandLanding: nil)
+            .publish()
     }
 
     /// A command has been received
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-        let featureId = ArsdkCommand.getFeatureId(command)
-        if featureId == kArsdkFeatureArdrone3PilotingstateUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureArdrone3PilotingstateUid:
             ArsdkFeatureArdrone3Pilotingstate.decode(command, callback: self)
-        } else if featureId == kArsdkFeatureHandLandUid {
+        case kArsdkFeatureHandLandUid:
             ArsdkFeatureHandLand.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkDecoder.decode(command)
+            arsdkPilotingDecoder.decode(command)
+        default:
+            break
         }
     }
-
 }
 
 /// Piloting State decode callback implementation
@@ -118,4 +138,49 @@ extension AnafiFlyingIndicators: ArsdkFeatureHandLandCallback {
         }
         flyingIndicator.notifyUpdated()
     }
+}
+
+/// Backup link decode callback implementation.
+extension AnafiFlyingIndicators: ArsdkBackuplinkEventDecoderListener {
+    func onTelemetry(_ telemetry: Arsdk_Backuplink_Event.Telemetry) {
+        switch telemetry.flyingState {
+        case .landed:
+            flyingIndicator.update(state: .landed).notifyUpdated()
+        case .hovering:
+            flyingIndicator.update(flyingState: .waiting).notifyUpdated()
+        case .flying, .rth, .flightPlan, .pointnfly:
+            flyingIndicator.update(flyingState: .flying).notifyUpdated()
+        case .emergency:
+            flyingIndicator.update(state: .emergency).notifyUpdated()
+        case .UNRECOGNIZED(_):
+            ULog.w(.tag, "Unrecognized flying state, skipping this event.")
+        }
+    }
+
+    func onMainRadioDisconnecting(_ mainRadioDisconnecting: SwiftProtobuf.Google_Protobuf_Empty) {
+        // nothing to do
+    }
+}
+
+/// Piloting callback implementation
+extension AnafiFlyingIndicators: ArsdkPilotingEventDecoderListener {
+    func onState(_ state: Arsdk_Piloting_Event.State) {
+        if state.hasVehicleMode {
+            if let vehicleMode = VehicleMode(fromArsdk: state.vehicleMode.value) {
+                flyingIndicator.update(vehicleMode: vehicleMode).notifyUpdated()
+            }
+        }
+    }
+
+    func onCapabilities(_ capabilities: Arsdk_Piloting_Event.Capabilities) {
+        // nothing to do
+    }
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension VehicleMode: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<VehicleMode, Arsdk_Piloting_VehicleMode>([
+        .copter: .copter,
+        .plane: .plane
+    ])
 }

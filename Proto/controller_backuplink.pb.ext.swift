@@ -1,0 +1,141 @@
+// Generated, do not edit !
+
+import Foundation
+import GroundSdk
+import SwiftProtobuf
+
+/// Listener for `ArsdkControllerbackuplinkEventDecoder`.
+protocol ArsdkControllerbackuplinkEventDecoderListener: AnyObject {
+
+    /// Processes a `Arsdk_Controllerbackuplink_Event.State` event.
+    ///
+    /// - Parameter state: event to process
+    func onState(_ state: Arsdk_Controllerbackuplink_Event.State)
+}
+
+/// Decoder for arsdk.controllerbackuplink.Event events.
+class ArsdkControllerbackuplinkEventDecoder: NSObject, ArsdkFeatureGenericCallback {
+
+    /// Service identifier.
+    static let serviceId = "arsdk.controllerbackuplink.Event".serviceId
+
+    /// Listener notified when events are decoded.
+    private weak var listener: ArsdkControllerbackuplinkEventDecoderListener?
+
+    /// Constructor.
+    ///
+    /// - Parameter listener: listener notified when events are decoded
+    init(listener: ArsdkControllerbackuplinkEventDecoderListener) {
+       self.listener = listener
+    }
+
+    /// Decodes an event.
+    ///
+    /// - Parameter event: event to decode
+    func decode(_ event: OpaquePointer) {
+       if ArsdkCommand.getFeatureId(event) == kArsdkFeatureGenericUid {
+            ArsdkFeatureGeneric.decode(event, callback: self)
+        }
+    }
+
+    func onCustomEvtNonAck(serviceId: UInt, msgNum: UInt, payload: Data) {
+        processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
+    }
+
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
+        processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
+    }
+
+    /// Processes a custom event.
+    ///
+    /// - Parameters:
+    ///    - serviceId: service identifier
+    ///    - payload: event payload
+    private func processEvent(serviceId: UInt, payload: Data, isNonAck: Bool) {
+        guard serviceId == ArsdkControllerbackuplinkEventDecoder.serviceId else {
+            return
+        }
+        if let event = try? Arsdk_Controllerbackuplink_Event(serializedData: payload) {
+            if !isNonAck {
+                ULog.d(ULog.cmdTag, "ArsdkControllerbackuplinkEventDecoder event \(event)")
+            }
+            switch event.id {
+            case .state(let event):
+                listener?.onState(event)
+            case .none:
+                ULog.w(.tag, "Unknown Arsdk_Controllerbackuplink_Event, skipping this event")
+            }
+        }
+    }
+}
+
+/// Extension to get command field number.
+extension Arsdk_Controllerbackuplink_Event.OneOf_ID {
+    var number: Int32 {
+        switch self {
+        case .state: return 16
+        }
+    }
+}
+
+/// Decoder for arsdk.controllerbackuplink.Command commands.
+class ArsdkControllerbackuplinkCommandEncoder {
+
+    /// Service identifier.
+    static let serviceId = "arsdk.controllerbackuplink.Command".serviceId
+
+    /// Gets encoder for a command.
+    ///
+    /// - Parameter command: command to encode
+    /// - Returns: command encoder, or `nil`
+    static func encoder(_ command: Arsdk_Controllerbackuplink_Command.OneOf_ID) -> ArsdkCommandEncoder? {
+        ULog.d(.tag, "ArsdkControllerbackuplinkCommandEncoder command \(command)")
+        var message = Arsdk_Controllerbackuplink_Command()
+        message.id = command
+        if let payload = try? message.serializedData() {
+            return ArsdkFeatureGeneric.customCmdEncoder(serviceId: serviceId,
+                                                        msgNum: UInt(command.number),
+                                                        payload: payload)
+        }
+        return nil
+    }
+}
+
+/// Extension to get command field number.
+extension Arsdk_Controllerbackuplink_Command.OneOf_ID {
+    var number: Int32 {
+        switch self {
+        case .getState: return 16
+        case .configure: return 17
+        }
+    }
+}
+extension Arsdk_Controllerbackuplink_Command.GetState {
+    static var includeDefaultCapabilitiesFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Controllerbackuplink_Command.Configure {
+    static var configFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Controllerbackuplink_Command {
+    static var getStateFieldNumber: Int32 { 16 }
+    static var configureFieldNumber: Int32 { 17 }
+}
+extension Arsdk_Controllerbackuplink_Event.State {
+    static var defaultCapabilitiesFieldNumber: Int32 { 1 }
+    static var linkInfoFieldNumber: Int32 { 2 }
+    static var configFieldNumber: Int32 { 3 }
+}
+extension Arsdk_Controllerbackuplink_Event {
+    static var stateFieldNumber: Int32 { 16 }
+}
+extension Arsdk_Controllerbackuplink_Capabilities {
+    static var supportedFrequenciesFieldNumber: Int32 { 1 }
+    static var supportedBandsFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Controllerbackuplink_Config {
+    static var frequencyFieldNumber: Int32 { 1 }
+    static var enabledLinksFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Controllerbackuplink_EnabledLinksValue {
+    static var valueFieldNumber: Int32 { 1 }
+}

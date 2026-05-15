@@ -32,10 +32,139 @@ import GroundSdk
 import SwiftProtobuf
 
 /// Device controller for a RC (Remote Control).
-class RCController: ProxyDeviceController {
+class RCController: DeviceController {
 
-    /// Drone Manager Feature implementation
-    private var droneManager: DroneManagerFeature!
+    /// The remote antenna connected to the controlled RC.
+    class RemoteAntenna: ArsdkRemoteantennaEventDecoderListener {
+
+        /// Remote antenna's unique identifier.
+        private(set) var uid: String?
+
+        /// Remote antenna's device model.
+        private(set) var model: DeviceModel?
+
+        /// Remote antenna firmware version.
+        private(set) var firmwareVersion: FirmwareVersion?
+
+        /// Remote antenna device http server
+        var deviceServer: DeviceServer?
+
+        /// Device controller
+        private var deviceController: DeviceController
+
+        /// The tcp proxy if it exists.
+        /// Always nil when not connected.
+        fileprivate private(set) var arsdkTcpProxy: ArsdkTcpProxy?
+
+        /// Decoder for remote antenna events.
+        var arsdkDecoder: ArsdkRemoteantennaEventDecoder!
+
+        /// Whether TCP proxy is created or not.
+        private var isTcpProxyCreated: Bool = false {
+            didSet {
+
+                guard isTcpProxyCreated != oldValue else { return }
+
+                if isTcpProxyCreated {
+                    if isDeviceInfoReceived {
+                        deviceController.componentControllers.forEach { controller in
+                            controller.remoteAntennaDidConnect()
+                        }
+                    }
+                } else {
+                    deviceController.componentControllers.forEach { controller in
+                        controller.remoteAntennaDidDisconnect()
+                    }
+                }
+            }
+        }
+
+        /// Whether device info event has been received or not.
+        private var isDeviceInfoReceived: Bool = false {
+            didSet {
+
+                guard isDeviceInfoReceived != oldValue else { return }
+
+                if isDeviceInfoReceived && isTcpProxyCreated {
+                    deviceController.componentControllers.forEach { controller in
+                        controller.remoteAntennaDidConnect()
+                    }
+                }
+            }
+        }
+
+        /// Whether the remote antenna is connected and active or not.
+        fileprivate(set) var isActive: Bool = false {
+            didSet {
+
+                guard isActive != oldValue else { return }
+
+                if isActive {
+                    createTcpProxy()
+                } else {
+                    uid = nil
+                    model = nil
+                    firmwareVersion = nil
+                    isDeviceInfoReceived = false
+                    closeTcpProxy()
+                }
+            }
+        }
+
+        /// Constructor
+        ///
+        /// - Parameter deviceController: the device controller
+        init(deviceController: DeviceController) {
+            self.deviceController = deviceController
+            self.arsdkDecoder = ArsdkRemoteantennaEventDecoder(listener: self)
+        }
+
+        /// Create tcp proxy
+        private func createTcpProxy() {
+            deviceController.backend?.createTcpProxy(
+                url: "remote_antenna", port: 80, completion: { [weak self] proxy, address, port in
+                    guard let self = self else { return }
+
+                    self.arsdkTcpProxy = proxy
+
+                    if let address = address, port != 0 {
+                        deviceServer = DeviceServer(address: address, port: port)
+                    }
+                    isTcpProxyCreated = true
+                })
+        }
+
+        /// Close tcp proxy
+        private func closeTcpProxy() {
+            isTcpProxyCreated = false
+            deviceServer = nil
+            arsdkTcpProxy = nil
+        }
+
+        func onState(_ state: Arsdk_Remoteantenna_Event.State) {
+            if state.hasAntennaStatus {
+                self.isActive = state.antennaStatus.value == .active
+            }
+            if self.isActive {
+                if state.hasDeviceInfo {
+                    if !state.deviceInfo.serial.isEmpty {
+                        uid = state.deviceInfo.serial
+                        model = DeviceModel.from(internalId: Int(state.deviceInfo.model))
+                        firmwareVersion = FirmwareVersion.parse(versionStr: state.deviceInfo.firmwareVersion)
+                        isDeviceInfoReceived = true
+                    }
+                }
+            }
+        }
+
+        func onDiscoveredCloudAntennas(_ discoveredCloudAntennas: Arsdk_Remoteantenna_Event.DiscoveredCloudAntennas) {
+            // nothing to do
+        }
+
+        func onHeading(_ heading: Arsdk_Remoteantenna_Event.Heading) {
+            // nothing to do
+        }
+    }
 
     /// Get the drone managed by this controller
     var remoteControl: RemoteControlCore {
@@ -48,8 +177,14 @@ class RCController: ProxyDeviceController {
     /// Monitor of the userAccount changes
     private var userAccountMonitor: MonitorCore!
 
-    /// User account information
-    private var userAccountInfo: UserAccountInfoCore?
+    /// Monitor the userLocation (with systemPositionUtility)
+    private var userLocationMonitor: MonitorCore?
+
+    /// Decoder for mobile device events.
+    private var arsdkMobileDeviceDecoder: ArsdkMobiledeviceEventDecoder!
+
+    /// The remote antenna connected to the controlled RC.
+    public private(set) var remoteAntenna: RemoteAntenna!
 
     /// Constructor
     ///
@@ -64,11 +199,12 @@ class RCController: ProxyDeviceController {
         }
         self.getAllSettingsEncoder = ArsdkFeatureSkyctrlSettings.allSettingsEncoder()
         self.getAllStatesEncoder = ArsdkFeatureSkyctrlCommon.allStatesEncoder()
-        self.droneManager = DroneManagerFeature(arsdkProxy: arsdkProxy)
 
         if let eventLogger = engine.utilities.getUtility(Utilities.eventLogger) {
             deviceEventLogger = RCEventLogger(eventLog: eventLogger, engine: self.engine, device: self.device)
         }
+        arsdkMobileDeviceDecoder = ArsdkMobiledeviceEventDecoder(listener: self)
+        remoteAntenna = RemoteAntenna(deviceController: self)
     }
 
     /// Device controller did start
@@ -76,23 +212,6 @@ class RCController: ProxyDeviceController {
         super.controllerDidStart()
         // Can force unwrap remote control store utility because we know it is always available after the engine's start
         engine.utilities.getUtility(Utilities.remoteControlStore)!.add(remoteControl)
-        let userAccountUtility = engine.utilities.getUtility(Utilities.userAccount)!
-        // get userInfo and monitor changes
-        userAccountInfo = userAccountUtility.userAccountInfo
-        // monitor userAccount changes
-        userAccountMonitor = userAccountUtility.startMonitoring(accountDidChange: { (newUserAccountInfo) in
-            if newUserAccountInfo != self.userAccountInfo {
-                if self.userAccountInfo?.token != newUserAccountInfo?.token,
-                   let token = newUserAccountInfo?.token {
-                    self.sendToken(token)
-                }
-                if self.userAccountInfo?.droneList != newUserAccountInfo?.droneList,
-                   let droneList = newUserAccountInfo?.droneList {
-                    self.sendDroneList(droneList)
-                }
-                self.userAccountInfo = newUserAccountInfo
-            }
-        })
     }
 
     /// Device controller did stop
@@ -104,15 +223,12 @@ class RCController: ProxyDeviceController {
         userAccountMonitor?.stop()
         userAccountMonitor = nil
         let notificationCenter = NotificationCenter.default
-        if #available(iOS 13.0, *) {
-            notificationCenter.removeObserver(self, name: UIScene.didEnterBackgroundNotification, object: nil)
-        } else {
-            notificationCenter.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
-        }
+        notificationCenter.removeObserver(self, name: UIScene.didEnterBackgroundNotification, object: nil)
     }
 
     override func protocolWillConnect() {
         super.protocolWillConnect()
+        _ = sendGetCapabilitiesCommand()
 
         if let blackBoxRecorder = engine.blackBoxRecorder {
             let blackBoxRcSession = blackBoxRecorder.openRemoteControlSession(remoteControl: remoteControl)
@@ -128,20 +244,21 @@ class RCController: ProxyDeviceController {
         }
     }
 
-    /// About to disconnect protocol
-    override func protocolWillDisconnect() {
-        super.protocolWillDisconnect()
-        droneManager.protocolWillDisconnect()
-    }
-
     override func protocolDidConnect() {
         super.protocolDidConnect()
-        if let token = userAccountInfo?.token {
-            sendToken(token)
-        }
-        if let droneList = userAccountInfo?.droneList {
-            sendDroneList(droneList)
-        }
+        let userAccountUtility = engine.utilities.getUtility(Utilities.userAccount)!
+        // monitor userAccount changes
+        userAccountMonitor = userAccountUtility.startMonitoring(accountDidChange: { (newUserAccountInfo) in
+            if let token = newUserAccountInfo?.token {
+                self.sendToken(token)
+            }
+            if let droneList = newUserAccountInfo?.droneList {
+                self.sendDroneList(droneList)
+            }
+            if let cloudAntennaList = newUserAccountInfo?.cloudAntennaList {
+                self.sendCloudAntennaList(cloudAntennaList)
+            }
+        })
     }
 
     override func protocolDidDisconnect() {
@@ -149,6 +266,10 @@ class RCController: ProxyDeviceController {
         NotificationCenter.default.removeObserver(self, name: UIApplication.willTerminateNotification, object: nil)
         rcBlackBoxSubscription?.cancel()
         rcBlackBoxSubscription = nil
+        remoteAntenna?.isActive = false
+        // stop monitoring subscription
+        userLocationMonitor?.stop()
+        userLocationMonitor = nil
     }
 
     /// A command has been received
@@ -156,33 +277,18 @@ class RCController: ProxyDeviceController {
     /// - Parameter command: received command
     override func protocolDidReceiveCommand(_ command: OpaquePointer) {
         // settings/state
-        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureSkyctrlSettingsstateUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureSkyctrlSettingsstateUid:
             ArsdkFeatureSkyctrlSettingsstate.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureSkyctrlCommonstateUid {
+        case kArsdkFeatureSkyctrlCommonstateUid:
             ArsdkFeatureSkyctrlCommonstate.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            remoteAntenna.arsdkDecoder.decode(command)
+            arsdkMobileDeviceDecoder.decode(command)
+        default:
+            break
         }
-
-        // Drone manager feature
-        droneManager.protocolDidReceiveCommand(command)
-
         super.protocolDidReceiveCommand(command)
-    }
-
-    /// Ask the proxy to connect to a device.
-    ///
-    /// - Parameters:
-    ///    - controller: device controller of the device to connect.
-    ///    - password: password to use to connect the remote device, an empty string if password is not required
-    /// - Returns: true if the connection as started
-    override func connectRemoteDevice(controller: DeviceController, password: String) -> Bool {
-        return droneManager.connectRemoteDevice(uid: controller.device.uid, password: password)
-    }
-
-    /// Forget a remote device.
-    ///
-    /// - Parameter uid: uid of the device to forget
-    override func forgetRemoteDevice(uid: String) {
-        droneManager.forgetRemoteDevice(uid: uid)
     }
 
     /// Send user account token
@@ -203,13 +309,93 @@ class RCController: ProxyDeviceController {
         sendSecurityTokenCommand(.registerApcDroneList(droneListCommand))
     }
 
+    /// Send cloud antenna list
+    ///
+    /// - Parameter cloudAntennaList: cloud antenna list
+    private func sendCloudAntennaList(_ cloudAntennaList: String) {
+        var cloudAntennaListCommand = Arsdk_Security_Command.RegisterApcCloudAntennaList()
+        cloudAntennaListCommand.list = cloudAntennaList
+        sendSecurityTokenCommand(.registerApcCloudAntennaList(cloudAntennaListCommand))
+    }
+
     /// Sends to the drone a security command.
     ///
     /// - Parameter command: command to send
     private func sendSecurityTokenCommand(_ command: Arsdk_Security_Command.OneOf_ID) {
         if let encoder = ArsdkSecurityCommandEncoder.encoder(command) {
-            sendCommand(encoder)
+            _ = sendCommand(encoder)
         }
+    }
+
+    /// Start system positon
+    private func startSystemPosition() {
+        let systemPositionUtility = engine.utilities.getUtility(Utilities.systemPosition)
+        if let systemPositionUtility {
+            userLocationMonitor = systemPositionUtility.startLocationMonitoring(
+                passive: false, userLocationDidChange: { [unowned self] newLocation in
+                    if let newLocation = newLocation {
+                        // Check that the location is not too old (15 sec max)
+                        if abs(newLocation.timestamp.timeIntervalSinceNow) <= 15 {
+                            // this position is valid and can be sent to the drone
+                            self.locationDidChange(newLocation)
+                        } else {
+                            ULog.d(.ctrlTag,
+                                   "reject old timestamp Location \(abs(newLocation.timestamp.timeIntervalSinceNow))")
+                        }
+                    }
+                }, stoppedDidChange: {_ in }, authorizedDidChange: {_ in })
+        }
+    }
+
+    /// Processes system geographic location changes and sends them to the remote.
+    private func locationDidChange(_ newLocation: CLLocation) {
+        // controller speed validity.
+        let speedIsValid = { () -> Bool in
+            guard newLocation.speedAccuracy >= 0 else { return false }
+            if newLocation.speed == 0.0 {
+                return true
+            } else {
+                return newLocation.courseAccuracy >= 0 && newLocation.courseAccuracy < 180.0
+            }
+        }
+        var location = Arsdk_Mobiledevice_Command.Location()
+        location.timestamp = Google_Protobuf_UInt64Value(UInt64(newLocation.timestamp.timeIntervalSince1970 * 1000))
+        location.source = .sourceMain
+        location.latitude = Google_Protobuf_DoubleValue(newLocation.coordinate.latitude)
+        location.longitude = Google_Protobuf_DoubleValue(newLocation.coordinate.longitude)
+        location.amslAltitude = Google_Protobuf_FloatValue(Float(newLocation.altitude))
+        let horizontalAccuracy =
+            Google_Protobuf_FloatValue(Float(newLocation.horizontalAccuracy / 2.0.squareRoot()))
+        location.latitudeAccuracy = horizontalAccuracy
+        location.longitudeAccuracy = horizontalAccuracy
+        location.amslAltitudeAccuracy =
+            Google_Protobuf_FloatValue(Float(newLocation.verticalAccuracy))
+        if speedIsValid() {
+            let courseRad = newLocation.course.toRadians()
+            location.northVelocity = Google_Protobuf_FloatValue(Float(cos(courseRad) * newLocation.speed))
+            location.eastVelocity = Google_Protobuf_FloatValue(Float(sin(courseRad) * newLocation.speed))
+            location.velocityAccuracy = Google_Protobuf_FloatValue(Float(newLocation.speedAccuracy))
+            location.velocityAccuracy = Google_Protobuf_FloatValue(Float(newLocation.speedAccuracy))
+        }
+        _ = sendMobileDeviceCommand(.location(location))
+    }
+
+    /// Sends get capabilities command.
+    ///
+    /// - Returns: `true` if the command has been sent
+    func sendGetCapabilitiesCommand() -> Bool {
+        return sendMobileDeviceCommand(.getCapabilities(Google_Protobuf_Empty()))
+    }
+
+    /// Sends to the drone a Mobile device command.
+    ///
+    /// - Parameter command: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendMobileDeviceCommand(_ command: Arsdk_Mobiledevice_Command.OneOf_ID) -> Bool {
+        if let encoder = ArsdkMobiledeviceCommandEncoder.encoder(command) {
+            return sendCommand(encoder)
+        }
+        return false
     }
 }
 
@@ -248,6 +434,15 @@ extension RCController: ArsdkFeatureSkyctrlCommoneventstateCallback {
         if reason == ArsdkFeatureSkyctrlCommoneventstateShutdownReason.poweroffButton {
             autoReconnect = false
             _ = doDisconnect(cause: .userRequest)
+        }
+    }
+}
+
+/// Mobile device events, used to received capabilities
+extension RCController: ArsdkMobiledeviceEventDecoderListener {
+    func onCapabilities(_ capabilities: Arsdk_Mobiledevice_Event.Capabilities) {
+        if capabilities.supportedFeatures.contains(.location) {
+            startSystemPosition()
         }
     }
 }

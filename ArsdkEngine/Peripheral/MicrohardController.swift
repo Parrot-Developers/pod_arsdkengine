@@ -100,12 +100,10 @@ extension MicrohardController {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendMicrohardCommand(_ command: Arsdk_Microhard_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkMicrohardCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends "get state" command.
@@ -159,7 +157,6 @@ extension MicrohardController: ArsdkMicrohardEventDecoderListener {
         }
 
         microhard.publish()
-        microhard.notifyUpdated()
     }
 
     func onPairing(_ pairing: Arsdk_Microhard_Event.Pairing) {

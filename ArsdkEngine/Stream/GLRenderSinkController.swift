@@ -199,20 +199,20 @@ extension GlRenderSinkController {
     ///    - paddingFill: rendering padding mode
     /// - Returns: SdkCoreStreamRenderingFillMode equivalent
     func fillModeFrom(scaleType: GlRenderSinkScaleType, paddingFill: GlRenderSinkPaddingFill)
-        -> SdkCoreStreamRenderingFillMode {
-            switch scaleType {
-            case .fit:
-                switch paddingFill {
-                case .none:
-                    return .fit
-                case .blur_crop:
-                    return .fitPadBlurCrop
-                case .blur_extend:
-                    return .fitPadBlurExtend
-                }
-            case .crop:
-                return .crop
+    -> SdkCoreStreamRenderingFillMode {
+        switch scaleType {
+        case .fit:
+            switch paddingFill {
+            case .none:
+                return .fit
+            case .blur_crop:
+                return .fitPadBlurCrop
+            case .blur_extend:
+                return .fitPadBlurExtend
             }
+        case .crop:
+            return .crop
+        }
     }
 }
 
@@ -278,6 +278,7 @@ extension GlRenderSinkController: SdkCoreRendererOverlayListener {
         }
     }
 }
+
 /// TextureLoaderFrame backend implementation.
 class TextureLoaderFrameBackendCore: TextureLoaderFrameBackend {
 
@@ -401,12 +402,22 @@ class OverlayContextBackendCore: OverlayContextBackend {
         return data.frameMetadataHandle
     }
 
+    /// Byte buffer of the current frame metadata.
+    var frameMetadataBuffer: Data? {
+        return data.frameMetadataBuffer
+    }
+
+    /// Current frame timestamp in microseconds.
+    var frameTimestamp: UInt64? {
+        return data.frameTimestamp != 0 ? data.frameTimestamp : nil
+    }
+
     /// Histogram.
     var histogram: Histogram? {
         return histogramCore.histogramRed != nil ||
-            histogramCore.histogramGreen != nil ||
-            histogramCore.histogramBlue != nil ||
-            histogramCore.histogramLuma != nil ? histogramCore : nil
+        histogramCore.histogramGreen != nil ||
+        histogramCore.histogramBlue != nil ||
+        histogramCore.histogramLuma != nil ? histogramCore : nil
     }
 
     /// Constructor

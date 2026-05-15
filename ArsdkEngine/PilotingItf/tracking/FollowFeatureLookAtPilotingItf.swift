@@ -62,7 +62,7 @@ class FollowFeatureLookAtPilotingItf: FollowFeatureTrackingPilotingItf, LookAtPi
     /// Start a LookAt with all its params set to the default params.
     /// Sending this command will stop other running followMe.
     override func sendStartTrackingCommand() {
-        sendCommand(ArsdkFeatureFollowMe.startEncoder(mode: .lookAt))
+        _ = sendCommand(ArsdkFeatureFollowMe.startEncoder(mode: .lookAt))
     }
 
     /// Stop LookAt
@@ -71,7 +71,7 @@ class FollowFeatureLookAtPilotingItf: FollowFeatureTrackingPilotingItf, LookAtPi
         guard trackingModeUsed!.contains(trackingSharing.latestModeReceived) else {
             return
         }
-        sendCommand(ArsdkFeatureFollowMe.stopEncoder())
+        _ = sendCommand(ArsdkFeatureFollowMe.stopEncoder())
     }
 }
 
@@ -84,9 +84,9 @@ extension FollowFeatureLookAtPilotingItf {
         mode: ArsdkFeatureFollowMeMode, behavior: ArsdkFeatureFollowMeBehavior,
         animation: ArsdkFeatureFollowMeAnimation, animationAvailableBitField: UInt) {
 
-        // shares the latest mode received
-        trackingSharing.latestModeReceived = mode
+            // shares the latest mode received
+            trackingSharing.latestModeReceived = mode
 
-        trackingIsRunning = (mode == .lookAt && behavior == .lookAt)
-    }
+            trackingIsRunning = (mode == .lookAt && behavior == .lookAt)
+        }
 }

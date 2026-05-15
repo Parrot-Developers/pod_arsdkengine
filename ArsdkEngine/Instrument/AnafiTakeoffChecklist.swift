@@ -61,7 +61,7 @@ class AnafiTakeoffChecklist: DeviceComponentController {
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-       if ArsdkCommand.getFeatureId(command) == kArsdkFeatureAlarmsUid {
+        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureAlarmsUid {
             ArsdkFeatureAlarms.decode(command, callback: self)
         }
     }
@@ -114,6 +114,18 @@ extension AnafiTakeoffChecklist: ArsdkFeatureAlarmsCallback {
             newKind = .vcam
         case .verticalTof:
             newKind = .verticalTof
+        case .motorDown:
+            newKind = .motorDown
+        case .noSmartbattery:
+            newKind = .noSmartBattery
+        case .takeoffForbiddenByBattery:
+            newKind = .forbiddenByBattery
+        case .autopilotConfiguration:
+            newKind = .autopilotConfiguration
+        case .pitot:
+            newKind = .pitot
+        case .autopilotUnavailable:
+            newKind = .autopilotUnavailable
         case .sdkCoreUnknown:
             break
         @unknown default:

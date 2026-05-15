@@ -61,6 +61,6 @@ class FtpFlightPlanUploader: ArsdkFlightplanUploader {
                     completion(false, nil)
                     ULog.w(.flightPlanTag, "Upload of mavlink file failed with error \(status.rawValue)")
                 }
-        })
+            })
     }
 }

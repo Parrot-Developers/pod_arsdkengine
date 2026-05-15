@@ -50,7 +50,7 @@ class AnafiDevToolbox: DeviceComponentController, DevToolboxBackend {
     /// Drone is connected.
     override func didConnect() {
         // when connected, ask all debug settings
-        sendCommand(ArsdkFeatureDebug.getAllSettingsEncoder())
+        _ = sendCommand(ArsdkFeatureDebug.getAllSettingsEncoder())
         devToolbox.publish()
     }
 
@@ -70,20 +70,20 @@ class AnafiDevToolbox: DeviceComponentController, DevToolboxBackend {
 
     func set(setting: BoolDebugSettingCore) {
         let strValue = setting.value ? "1" : "0"
-        sendCommand(ArsdkFeatureDebug.setSettingEncoder(id: setting.uid, value: strValue))
+        _ = sendCommand(ArsdkFeatureDebug.setSettingEncoder(id: setting.uid, value: strValue))
     }
 
     func set(setting: TextDebugSettingCore) {
-        sendCommand(ArsdkFeatureDebug.setSettingEncoder(id: setting.uid, value: setting.value))
+        _ = sendCommand(ArsdkFeatureDebug.setSettingEncoder(id: setting.uid, value: setting.value))
     }
 
     func set(setting: NumericDebugSettingCore) {
         let strValue = String(format: "%f", setting.value)
-        sendCommand(ArsdkFeatureDebug.setSettingEncoder(id: setting.uid, value: strValue))
+        _ = sendCommand(ArsdkFeatureDebug.setSettingEncoder(id: setting.uid, value: strValue))
     }
 
     func sendDebugTag(tag: String) {
-        sendCommand(ArsdkFeatureDebug.tagEncoder(value: tag))
+        _ = sendCommand(ArsdkFeatureDebug.tagEncoder(value: tag))
     }
 
     /// Creates a debug setting.

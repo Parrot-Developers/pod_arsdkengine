@@ -29,6 +29,7 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
 /// Battery info component controller for Common messages based drones
 class CommonBatteryInfo: DeviceComponentController {
@@ -36,12 +37,16 @@ class CommonBatteryInfo: DeviceComponentController {
     /// Battery info component
     private var batteryInfo: BatteryInfoCore!
 
+    /// Decoder for backup link events.
+    private var arsdkDecoder: ArsdkBackuplinkEventDecoder!
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        self.batteryInfo = BatteryInfoCore(store: deviceController.device.instrumentStore)
+        arsdkDecoder = ArsdkBackuplinkEventDecoder(listener: self)
+        batteryInfo = BatteryInfoCore(store: deviceController.device.instrumentStore)
     }
 
     /// Drone is connected
@@ -51,18 +56,38 @@ class CommonBatteryInfo: DeviceComponentController {
 
     /// Drone is disconnected
     override func didDisconnect() {
+        batteryInfo.update(isChargeLevelReliable: nil)
+        batteryInfo.update(cellConfiguration: nil)
         batteryInfo.unpublish()
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        // Keep published. Battery charge/level is provided by backup telemetry.
+        // However, properly clear info we cannot provide reliably.
+        batteryInfo.update(batteryHealth: nil)
+            .update(cycleCount: nil)
+            .update(temperature: nil)
+            .update(capacity: nil)
+            .update(cellVoltages: nil)
+            .publish()
     }
 
     /// A command has been received
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-        let featureId = ArsdkCommand.getFeatureId(command)
-        if featureId == kArsdkFeatureCommonCommonstateUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureCommonCommonstateUid:
             ArsdkFeatureCommonCommonstate.decode(command, callback: self)
-        } else if featureId == kArsdkFeatureBatteryUid {
+        case kArsdkFeatureCommonChargerstateUid:
+            ArsdkFeatureCommonChargerstate.decode(command, callback: self)
+        case kArsdkFeatureBatteryUid:
             ArsdkFeatureBattery.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkDecoder.decode(command)
+        default:
+            break
         }
     }
 }
@@ -71,6 +96,21 @@ class CommonBatteryInfo: DeviceComponentController {
 extension CommonBatteryInfo: ArsdkFeatureCommonCommonstateCallback {
     func onBatteryStateChanged(percent: UInt) {
         batteryInfo.update(batteryLevel: Int(percent)).notifyUpdated()
+    }
+}
+
+/// Common charger state decode callback implementation
+extension CommonBatteryInfo: ArsdkFeatureCommonChargerstateCallback {
+    func onChargingInfo(phase: ArsdkFeatureCommonChargerstateCharginginfoPhase,
+                        rate: ArsdkFeatureCommonChargerstateCharginginfoRate,
+                        intensity: UInt, fullchargingtime: UInt) {
+        switch phase {
+        case .constantCurrent1, .constantCurrent2, .constantVoltage:
+            batteryInfo.update(isCharging: true)
+        default:
+            batteryInfo.update(isCharging: false)
+        }
+        batteryInfo.notifyUpdated()
     }
 }
 
@@ -122,5 +162,25 @@ extension CommonBatteryInfo: ArsdkFeatureBatteryCallback {
                                             gaugeVersion: gaugeVersion,
                                             usbVersion: usbVersion))
             .notifyUpdated()
+    }
+
+    func onReliability(isChargeLevelReliable: UInt) {
+        batteryInfo.update(isChargeLevelReliable: isChargeLevelReliable == 1).notifyUpdated()
+    }
+
+    func onCellConfig(config: String, series: UInt, parallel: UInt) {
+        batteryInfo.update(cellConfiguration: BatteryCellConfiguration(config: config, series: series,
+                                                                       parallel: parallel)).notifyUpdated()
+    }
+}
+
+/// Backup link decode callback implementation.
+extension CommonBatteryInfo: ArsdkBackuplinkEventDecoderListener {
+    func onTelemetry(_ telemetry: Arsdk_Backuplink_Event.Telemetry) {
+        batteryInfo.update(batteryLevel: Int(telemetry.batteryCharge)).notifyUpdated()
+    }
+
+    func onMainRadioDisconnecting(_ mainRadioDisconnecting: SwiftProtobuf.Google_Protobuf_Empty) {
+        // nothing to do
     }
 }

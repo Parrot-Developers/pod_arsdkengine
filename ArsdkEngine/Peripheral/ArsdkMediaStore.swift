@@ -35,6 +35,7 @@ private let kThumbnailCacheSize = 4 * 1024 * 1024
 
 /// The media store api change event that comes from the `MediaStoreApiDelegate`.
 enum MediaStoreApiChangeEvent {
+
     /// The indexing state of the media webserver
     enum IndexingState: String, Decodable {
         /// media are not indexed and no indexing is in progress (media requests will result in
@@ -45,26 +46,40 @@ enum MediaStoreApiChangeEvent {
         /// media are indexed (media requests are possible)
         case indexed = "INDEXED"
     }
+
+    /// The storage of a media
+    enum MediaStoreStorageType: String, Decodable {
+        /// The removable storage
+        case removable = "removable_storage"
+        /// The internal storage
+        case `internal` = "internal_storage"
+    }
+
     /// The first resource of a new media has been created.
     /// - Parameter media: The media that was created
     case createdMedia(_ media: MediaRestApi.Media)
     /// A new resource of an existing media has been created.
     /// - Parameter resource: The resource that was created
     case createdResource(_ resource: MediaRestApi.MediaResource, mediaId: String)
+    /// An existing media has been updated.
+    /// - Parameter media: The media that was updated
+    case updatedMedia(_ media: MediaRestApi.Media)
     /// The last resource of a media has been removed.
     /// - Parameter mediaId: The id of the media that was removed
     case removedMedia(mediaId: String)
     /// A resource of a media has been removed, the media still has remaining resource
     /// - Parameter resourceId: The id of the resource that was removed
     case removedResource(resourceId: String)
-    /// All media were removed
+    /// All media have been removed
     case allMediaRemoved
-    /// The indexing state changed
+    /// The indexing state has changed.
     /// - Parameters:
     ///   - oldState: the old indexing state
     ///   - newState: the new indexing state
     case indexingStateChanged(oldState: IndexingState, newState: IndexingState)
-    /// The websocket disconnected
+    /// The storage has been removed.
+    case storageRemoved(storage: MediaStoreStorageType)
+    /// The websocket has disconnected.
     case webSocketDisconnected
 
     enum CodingKeys: String, CodingKey {
@@ -74,11 +89,24 @@ enum MediaStoreApiChangeEvent {
         case resource
         case mediaId = "media_id"
         case media
+        case storage
     }
 
     /// The GroundSdk representation of itself.
     var gsdkEvent: MediaStoreChangeEvent {
         switch self {
+        case .createdMedia(let media):
+            return .createdMedia(MediaItemCore.from(httpMedia: media)!)
+        case .createdResource(let resource, mediaId: let mediaId):
+            return .createdResource(MediaItemResourceCore.from(httpResource: resource)!, mediaId: mediaId)
+        case .updatedMedia(let media):
+            return .updatedMedia(MediaItemCore.from(httpMedia: media)!)
+        case .removedMedia(mediaId: let mediaId):
+            return .removedMedia(mediaId: mediaId)
+        case .removedResource(resourceId: let resourceId):
+            return .removedResource(resourceId: resourceId)
+        case .allMediaRemoved:
+            return .allMediaRemoved
         case .indexingStateChanged(oldState: let old, newState: let new):
             let mapper = Mapper<MediaStoreIndexingState, IndexingState>([
                 .unavailable: .notIndexed,
@@ -86,17 +114,11 @@ enum MediaStoreApiChangeEvent {
                 .indexed: .indexed])
             return .indexingStateChanged(oldState: mapper.reverseMap(from: old)!,
                                          newState: mapper.reverseMap(from: new)!)
-
-        case .createdMedia(let media):
-            return .createdMedia(MediaItemCore.from(httpMedia: media)!)
-        case .createdResource(let resource, mediaId: let mediaId):
-            return .createdResource(MediaItemResourceCore.from(httpResource: resource)!, mediaId: mediaId)
-        case .removedMedia(mediaId: let mediaId):
-            return .removedMedia(mediaId: mediaId)
-        case .removedResource(resourceId: let resourceId):
-            return .removedResource(resourceId: resourceId)
-        case .allMediaRemoved:
-            return .allMediaRemoved
+        case .storageRemoved(let storage):
+            let mapper = Mapper<StorageType, MediaStoreStorageType>([
+                .removable: .removable,
+                .internal: .internal])
+            return .storageRemoved(storage: mapper.reverseMap(from: storage)!)
         case .webSocketDisconnected:
             return .webSocketDisconnected
         }
@@ -250,7 +272,6 @@ protocol MediaStoreApi: AnyObject {
     /// - Parameter command: the command received
     func didReceiveCommand(_ command: OpaquePointer)
 }
-// swiftlint:enable class_delegate_protocol
 
 /// Media store peripheral controller that does access the media through http
 class HttpMediaStore: ArsdkMediaStore {
@@ -386,192 +407,30 @@ extension ArsdkMediaStore: MediaStoreBackend {
     /// Download a list of media resources
     ///
     /// - Parameters:
-    ///   - mediaResources: media resources to download
+    ///   - resource: media resource to download
     ///   - type: download type
     ///   - destination: download destination
     ///   - progress: progress callback
+    ///   - completion: closure called when the signature has been downloaded or if there is an error
     /// - Returns: download task, or nil if the request can't be send
-    public func download(mediaResources: MediaResourceListCore,
-                         type: DownloadType,
-                         destination: DownloadDestination,
-                         progress: @escaping (MediaDownloader) -> Void) -> CancelableCore? {
-        let destDirectoryPath: String
-        switch destination {
-        case .document(let directoryName):
-            let documentPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-            if let directoryName = directoryName {
-                destDirectoryPath = documentPath.appendingPathComponent(directoryName).path
-            } else {
-                destDirectoryPath = documentPath.path
-            }
-        case .directory(let path):
-            destDirectoryPath = path
-        default:
-            destDirectoryPath = NSTemporaryDirectory()
-        }
-        do {
-            try FileManager.default.createDirectory(atPath: destDirectoryPath,
-                                                    withIntermediateDirectories: true, attributes: nil)
-        } catch let err {
-            ULog.e(.ctrlTag, "ArsdkMediaStore: error creating download media directory \(err)")
-            return nil
-        }
+    func download(resource: MediaItemResourceCore, type: DownloadType, destination: String,
+                  progress: @escaping (Int) -> Void, completion: @escaping (URL?) -> Void) -> CancelableCore? {
+        self.api.download(resource: resource, type: type, destDirectoryPath: destination,
+                          progress: progress, completion: completion)
+    }
 
-        // init MediaGalleryAdder if target is .mediaGallery
-        let galleryAdder: MediaGalleryAdder?
-        if case .mediaGallery(let albumName) = destination {
-            galleryAdder = MediaGalleryAdder(albumName: albumName)
-        } else {
-            galleryAdder = nil
-        }
-        // init resource iterator
-        let resourcesIterator = mediaResources.makeIterator()
-        // create result request
-        let task = CancelableTaskCore()
-
-        /// Notify progress with current file progress
-        ///
-        /// - Parameter percent: current file download %
-        func notifyProgress(percent: Float, currentMedia: MediaItem) {
-            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
-                                         currentFileProgress: percent / 100,
-                                         status: .running,
-                                         currentMedia: currentMedia))
-        }
-
-        /// Notify progress completion with fileUrl
-        func notifyProgressCompletion(currentMedia: MediaItem, fileUrl: URL, signatureUrl: URL? = nil) {
-            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
-                                         currentFileProgress: 1.0,
-                                         status: .fileDownloaded,
-                                         currentMedia: currentMedia,
-                                         fileUrl: fileUrl,
-                                         signatureUrl: signatureUrl))
-        }
-
-        /// Notify progress with an error
-        func notifyProgressError(currentMedia: MediaItem) {
-            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
-                                         currentFileProgress: 0.0,
-                                         status: .error,
-                                         currentMedia: currentMedia))
-        }
-
-        /// Notify download terminated
-        func notifyProgressTerminated() {
-            progress(MediaDownloaderCore(mediaResourceListIterator: resourcesIterator,
-                                         currentFileProgress: 1.0,
-                                         status: .complete))
-        }
-
-        /// Process downloaded resource
-        ///
-        /// - Parameters:
-        ///   - media: downloaded media
-        ///   - filePath: local media resource path
-        func processDownloadedResource(media: MediaItem, fileUrl: URL) {
-            ULog.d(.ctrlTag, "media \(fileUrl.path) downloaded")
-            if let galleryAdder = galleryAdder {
-                galleryAdder.addMedia(url: fileUrl, mediaType: media.type) { _ in
-                    do {
-                        try FileManager.default.removeItem(at: fileUrl)
-                    } catch let err {
-                        ULog.e(.ctrlTag, "Error adding item to gallery \(err)")
-                    }
-                }
-            }
-        }
-
-        /// Download the next media resource in the iterator
-        func downloadNextResource() {
-            guard !task.canceled else {
-                // don't do anything if the request has been canceled
-                return
-            }
-
-            // Move to next resource
-            if let mediaResource = resourcesIterator.next() {
-                // request download
-                let req = self.api.download(
-                    resource: mediaResource.resource, type: type, destDirectoryPath: destDirectoryPath,
-                    progress: { percent in notifyProgress(percent: Float(percent), currentMedia: mediaResource.media) },
-                    completion: { fileUrl in
-                        task.request = nil
-                        if let fileUrl = fileUrl {
-                            processDownloadedResource(media: mediaResource.media, fileUrl: fileUrl)
-                            if mediaResource.resource.signed && type == .full {
-                                downloadResourceSignature(mediaResource: mediaResource, fileUrl: fileUrl)
-                            } else {
-                                notifyProgressCompletion(currentMedia: mediaResource.media, fileUrl: fileUrl)
-                                downloadNextResource()
-                            }
-                        } else if !task.canceled {
-                            ULog.w(.ctrlTag, "Error downloading media resource")
-                            notifyProgressError(currentMedia: mediaResource.media)
-                        }
-                })
-                // progress for the new resource
-                notifyProgress(percent: 0, currentMedia: mediaResource.media)
-                // request created, update client request
-                if let req = req {
-                    // store current low level request to cancel
-                    task.request = req
-                } else {
-                    ULog.d(.ctrlTag, "media resource download skipped")
-                    downloadNextResource()
-                }
-            } else {
-                // no more resources to download
-                if let galleryAdder = galleryAdder {
-                    ULog.d(.ctrlTag, "media download terminated, waiting for media gallery completion ")
-                    galleryAdder.notifyCompleted {
-                        ULog.d(.ctrlTag, "media gallery update terminated")
-                        notifyProgressTerminated()
-                    }
-                } else {
-                    ULog.d(.ctrlTag, "media download terminated")
-                    notifyProgressTerminated()
-                }
-            }
-        }
-
-        /// Download media resource signature
-        func downloadResourceSignature(mediaResource: (media: MediaItemCore, resource: MediaItemResourceCore),
-                                       fileUrl: URL) {
-            guard !task.canceled else {
-                // don't do anything if the request has been canceled
-                return
-            }
-
-            // request download
-            let req = self.api.downloadSignature(resource: mediaResource.resource,
-                                                 destDirectoryPath: destDirectoryPath,
-                                                 completion: { signatureUrl in
-                task.request = nil
-                if signatureUrl == nil {
-                    ULog.w(.ctrlTag, "Error downloading media resource signature")
-                }
-                if !task.canceled {
-                    notifyProgressCompletion(currentMedia: mediaResource.media,
-                                                  fileUrl: fileUrl,
-                                                  signatureUrl: signatureUrl)
-                    downloadNextResource()
-                }
-            })
-            // request created, update client request and notify progress
-            if let req = req {
-                // store current low level request to cancel
-                task.request = req
-            } else {
-                // error sending request
-                ULog.d(.ctrlTag, "media download error sending request, skipping media")
-                notifyProgressError(currentMedia: mediaResource.media)
-            }
-        }
-
-        // start download with the first resource
-        downloadNextResource()
-        return task
+    /// Download a signature resource
+    ///
+    /// - Parameters:
+    ///   - resource: signature resource
+    ///   - destDirectoryPath: download destination
+    ///   - completion: closure called when the signature has been downloaded or if there is an error
+    /// - Returns: download task, or nil if the request can't be send
+    public func downloadSignature(resource: MediaItemResourceCore, destDirectoryPath: String,
+                                  completion: @escaping (_ signatureUrl: URL?) -> Void) -> CancelableCore? {
+        self.api.downloadSignature(resource: resource,
+                                   destDirectoryPath: destDirectoryPath,
+                                   completion: completion)
     }
 
     /// Uploads media resources.
@@ -647,7 +506,7 @@ extension ArsdkMediaStore: MediaStoreBackend {
                             ULog.w(.ctrlTag, "Error uploading media resource")
                             notifyProgress(currentEntry: entry, ratio: 0.0, status: .error)
                         }
-                })
+                    })
                 // request created, update client request and notify progress
                 if let req = req {
                     // store current low level request to cancel

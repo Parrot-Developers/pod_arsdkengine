@@ -34,7 +34,7 @@ import GroundSdk
 class FtpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
 
     /// Device controller.
-    private let deviceController: DeviceController
+    private unowned let deviceController: DeviceController
 
     /// Flight log storage utility.
     private let storage: FlightLogStorageCore
@@ -75,7 +75,7 @@ class FtpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
 
         downloadCount = 0
         downloader?.update(completionStatus: .none)
-            .update(downloadingFlag: true)
+            .update(downloadingState: .downloading(hasFlight: false))
             .update(downloadedCount: downloadCount)
             .notifyUpdated()
 
@@ -94,10 +94,10 @@ class FtpFlightLogDownloaderDelegate: ArsdkFlightLogDownloaderDelegate {
             completion: { status in
                 let success = status == .ok
                 self.downloader?.update(completionStatus: success ? .success : .interrupted)
-                    .update(downloadingFlag: false)
+                    .update(downloadingState: .none)
                     .notifyUpdated()
                 self.currentRequest = nil
-        })
+            })
     }
 
     func delete() {

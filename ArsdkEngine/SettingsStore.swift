@@ -151,9 +151,9 @@ class SettingsStore {
     @discardableResult func writeMultiRange<K, V>(
         key: StoreKey, value: [K: (min: V, max: V)]) -> SettingsStore where K: StorableProtocol, V: StorableProtocol {
 
-        dictionary[key.key] = StorableDict(value.mapValues { StorableArray([$0.min, $0.max]) }).content
-        return self
-    }
+            dictionary[key.key] = StorableDict(value.mapValues { StorableArray([$0.min, $0.max]) }).content
+            return self
+        }
 
     /// Read a range of Storable from the store
     ///

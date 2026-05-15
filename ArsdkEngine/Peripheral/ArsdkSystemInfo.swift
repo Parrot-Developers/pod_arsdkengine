@@ -32,11 +32,23 @@ import GroundSdk
 
 /// Arsdk System Info backend that should be implemented by subclasses
 protocol ArsdkSystemInfoBackend {
+    /// Send get state command
+    func doSendGetState() -> Bool
+
+    /// Sets the product name
+    func doSet(productName: String) -> Bool
+
     /// Reset the settings
     func doResetSettings() -> Bool
 
     /// Do a factory reset
     func doFactoryReset() -> Bool
+
+    /// Do a power off of the device
+    func doPowerOff() -> Bool
+
+    /// Do a power of the device
+    func doReboot() -> Bool
 }
 
 /// Generic System info component controller
@@ -49,6 +61,7 @@ class ArsdkSystemInfo: DeviceComponentController {
         case firmwareVersion = "firmwareVersion"
         case hardwareVersion = "hardwareVersion"
         case updateRequirement = "updateRequirement"
+        case productVariant = "productVariant"
     }
 
     private static let settingKey = "SystemInfo"
@@ -67,7 +80,8 @@ class ArsdkSystemInfo: DeviceComponentController {
 
     /// Blacklisted firmware version store
     private let blacklistStore: BlacklistedVersionStoreCore?
-    /// Monitors changed on the blacklist store
+
+    /// Monitors changes on the blacklist store
     private var blacklistStoreMonitor: MonitorCore?
 
     /// Constructor
@@ -77,12 +91,18 @@ class ArsdkSystemInfo: DeviceComponentController {
         deviceStore = deviceController.deviceStore.getSettingsStore(key: ArsdkSystemInfo.settingKey)
         blacklistStore = deviceController.engine.utilities.getUtility(Utilities.blacklistedVersionStore)
         super.init(deviceController: deviceController)
-        systemInfo = SystemInfoCore(store: deviceController.device.peripheralStore, backend: self)
+        createSystemInfo()
         if !deviceStore.new {
             loadPersistedData()
             monitorBlacklistStore()
             systemInfo.publish()
         }
+    }
+
+    /// Device is about to be connected.
+    override func willConnect() {
+        super.willConnect()
+        _ = backend.doSendGetState()
     }
 
     /// Device is connected
@@ -94,9 +114,8 @@ class ArsdkSystemInfo: DeviceComponentController {
 
     /// Device is disconnected
     override func didDisconnect() {
-        super.didDisconnect()
         // clear all non saved settings
-        systemInfo.resetSettingsEnded().factoryResetEnded().notifyUpdated()
+        systemInfo.resetSettingsEnded().factoryResetEnded().resetProductName().publish()
     }
 
     /// Device is about to be forgotten
@@ -135,7 +154,7 @@ class ArsdkSystemInfo: DeviceComponentController {
     }
 
     /// Load saved values in systemInfo
-    private func loadPersistedData() {
+    public func loadPersistedData() {
         if let serial: String = deviceStore.read(key: PersistedDataKey.serial) {
             systemInfo.update(serial: serial)
         }
@@ -179,10 +198,22 @@ class ArsdkSystemInfo: DeviceComponentController {
             }
         }
     }
+
+    /// Create system info core
+    ///
+    /// Note: need to be override
+    func createSystemInfo() { }
 }
 
 /// SystemInfo backend implementation
 extension ArsdkSystemInfo: SystemInfoBackend {
+    func set(productName: String) -> Bool {
+        guard connected else {
+            return false
+        }
+        return backend.doSet(productName: productName)
+    }
+
     func resetSettings() -> Bool {
         guard connected else {
             return false
@@ -195,5 +226,19 @@ extension ArsdkSystemInfo: SystemInfoBackend {
             return false
         }
         return backend.doFactoryReset()
+    }
+
+    func powerOff() -> Bool {
+        guard connected else {
+            return false
+        }
+        return backend.doPowerOff()
+    }
+
+    func reboot() -> Bool {
+        guard connected else {
+            return false
+        }
+        return backend.doReboot()
     }
 }

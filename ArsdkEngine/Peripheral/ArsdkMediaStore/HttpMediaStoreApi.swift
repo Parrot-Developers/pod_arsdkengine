@@ -32,7 +32,7 @@ import GroundSdk
 
 class HttpMediaStoreApi: NSObject, MediaStoreApi {
 
-    private let deviceController: DeviceController
+    private unowned let deviceController: DeviceController
     private var mediaRestApi: MediaRestApi?
     private var mediaWsApi: MediaWsApi?
 
@@ -54,7 +54,7 @@ class HttpMediaStoreApi: NSObject, MediaStoreApi {
 
     func startWatchingContentChanges() {
         if let droneServer = deviceController.deviceServer {
-            mediaWsApi = MediaWsApi(server: droneServer) { [unowned self] event  in
+            mediaWsApi = MediaWsApi(server: droneServer) { [unowned self] event in
                 self.delegate?.receivedMediaStoreChangedEvent(event)
             } onFailure: {
                 self.delegate?.receivedMediaStoreChangedEvent(.webSocketDisconnected)

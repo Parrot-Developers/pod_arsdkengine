@@ -29,19 +29,24 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
 /// Compass component controller for ArDrone3 messages based drones
 class AnafiCompass: DeviceComponentController {
 
-    /// compass component
+    /// Compass component
     private var compass: CompassCore!
+
+    /// Decoder for backup link events.
+    private var arsdkDecoder: ArsdkBackuplinkEventDecoder!
 
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        self.compass = CompassCore(store: deviceController.device.instrumentStore)
+        arsdkDecoder = ArsdkBackuplinkEventDecoder(listener: self)
+        compass = CompassCore(store: deviceController.device.instrumentStore)
     }
 
     /// Drone is connected
@@ -54,12 +59,22 @@ class AnafiCompass: DeviceComponentController {
         compass.unpublish()
     }
 
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        compass.publish()
+    }
+
     /// A command has been received
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureArdrone3PilotingstateUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureArdrone3PilotingstateUid:
             ArsdkFeatureArdrone3Pilotingstate.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkDecoder.decode(command)
+        default:
+            break
         }
     }
 }
@@ -68,5 +83,16 @@ class AnafiCompass: DeviceComponentController {
 extension AnafiCompass: ArsdkFeatureArdrone3PilotingstateCallback {
     func onAttitudeChanged(roll: Float, pitch: Float, yaw: Float) {
         compass.update(heading: Double(yaw).toBoundedDegrees()).notifyUpdated()
+    }
+}
+
+/// Backup link decode callback implementation.
+extension AnafiCompass: ArsdkBackuplinkEventDecoderListener {
+    func onTelemetry(_ telemetry: Arsdk_Backuplink_Event.Telemetry) {
+        compass.update(heading: Double(telemetry.heading).toBoundedDegrees()).notifyUpdated()
+    }
+
+    func onMainRadioDisconnecting(_ mainRadioDisconnecting: SwiftProtobuf.Google_Protobuf_Empty) {
+        // nothing to do
     }
 }

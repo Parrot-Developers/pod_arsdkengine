@@ -200,7 +200,7 @@ private extension PersistentDictionary {
 
             // if value to merge and base value is a dictionary, merge it recursivelly in the base
             if let valueToMerge = valueToMerge as? [String: AnyObject],
-                baseValue as? [String: AnyObject] != nil {
+               baseValue as? [String: AnyObject] != nil {
                 let baseDict = getPersistentDictionary(key: key)
                 baseDict.merge(from: valueToMerge, override: override)
             } else if override || self[key] == nil { // value is a leaf, merge it if it should be overriden or if there

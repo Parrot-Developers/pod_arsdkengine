@@ -53,7 +53,7 @@ class SkyControllerMagnetometer: DeviceComponentController {
 
     /// Drone is disconnected
     override func didDisconnect() {
-        magnetometer.unpublish()
+        magnetometer.calibrationProcessStopped().unpublish()
     }
 
     /// A command has been received
@@ -69,12 +69,12 @@ class SkyControllerMagnetometer: DeviceComponentController {
 /// Magnetometer backend implementation
 extension SkyControllerMagnetometer: MagnetometerBackend {
     func startCalibrationProcess() {
-        sendCommand(ArsdkFeatureSkyctrlCalibration.startCalibrationEncoder())
-        sendCommand(ArsdkFeatureSkyctrlCalibration.enableMagnetoCalibrationQualityUpdatesEncoder(enable: 1))
+        _ = sendCommand(ArsdkFeatureSkyctrlCalibration.startCalibrationEncoder())
+        _ = sendCommand(ArsdkFeatureSkyctrlCalibration.enableMagnetoCalibrationQualityUpdatesEncoder(enable: 1))
     }
 
     func cancelCalibrationProcess() {
-        sendCommand(ArsdkFeatureSkyctrlCalibration.enableMagnetoCalibrationQualityUpdatesEncoder(enable: 0))
+        _ = sendCommand(ArsdkFeatureSkyctrlCalibration.enableMagnetoCalibrationQualityUpdatesEncoder(enable: 0))
     }
 }
 
@@ -85,25 +85,25 @@ extension SkyControllerMagnetometer: ArsdkFeatureSkyctrlCalibrationstateCallback
         status: ArsdkFeatureSkyctrlCalibrationstateMagnetocalibrationstateStatus,
         xQuality: UInt, yQuality: UInt, zQuality: UInt) {
 
-        if status != .sdkCoreUnknown {
-            let rollProgress = Int(percentInterval.clamp((xQuality*100)/arsdkMaxCalibrationQuality))
-            let pitchProgress = Int(percentInterval.clamp((yQuality*100)/arsdkMaxCalibrationQuality))
-            let yawProgress = Int(percentInterval.clamp((zQuality*100)/arsdkMaxCalibrationQuality))
-            var calibratedStatus: MagnetometerCalibrationState = .required
-            switch status {
-            case .calibrated:
-                calibratedStatus = .calibrated
-            case .assessing, .unreliable:
-                calibratedStatus = .required
-            default:
-                calibratedStatus = .required
-            }
-            magnetometer.update(rollProgress: rollProgress, pitchProgress: pitchProgress, yawProgress: yawProgress)
-                .update(calibrated: calibratedStatus).notifyUpdated()
+            if status != .sdkCoreUnknown {
+                let rollProgress = Int(percentInterval.clamp((xQuality*100)/arsdkMaxCalibrationQuality))
+                let pitchProgress = Int(percentInterval.clamp((yQuality*100)/arsdkMaxCalibrationQuality))
+                let yawProgress = Int(percentInterval.clamp((zQuality*100)/arsdkMaxCalibrationQuality))
+                var calibratedStatus: MagnetometerCalibrationState = .required
+                switch status {
+                case .calibrated:
+                    calibratedStatus = .calibrated
+                case .assessing, .unreliable:
+                    calibratedStatus = .required
+                default:
+                    calibratedStatus = .required
+                }
+                magnetometer.update(rollProgress: rollProgress, pitchProgress: pitchProgress, yawProgress: yawProgress)
+                    .update(calibrated: calibratedStatus).notifyUpdated()
 
-            if calibratedStatus == .calibrated {
-                magnetometer.calibrationProcessStopped().notifyUpdated()
+                if calibratedStatus == .calibrated {
+                    magnetometer.calibrationProcessStopped().notifyUpdated()
+                }
             }
         }
-    }
 }

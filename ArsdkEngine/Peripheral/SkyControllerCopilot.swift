@@ -42,6 +42,9 @@ class SkyControllerCopilot: DeviceComponentController, CopilotBackend {
     /// Preset store for this piloting interface
     private var presetStore: SettingsStore?
 
+    /// `true` if this controller has persisted model specific values
+    private var isPersisted: Bool { presetStore?.new == false }
+
     /// Setting values as received from the drone
     private var droneSettings = Set<Setting>()
 
@@ -86,8 +89,8 @@ class SkyControllerCopilot: DeviceComponentController, CopilotBackend {
 
         super.init(deviceController: deviceController)
         copilot = CopilotCore(store: deviceController.device.peripheralStore, backend: self)
-        // load settings
-        if let presetStore = presetStore, !presetStore.new {
+
+        if isPersisted {
             loadPresets()
             copilot.publish()
         }
@@ -136,8 +139,8 @@ class SkyControllerCopilot: DeviceComponentController, CopilotBackend {
                 case .value:
                     if let value: CopilotSource = presetStore.read(key: setting.key) {
                         copilot.update(source: value)
-                        }
                     }
+                }
                 copilot.notifyUpdated()
             }
         }
@@ -167,16 +170,12 @@ class SkyControllerCopilot: DeviceComponentController, CopilotBackend {
     /// - Parameter source: requested source.
     /// - Returns: true if the command has been sent
     func sendCopilotCommand(_ source: CopilotSource) -> Bool {
-        var commandSent = false
         switch source {
         case .application:
-            sendCommand(ArsdkFeatureSkyctrlCopiloting.setPilotingSourceEncoder(source: .controller))
-            commandSent = true
+            return sendCommand(ArsdkFeatureSkyctrlCopiloting.setPilotingSourceEncoder(source: .controller))
         case .remoteControl:
-            sendCommand(ArsdkFeatureSkyctrlCopiloting.setPilotingSourceEncoder(source: .skycontroller))
-            commandSent = true
+            return sendCommand(ArsdkFeatureSkyctrlCopiloting.setPilotingSourceEncoder(source: .skycontroller))
         }
-        return commandSent
     }
 
     /// Called when a command that notify a setting change has been received
@@ -186,7 +185,7 @@ class SkyControllerCopilot: DeviceComponentController, CopilotBackend {
         droneSettings.insert(setting)
         switch setting {
         case .value(let source):
-                copilot.update(source: source)
+            copilot.update(source: source)
         }
         copilot.notifyUpdated()
     }

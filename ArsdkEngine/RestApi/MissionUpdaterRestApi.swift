@@ -54,35 +54,92 @@ class MissionUpdaterRestApi {
     /// - Returns: the request
     func getMissionList(
         completion: @escaping (_ missionList: [String: MissionCore]) -> Void) -> CancelableCore {
-        return server.getData(api: baseApi) { result, data in
+            return server.getData(api: baseApi) { result, data in
+                switch result {
+                case .success:
+                    // listing missions is successful
+                    if let data = data {
+                        let decoder = JSONDecoder()
+                        // need to override the way date are parsed because default format is iso8601 extended
+                        decoder.dateDecodingStrategy = .formatted(.iso8601Base)
+                        do {
+
+                            let missionList = try decoder.decode([MissionDecodable].self, from: data)
+                            // transform the json object missions list into a `MissionCore` list
+                            let missions = missionList.map { MissionCore.from(httpMission: $0) }.compactMap { $0 }
+                            var finalMissions: [String: MissionCore] = [:]
+                            for mission in missions {
+                                finalMissions[mission.uid] = mission
+                            }
+                            completion(finalMissions)
+                        } catch let error {
+                            ULog.w(.missionsTag,
+                                   "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
+                                   error.localizedDescription)
+                            completion([:])
+                        }
+                    }
+                default:
+                    completion([:])
+                }
+            }
+        }
+
+    /// Lists assets of the given mission.
+    ///
+    /// - Parameters:
+    ///   - mission: the concerned mission
+    ///   - completion: the completion callback (called on the main thread)
+    /// - Returns: the request
+    func browseAssets(mission: MissionCore,
+                      completion: @escaping (_ mission: MissionCore?) -> Void) -> CancelableCore {
+        return server.getData(api: "\(baseApi)/\(mission.uid)") { result, data in
             switch result {
             case .success:
-                // listing missions is successful
+                // listing mission assets succesful
                 if let data = data {
                     let decoder = JSONDecoder()
-                    // need to override the way date are parsed because default format is iso8601 extended
                     decoder.dateDecodingStrategy = .formatted(.iso8601Base)
                     do {
-
-                        let missionList = try decoder.decode([MissionDecodable].self, from: data)
-                        // transform the json object missions list into a `MissionCore` list
-                        let missions = missionList.map { MissionCore.from(httpMission: $0) }.compactMap { $0 }
-                        var finalMissions: [String: MissionCore] = [:]
-                        for mission in missions {
-                            finalMissions[mission.uid] = mission
-                        }
-                        completion(finalMissions)
+                        let missionDetail = try decoder.decode(MissionDetailDecodable.self, from: data)
+                        let missionDetailCore = MissionCore.from(httpMission: missionDetail)
+                        completion(missionDetailCore)
                     } catch let error {
                         ULog.w(.missionsTag, "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                            error.localizedDescription)
-                        completion([:])
+                               error.localizedDescription)
+                        completion(nil)
                     }
                 }
             default:
-                completion([:])
+                completion(nil)
             }
         }
     }
+
+    /// Download a given mission file to a given directory
+    ///
+    /// - Parameters:
+    ///   - missionFile: the mission file to download
+    ///   - directory: the directory where to put the downloaded mission file into
+    ///   - progress: progress callback
+    ///   - progressValue: progress percentage (from 0 to 100)
+    ///   - completion: the completion callback (called on the main thread)
+    ///   - result: the request result
+    ///   - fileUrl: url of the locally downloaded file. `nil` if there were an error during download or during copy
+    /// - Returns: the request
+    func downloadMissionFile(
+        _ missionFile: String, toDirectory directory: URL,
+        progress: @escaping (_ progressValue: Int) -> Void,
+        completion: @escaping (_ result: HttpSessionCore.Result, _ fileUrl: URL?) -> Void) -> CancelableCore {
+
+            return server.downloadFile(
+                api: missionFile,
+                destination: directory.appendingPathComponent((missionFile as NSString).lastPathComponent),
+                progress: progress,
+                completion: { result, localFileUrl in
+                    completion(result, localFileUrl)
+                })
+        }
 
     /// Delete a given mission on the drone
     ///
@@ -169,9 +226,24 @@ class MissionUpdaterRestApi {
         })
     }
 
+    /// An object representing the mission details as the REST api describes it.
+    /// This object has all the field of the json object given by the REST api.
+    struct MissionDetailDecodable: Decodable {
+        enum CodingKeys: String, CodingKey {
+            case metadata = "metadata"
+            case assets = "assets"
+        }
+
+        /// Mission information
+        let metadata: MissionDecodable
+
+        /// Mission assets
+        let assets: [String]
+    }
+
     /// An object representing the mission as the REST api describes it.
     /// This object has all the field of the json object given by the REST api.
-    fileprivate struct MissionDecodable: Decodable {
+    struct MissionDecodable: Decodable {
         enum CodingKeys: String, CodingKey {
             case uid = "uid"
             case descriptor = "desc"
@@ -180,6 +252,7 @@ class MissionUpdaterRestApi {
             case maxTargetVersion = "target_max_version"
             case version = "version"
             case targetModelId = "target_model_id"
+            case digest = "digest"
         }
 
         /// Mission id
@@ -202,6 +275,9 @@ class MissionUpdaterRestApi {
 
         /// Model id of the supported target.
         let targetModelId: UInt
+
+        /// Digest of the mission
+        let digest: String?
     }
 }
 
@@ -223,6 +299,30 @@ fileprivate extension MissionCore {
                            version: httpMission.version, recipientId: nil,
                            targetModelId: targetModel,
                            minTargetVersion: FirmwareVersion.parse(versionStr: httpMission.minTargetVersion),
-                           maxTargetVersion: FirmwareVersion.parse(versionStr: httpMission.maxTargetVersion))
+                           maxTargetVersion: FirmwareVersion.parse(versionStr: httpMission.maxTargetVersion),
+                           digest: httpMission.digest)
+    }
+
+    /// Creates a mission with assets from an http mission details
+    ///
+    /// - Parameter httpMission: the http mission details
+    /// - Returns: a mission if the http mission is compatible with the MissionDetailDecodable declaration
+    static func from(httpMission: MissionUpdaterRestApi.MissionDetailDecodable) -> MissionCore? {
+        let deviceModel = DeviceModel.from(internalId: Int(httpMission.metadata.targetModelId))
+        var targetModel: Drone.Model?
+        switch deviceModel {
+        case .drone(let model):
+            targetModel = model
+        default:
+            break
+        }
+        return MissionCore(uid: httpMission.metadata.uid, description: httpMission.metadata.descriptor,
+                           name: httpMission.metadata.name,
+                           version: httpMission.metadata.version, recipientId: nil,
+                           targetModelId: targetModel,
+                           minTargetVersion: FirmwareVersion.parse(versionStr: httpMission.metadata.minTargetVersion),
+                           maxTargetVersion: FirmwareVersion.parse(versionStr: httpMission.metadata.maxTargetVersion),
+                           digest: httpMission.metadata.digest,
+                           assets: httpMission.assets)
     }
 }

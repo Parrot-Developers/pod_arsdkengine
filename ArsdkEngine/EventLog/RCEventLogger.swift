@@ -45,10 +45,10 @@ class RCEventLogger: DeviceEventLogger {
 
     override public func didConnect() {
         if let softwareVersion = softwareVersion, let hardwareVersion = hardwareVersion,
-            let serialNumber = serialNumber {
+           let serialNumber = serialNumber {
             eventLog.log("EVT:CONTROLLER;event='connected';" +
-                "model_id='\(String(format: "%04x", device.deviceModel.internalId))';" +
-                "sw_version='\(softwareVersion)';hw_version='\(hardwareVersion)'")
+                         "model_id='\(String(format: "%04x", device.deviceModel.internalId))';" +
+                         "sw_version='\(softwareVersion)';hw_version='\(hardwareVersion)'")
             eventLog.log("EVTS:CONTROLLER;serial='\(serialNumber)'")
         }
     }

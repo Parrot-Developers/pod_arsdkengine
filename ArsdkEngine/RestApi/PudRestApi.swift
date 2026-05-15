@@ -66,7 +66,7 @@ class PudRestApi {
                         } catch let error {
                             ULog.w(.pudTag,
                                    "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                                    error.localizedDescription)
+                                   error.localizedDescription)
                             completion(nil)
                         }
                     }
@@ -74,7 +74,7 @@ class PudRestApi {
                     completion(nil)
                 }
             }
-    }
+        }
 
     /// Download a given pud to a given directory
     ///
@@ -88,13 +88,13 @@ class PudRestApi {
         _ pud: Pud, toDirectory directory: URL,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore {
 
-        return server.downloadFile(
-            api: pud.urlPath, withStreamDecoder: PudStreamDecoder(),
-            destination: directory.appendingPathComponent(pud.name), completion: { _, localFileUrl in
-                completion(localFileUrl)
-        })
+            return server.downloadFile(
+                api: pud.urlPath, withStreamDecoder: PudStreamDecoder(),
+                destination: directory.appendingPathComponent(pud.name), completion: { _, localFileUrl in
+                    completion(localFileUrl)
+                })
 
-    }
+        }
 
     /// Delete a given report on the device
     ///

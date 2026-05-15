@@ -77,8 +77,6 @@ class GuidedPilotingItfController: ActivablePilotingItfController, GuidedPilotin
     }
 
     override func requestDeactivation() {
-        // remove any pending directive
-        pendingGuidedDirectiveRequested = nil
         // send a stop if a current directive is active
         if let currentGuidedDirective = currentGuidedDirective {
             switch currentGuidedDirective.guidedType {
@@ -128,7 +126,7 @@ class GuidedPilotingItfController: ActivablePilotingItfController, GuidedPilotin
                 let locationDirective = guidedDirective as! LocationDirective
                 sendMoveToLocationCommand(locationDirective: locationDirective)
             case .relativeMove:
-                 let relativeMoveDirective = guidedDirective as! RelativeMoveDirective
+                let relativeMoveDirective = guidedDirective as! RelativeMoveDirective
                 sendRelativeMoveCommand(relativeMoveDirective: relativeMoveDirective)
             }
         } else {

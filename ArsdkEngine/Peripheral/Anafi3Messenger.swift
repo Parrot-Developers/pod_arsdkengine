@@ -68,7 +68,6 @@ class Anafi3Messenger: DeviceComponentController {
 /// Messenger backend implementation.
 extension Anafi3Messenger: MessengerBackend {
     func sendSms(recipient: String, content: String) -> Bool {
-        print("messenger sendSms to: \(recipient)  - \(content)")
         var sent = false
         if connected {
             var sendSms = Arsdk_Sms_Command.SendSms()
@@ -87,12 +86,10 @@ extension Anafi3Messenger {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendSmsCommand(_ command: Arsdk_Sms_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkSmsCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends get state command.

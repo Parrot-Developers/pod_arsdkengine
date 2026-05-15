@@ -56,14 +56,14 @@ class SecureElementRestApi {
     func downloadCertificate(
         destination: URL, completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore {
 
-        return server.downloadFile(
-            api: "\(baseApi)/drone.der",
-            destination: destination,
-            progress: { _ in },
-            completion: { _, localFileUrl in
-                completion(localFileUrl)
-        })
-    }
+            return server.downloadFile(
+                api: "\(baseApi)/drone.der",
+                destination: destination,
+                progress: { _ in },
+                completion: { _, localFileUrl in
+                    completion(localFileUrl)
+                })
+        }
 
     /// Sends a challenge signing request
     ///

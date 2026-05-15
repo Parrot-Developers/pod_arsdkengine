@@ -310,6 +310,122 @@ extension Arsdk_Camera_CameraModel: CaseIterable {
 
 #endif  // swift(>=4.2)
 
+enum Arsdk_Camera_StreamReceiver: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case `default` // = 0
+  case skycontroller // = 1
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .default
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .default
+    case 1: self = .skycontroller
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .default: return 0
+    case .skycontroller: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_StreamReceiver: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_StreamReceiver] = [
+    .default,
+    .skycontroller,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Camera_CameraType: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case `default` // = 0
+  case front // = 1
+  case stereoLeft // = 2
+  case stereoRight // = 3
+  case vertical // = 4
+  case disparity // = 5
+  case horizontalStereoLeft // = 6
+  case horizontalStereoRight // = 7
+  case downStereoLeft // = 8
+  case downStereoRight // = 9
+  case external // = 10
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .default
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .default
+    case 1: self = .front
+    case 2: self = .stereoLeft
+    case 3: self = .stereoRight
+    case 4: self = .vertical
+    case 5: self = .disparity
+    case 6: self = .horizontalStereoLeft
+    case 7: self = .horizontalStereoRight
+    case 8: self = .downStereoLeft
+    case 9: self = .downStereoRight
+    case 10: self = .external
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .default: return 0
+    case .front: return 1
+    case .stereoLeft: return 2
+    case .stereoRight: return 3
+    case .vertical: return 4
+    case .disparity: return 5
+    case .horizontalStereoLeft: return 6
+    case .horizontalStereoRight: return 7
+    case .downStereoLeft: return 8
+    case .downStereoRight: return 9
+    case .external: return 10
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_CameraType: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_CameraType] = [
+    .default,
+    .front,
+    .stereoLeft,
+    .stereoRight,
+    .vertical,
+    .disparity,
+    .horizontalStereoLeft,
+    .horizontalStereoRight,
+    .downStereoLeft,
+    .downStereoRight,
+    .external,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 enum Arsdk_Camera_DigitalSignature: SwiftProtobuf.Enum {
   typealias RawValue = Int
   case none // = 0
@@ -979,6 +1095,7 @@ enum Arsdk_Camera_PhotoEvent: SwiftProtobuf.Enum {
   case start // = 0
   case takingPhoto // = 1
   case stop // = 4
+  case none // = 5
   case UNRECOGNIZED(Int)
 
   init() {
@@ -990,6 +1107,7 @@ enum Arsdk_Camera_PhotoEvent: SwiftProtobuf.Enum {
     case 0: self = .start
     case 1: self = .takingPhoto
     case 4: self = .stop
+    case 5: self = .none
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -999,6 +1117,7 @@ enum Arsdk_Camera_PhotoEvent: SwiftProtobuf.Enum {
     case .start: return 0
     case .takingPhoto: return 1
     case .stop: return 4
+    case .none: return 5
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1013,6 +1132,7 @@ extension Arsdk_Camera_PhotoEvent: CaseIterable {
     .start,
     .takingPhoto,
     .stop,
+    .none,
   ]
 }
 
@@ -1157,7 +1277,9 @@ extension Arsdk_Camera_PhotoMode: CaseIterable {
 enum Arsdk_Camera_PhotoResolution: SwiftProtobuf.Enum {
   typealias RawValue = Int
   case photoResolution48MegaPixels // = 0
+  case photoResolution21MegaPixels // = 1
   case photoResolution12MegaPixels // = 2
+  case photoResolution50MegaPixels // = 3
   case UNRECOGNIZED(Int)
 
   init() {
@@ -1167,7 +1289,9 @@ enum Arsdk_Camera_PhotoResolution: SwiftProtobuf.Enum {
   init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .photoResolution48MegaPixels
+    case 1: self = .photoResolution21MegaPixels
     case 2: self = .photoResolution12MegaPixels
+    case 3: self = .photoResolution50MegaPixels
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1175,7 +1299,9 @@ enum Arsdk_Camera_PhotoResolution: SwiftProtobuf.Enum {
   var rawValue: Int {
     switch self {
     case .photoResolution48MegaPixels: return 0
+    case .photoResolution21MegaPixels: return 1
     case .photoResolution12MegaPixels: return 2
+    case .photoResolution50MegaPixels: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1188,7 +1314,9 @@ extension Arsdk_Camera_PhotoResolution: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   static var allCases: [Arsdk_Camera_PhotoResolution] = [
     .photoResolution48MegaPixels,
+    .photoResolution21MegaPixels,
     .photoResolution12MegaPixels,
+    .photoResolution50MegaPixels,
   ]
 }
 
@@ -1201,6 +1329,11 @@ enum Arsdk_Camera_PhotoStopReason: SwiftProtobuf.Enum {
   case configurationChange // = 2
   case internalError // = 3
   case insufficientStorageSpace // = 4
+  case inactiveCamera // = 5
+  case arbitration // = 6
+  case already // = 7
+  case storageUnavailable // = 8
+  case storageEncrypted // = 9
   case UNRECOGNIZED(Int)
 
   init() {
@@ -1214,6 +1347,11 @@ enum Arsdk_Camera_PhotoStopReason: SwiftProtobuf.Enum {
     case 2: self = .configurationChange
     case 3: self = .internalError
     case 4: self = .insufficientStorageSpace
+    case 5: self = .inactiveCamera
+    case 6: self = .arbitration
+    case 7: self = .already
+    case 8: self = .storageUnavailable
+    case 9: self = .storageEncrypted
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1225,6 +1363,11 @@ enum Arsdk_Camera_PhotoStopReason: SwiftProtobuf.Enum {
     case .configurationChange: return 2
     case .internalError: return 3
     case .insufficientStorageSpace: return 4
+    case .inactiveCamera: return 5
+    case .arbitration: return 6
+    case .already: return 7
+    case .storageUnavailable: return 8
+    case .storageEncrypted: return 9
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1241,6 +1384,11 @@ extension Arsdk_Camera_PhotoStopReason: CaseIterable {
     .configurationChange,
     .internalError,
     .insufficientStorageSpace,
+    .inactiveCamera,
+    .arbitration,
+    .already,
+    .storageUnavailable,
+    .storageEncrypted,
   ]
 }
 
@@ -1291,6 +1439,7 @@ enum Arsdk_Camera_RecordingEvent: SwiftProtobuf.Enum {
   case start // = 0
   case stop // = 1
   case stopping // = 2
+  case none // = 3
   case UNRECOGNIZED(Int)
 
   init() {
@@ -1302,6 +1451,7 @@ enum Arsdk_Camera_RecordingEvent: SwiftProtobuf.Enum {
     case 0: self = .start
     case 1: self = .stop
     case 2: self = .stopping
+    case 3: self = .none
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1311,6 +1461,7 @@ enum Arsdk_Camera_RecordingEvent: SwiftProtobuf.Enum {
     case .start: return 0
     case .stop: return 1
     case .stopping: return 2
+    case .none: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1325,6 +1476,7 @@ extension Arsdk_Camera_RecordingEvent: CaseIterable {
     .start,
     .stop,
     .stopping,
+    .none,
   ]
 }
 
@@ -1380,7 +1532,13 @@ enum Arsdk_Camera_RecordingStopReason: SwiftProtobuf.Enum {
   case configurationChange // = 2
   case internalError // = 3
   case insufficientStorageSpace // = 4
+  case insufficientStorageSpaceFallback // = 10
   case insufficientStorageSpeed // = 5
+  case inactiveCamera // = 6
+  case arbitration // = 7
+  case already // = 8
+  case storageUnavailable // = 9
+  case storageEncrypted // = 11
   case UNRECOGNIZED(Int)
 
   init() {
@@ -1394,6 +1552,12 @@ enum Arsdk_Camera_RecordingStopReason: SwiftProtobuf.Enum {
     case 3: self = .internalError
     case 4: self = .insufficientStorageSpace
     case 5: self = .insufficientStorageSpeed
+    case 6: self = .inactiveCamera
+    case 7: self = .arbitration
+    case 8: self = .already
+    case 9: self = .storageUnavailable
+    case 10: self = .insufficientStorageSpaceFallback
+    case 11: self = .storageEncrypted
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1405,6 +1569,12 @@ enum Arsdk_Camera_RecordingStopReason: SwiftProtobuf.Enum {
     case .internalError: return 3
     case .insufficientStorageSpace: return 4
     case .insufficientStorageSpeed: return 5
+    case .inactiveCamera: return 6
+    case .arbitration: return 7
+    case .already: return 8
+    case .storageUnavailable: return 9
+    case .insufficientStorageSpaceFallback: return 10
+    case .storageEncrypted: return 11
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1420,7 +1590,13 @@ extension Arsdk_Camera_RecordingStopReason: CaseIterable {
     .configurationChange,
     .internalError,
     .insufficientStorageSpace,
+    .insufficientStorageSpaceFallback,
     .insufficientStorageSpeed,
+    .inactiveCamera,
+    .arbitration,
+    .already,
+    .storageUnavailable,
+    .storageEncrypted,
   ]
 }
 
@@ -1638,31 +1814,76 @@ extension Arsdk_Camera_ShutterSpeed: CaseIterable {
 
 #endif  // swift(>=4.2)
 
-enum Arsdk_Camera_StoragePolicy: SwiftProtobuf.Enum {
+/// Spectrum allows user enable/disable thermal functionality
+///of the drone if available  
+enum Arsdk_Camera_Spectrum: SwiftProtobuf.Enum {
   typealias RawValue = Int
-  case auto // = 0
-  case `internal` // = 1
-  case removable // = 2
+  case visible // = 0
+  case thermal // = 1
   case UNRECOGNIZED(Int)
 
   init() {
-    self = .auto
+    self = .visible
   }
 
   init?(rawValue: Int) {
     switch rawValue {
-    case 0: self = .auto
-    case 1: self = .internal
-    case 2: self = .removable
+    case 0: self = .visible
+    case 1: self = .thermal
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
 
   var rawValue: Int {
     switch self {
-    case .auto: return 0
+    case .visible: return 0
+    case .thermal: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_Spectrum: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_Spectrum] = [
+    .visible,
+    .thermal,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Camera_StoragePolicy: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case priorityRemovable // = 0
+  case `internal` // = 1
+  case removable // = 2
+  case priorityInternal // = 3
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .priorityRemovable
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .priorityRemovable
+    case 1: self = .internal
+    case 2: self = .removable
+    case 3: self = .priorityInternal
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .priorityRemovable: return 0
     case .internal: return 1
     case .removable: return 2
+    case .priorityInternal: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1674,9 +1895,10 @@ enum Arsdk_Camera_StoragePolicy: SwiftProtobuf.Enum {
 extension Arsdk_Camera_StoragePolicy: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   static var allCases: [Arsdk_Camera_StoragePolicy] = [
-    .auto,
+    .priorityRemovable,
     .internal,
     .removable,
+    .priorityInternal,
   ]
 }
 
@@ -1686,6 +1908,7 @@ enum Arsdk_Camera_StorageType: SwiftProtobuf.Enum {
   typealias RawValue = Int
   case `internal` // = 0
   case removable // = 1
+  case none // = 2
   case UNRECOGNIZED(Int)
 
   init() {
@@ -1696,6 +1919,7 @@ enum Arsdk_Camera_StorageType: SwiftProtobuf.Enum {
     switch rawValue {
     case 0: self = .internal
     case 1: self = .removable
+    case 2: self = .none
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1704,6 +1928,7 @@ enum Arsdk_Camera_StorageType: SwiftProtobuf.Enum {
     switch self {
     case .internal: return 0
     case .removable: return 1
+    case .none: return 2
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1717,6 +1942,7 @@ extension Arsdk_Camera_StorageType: CaseIterable {
   static var allCases: [Arsdk_Camera_StorageType] = [
     .internal,
     .removable,
+    .none,
   ]
 }
 
@@ -1767,6 +1993,7 @@ enum Arsdk_Camera_VideoResolution: SwiftProtobuf.Enum {
   case reserved // = 0
   case videoResolution2160P // = 1
   case videoResolution1080P // = 3
+  case videoResolution720P // = 4
   case UNRECOGNIZED(Int)
 
   init() {
@@ -1778,6 +2005,7 @@ enum Arsdk_Camera_VideoResolution: SwiftProtobuf.Enum {
     case 0: self = .reserved
     case 1: self = .videoResolution2160P
     case 3: self = .videoResolution1080P
+    case 4: self = .videoResolution720P
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1787,6 +2015,7 @@ enum Arsdk_Camera_VideoResolution: SwiftProtobuf.Enum {
     case .reserved: return 0
     case .videoResolution2160P: return 1
     case .videoResolution1080P: return 3
+    case .videoResolution720P: return 4
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1801,6 +2030,7 @@ extension Arsdk_Camera_VideoResolution: CaseIterable {
     .reserved,
     .videoResolution2160P,
     .videoResolution1080P,
+    .videoResolution720P,
   ]
 }
 
@@ -2206,6 +2436,7 @@ enum Arsdk_Camera_ZoomControlMode: SwiftProtobuf.Enum {
   typealias RawValue = Int
   case level // = 0
   case velocity // = 1
+  case hfov // = 2
   case UNRECOGNIZED(Int)
 
   init() {
@@ -2216,6 +2447,7 @@ enum Arsdk_Camera_ZoomControlMode: SwiftProtobuf.Enum {
     switch rawValue {
     case 0: self = .level
     case 1: self = .velocity
+    case 2: self = .hfov
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -2224,6 +2456,7 @@ enum Arsdk_Camera_ZoomControlMode: SwiftProtobuf.Enum {
     switch self {
     case .level: return 0
     case .velocity: return 1
+    case .hfov: return 2
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -2237,6 +2470,143 @@ extension Arsdk_Camera_ZoomControlMode: CaseIterable {
   static var allCases: [Arsdk_Camera_ZoomControlMode] = [
     .level,
     .velocity,
+    .hfov,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Camera_ZoomPresetEnum: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case zoomPresetWide // = 0
+  case zoomPresetThermal // = 1
+  case zoomPresetTele // = 2
+  case zoomPresetMax // = 3
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .zoomPresetWide
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .zoomPresetWide
+    case 1: self = .zoomPresetThermal
+    case 2: self = .zoomPresetTele
+    case 3: self = .zoomPresetMax
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .zoomPresetWide: return 0
+    case .zoomPresetThermal: return 1
+    case .zoomPresetTele: return 2
+    case .zoomPresetMax: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_ZoomPresetEnum: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_ZoomPresetEnum] = [
+    .zoomPresetWide,
+    .zoomPresetThermal,
+    .zoomPresetTele,
+    .zoomPresetMax,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Camera_ZoomGotoPresetEnum: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case zoomGotoPresetFirst // = 0
+  case zoomGotoPresetLast // = 1
+  case zoomGotoPresetPrev // = 2
+  case zoomGotoPresetNext // = 3
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .zoomGotoPresetFirst
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .zoomGotoPresetFirst
+    case 1: self = .zoomGotoPresetLast
+    case 2: self = .zoomGotoPresetPrev
+    case 3: self = .zoomGotoPresetNext
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .zoomGotoPresetFirst: return 0
+    case .zoomGotoPresetLast: return 1
+    case .zoomGotoPresetPrev: return 2
+    case .zoomGotoPresetNext: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_ZoomGotoPresetEnum: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_ZoomGotoPresetEnum] = [
+    .zoomGotoPresetFirst,
+    .zoomGotoPresetLast,
+    .zoomGotoPresetPrev,
+    .zoomGotoPresetNext,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Camera_CameraSubtype: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case wide // = 0
+  case tele // = 1
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .wide
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .wide
+    case 1: self = .tele
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .wide: return 0
+    case .tele: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_CameraSubtype: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_CameraSubtype] = [
+    .wide,
+    .tele,
   ]
 }
 
@@ -2277,6 +2647,86 @@ extension Arsdk_Camera_ZoomVelocityControlQualityMode: CaseIterable {
   static var allCases: [Arsdk_Camera_ZoomVelocityControlQualityMode] = [
     .allowDegradation,
     .stopBeforeDegradation,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Camera_LowLightModeSelection: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case manual // = 0
+  case automatic // = 1
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .manual
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .manual
+    case 1: self = .automatic
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .manual: return 0
+    case .automatic: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_LowLightModeSelection: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_LowLightModeSelection] = [
+    .manual,
+    .automatic,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Camera_LowLightMode: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case disabled // = 0
+  case enabled // = 1
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .disabled
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .disabled
+    case 1: self = .enabled
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .disabled: return 0
+    case .enabled: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Camera_LowLightMode: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Camera_LowLightMode] = [
+    .disabled,
+    .enabled,
   ]
 }
 
@@ -2387,6 +2837,54 @@ struct Arsdk_Camera_Command {
     set {id = .resetZoom(newValue)}
   }
 
+  var zoomGotoPreset: Arsdk_Camera_Command.ZoomGotoPreset {
+    get {
+      if case .zoomGotoPreset(let v)? = id {return v}
+      return Arsdk_Camera_Command.ZoomGotoPreset()
+    }
+    set {id = .zoomGotoPreset(newValue)}
+  }
+
+  var setUserLfic: Arsdk_Camera_Command.SetUserLfic {
+    get {
+      if case .setUserLfic(let v)? = id {return v}
+      return Arsdk_Camera_Command.SetUserLfic()
+    }
+    set {id = .setUserLfic(newValue)}
+  }
+
+  var notifyStreamCamera: Arsdk_Camera_StreamCamera {
+    get {
+      if case .notifyStreamCamera(let v)? = id {return v}
+      return Arsdk_Camera_StreamCamera()
+    }
+    set {id = .notifyStreamCamera(newValue)}
+  }
+
+  var setThermalAlignmentOffsets: Arsdk_Camera_Command.SetAlignmentOffsets {
+    get {
+      if case .setThermalAlignmentOffsets(let v)? = id {return v}
+      return Arsdk_Camera_Command.SetAlignmentOffsets()
+    }
+    set {id = .setThermalAlignmentOffsets(newValue)}
+  }
+
+  var setThermalPalette: Arsdk_Camera_Command.SetThermalPalette {
+    get {
+      if case .setThermalPalette(let v)? = id {return v}
+      return Arsdk_Camera_Command.SetThermalPalette()
+    }
+    set {id = .setThermalPalette(newValue)}
+  }
+
+  var setThermalRendering: Arsdk_Camera_Command.SetThermalRendering {
+    get {
+      if case .setThermalRendering(let v)? = id {return v}
+      return Arsdk_Camera_Command.SetThermalRendering()
+    }
+    set {id = .setThermalRendering(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
@@ -2403,6 +2901,12 @@ struct Arsdk_Camera_Command {
     case lockWhiteBalance(Arsdk_Camera_Command.LockWhiteBalance)
     case setMediaMetadata(Arsdk_Camera_Command.SetMediaMetadata)
     case resetZoom(Arsdk_Camera_Command.ResetZoom)
+    case zoomGotoPreset(Arsdk_Camera_Command.ZoomGotoPreset)
+    case setUserLfic(Arsdk_Camera_Command.SetUserLfic)
+    case notifyStreamCamera(Arsdk_Camera_StreamCamera)
+    case setThermalAlignmentOffsets(Arsdk_Camera_Command.SetAlignmentOffsets)
+    case setThermalPalette(Arsdk_Camera_Command.SetThermalPalette)
+    case setThermalRendering(Arsdk_Camera_Command.SetThermalRendering)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Camera_Command.OneOf_ID, rhs: Arsdk_Camera_Command.OneOf_ID) -> Bool {
@@ -2456,6 +2960,30 @@ struct Arsdk_Camera_Command {
       }()
       case (.resetZoom, .resetZoom): return {
         guard case .resetZoom(let l) = lhs, case .resetZoom(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.zoomGotoPreset, .zoomGotoPreset): return {
+        guard case .zoomGotoPreset(let l) = lhs, case .zoomGotoPreset(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.setUserLfic, .setUserLfic): return {
+        guard case .setUserLfic(let l) = lhs, case .setUserLfic(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.notifyStreamCamera, .notifyStreamCamera): return {
+        guard case .notifyStreamCamera(let l) = lhs, case .notifyStreamCamera(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.setThermalAlignmentOffsets, .setThermalAlignmentOffsets): return {
+        guard case .setThermalAlignmentOffsets(let l) = lhs, case .setThermalAlignmentOffsets(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.setThermalPalette, .setThermalPalette): return {
+        guard case .setThermalPalette(let l) = lhs, case .setThermalPalette(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.setThermalRendering, .setThermalRendering): return {
+        guard case .setThermalRendering(let l) = lhs, case .setThermalRendering(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -2539,6 +3067,44 @@ struct Arsdk_Camera_Command {
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
+  }
+
+  struct ZoomGotoPreset {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var cameraID: UInt64 = 0
+
+    var gotoPreset: Arsdk_Camera_ZoomGotoPresetEnum = .zoomGotoPresetFirst
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct SetUserLfic {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var cameraID: UInt64 = 0
+
+    /// Coordinates [0; 1] in the picture (null to clear) 
+    var coords: Arsdk_Camera_Vec2 {
+      get {return _coords ?? Arsdk_Camera_Vec2()}
+      set {_coords = newValue}
+    }
+    /// Returns true if `coords` has been explicitly set.
+    var hasCoords: Bool {return self._coords != nil}
+    /// Clears the value of `coords`. Subsequent reads from it will return its default value.
+    mutating func clearCoords() {self._coords = nil}
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _coords: Arsdk_Camera_Vec2? = nil
   }
 
   struct StartPhoto {
@@ -2651,6 +3217,77 @@ struct Arsdk_Camera_Command {
     fileprivate var _metadata: Arsdk_Camera_MediaMetadata? = nil
   }
 
+  struct SetAlignmentOffsets {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var cameraID: UInt64 = 0
+
+    var alignmentOffsets: Arsdk_Camera_AlignmentOffsets {
+      get {return _alignmentOffsets ?? Arsdk_Camera_AlignmentOffsets()}
+      set {_alignmentOffsets = newValue}
+    }
+    /// Returns true if `alignmentOffsets` has been explicitly set.
+    var hasAlignmentOffsets: Bool {return self._alignmentOffsets != nil}
+    /// Clears the value of `alignmentOffsets`. Subsequent reads from it will return its default value.
+    mutating func clearAlignmentOffsets() {self._alignmentOffsets = nil}
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _alignmentOffsets: Arsdk_Camera_AlignmentOffsets? = nil
+  }
+
+  /// Set palette for thermal rendering
+  struct SetThermalPalette {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var cameraID: UInt64 = 0
+
+    var palette: Arsdk_Thermalrendering_Palette {
+      get {return _palette ?? Arsdk_Thermalrendering_Palette()}
+      set {_palette = newValue}
+    }
+    /// Returns true if `palette` has been explicitly set.
+    var hasPalette: Bool {return self._palette != nil}
+    /// Clears the value of `palette`. Subsequent reads from it will return its default value.
+    mutating func clearPalette() {self._palette = nil}
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _palette: Arsdk_Thermalrendering_Palette? = nil
+  }
+
+  /// Set thermal rendering
+  struct SetThermalRendering {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var cameraID: UInt64 = 0
+
+    var rendering: Arsdk_Thermalrendering_Rendering {
+      get {return _rendering ?? Arsdk_Thermalrendering_Rendering()}
+      set {_rendering = newValue}
+    }
+    /// Returns true if `rendering` has been explicitly set.
+    var hasRendering: Bool {return self._rendering != nil}
+    /// Clears the value of `rendering`. Subsequent reads from it will return its default value.
+    mutating func clearRendering() {self._rendering = nil}
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _rendering: Arsdk_Thermalrendering_Rendering? = nil
+  }
+
   init() {}
 }
 
@@ -2689,6 +3326,15 @@ struct Arsdk_Camera_Event {
     set {id = .nextPhotoInterval(newValue)}
   }
 
+  /// non-ack
+  var cameraWhiteBalance: Arsdk_Camera_Event.WhiteBalance {
+    get {
+      if case .cameraWhiteBalance(let v)? = id {return v}
+      return Arsdk_Camera_Event.WhiteBalance()
+    }
+    set {id = .cameraWhiteBalance(newValue)}
+  }
+
   var cameraList: Arsdk_Camera_Event.CameraList {
     get {
       if case .cameraList(let v)? = id {return v}
@@ -2721,6 +3367,14 @@ struct Arsdk_Camera_Event {
     set {id = .recording(newValue)}
   }
 
+  var requestStreamCamera: Arsdk_Camera_StreamCamera {
+    get {
+      if case .requestStreamCamera(let v)? = id {return v}
+      return Arsdk_Camera_StreamCamera()
+    }
+    set {id = .requestStreamCamera(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
@@ -2730,10 +3384,13 @@ struct Arsdk_Camera_Event {
     case zoomLevel(Arsdk_Camera_Event.ZoomLevel)
     /// non-ack
     case nextPhotoInterval(Arsdk_Camera_Event.NextPhotoInterval)
+    /// non-ack
+    case cameraWhiteBalance(Arsdk_Camera_Event.WhiteBalance)
     case cameraList(Arsdk_Camera_Event.CameraList)
     case state(Arsdk_Camera_Event.State)
     case photo(Arsdk_Camera_Event.Photo)
     case recording(Arsdk_Camera_Event.Recording)
+    case requestStreamCamera(Arsdk_Camera_StreamCamera)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Camera_Event.OneOf_ID, rhs: Arsdk_Camera_Event.OneOf_ID) -> Bool {
@@ -2753,6 +3410,10 @@ struct Arsdk_Camera_Event {
         guard case .nextPhotoInterval(let l) = lhs, case .nextPhotoInterval(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.cameraWhiteBalance, .cameraWhiteBalance): return {
+        guard case .cameraWhiteBalance(let l) = lhs, case .cameraWhiteBalance(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       case (.cameraList, .cameraList): return {
         guard case .cameraList(let l) = lhs, case .cameraList(let r) = rhs else { preconditionFailure() }
         return l == r
@@ -2767,6 +3428,10 @@ struct Arsdk_Camera_Event {
       }()
       case (.recording, .recording): return {
         guard case .recording(let l) = lhs, case .recording(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.requestStreamCamera, .requestStreamCamera): return {
+        guard case .requestStreamCamera(let l) = lhs, case .requestStreamCamera(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -2879,6 +3544,16 @@ struct Arsdk_Camera_Event {
     /// Clears the value of `zoom`. Subsequent reads from it will return its default value.
     mutating func clearZoom() {_uniqueStorage()._zoom = nil}
 
+    /// whether the zoom is currently locked by the flying mode
+    var zoomIsLocked: SwiftProtobuf.Google_Protobuf_BoolValue {
+      get {return _storage._zoomIsLocked ?? SwiftProtobuf.Google_Protobuf_BoolValue()}
+      set {_uniqueStorage()._zoomIsLocked = newValue}
+    }
+    /// Returns true if `zoomIsLocked` has been explicitly set.
+    var hasZoomIsLocked: Bool {return _storage._zoomIsLocked != nil}
+    /// Clears the value of `zoomIsLocked`. Subsequent reads from it will return its default value.
+    mutating func clearZoomIsLocked() {_uniqueStorage()._zoomIsLocked = nil}
+
     var mediaMetadata: Arsdk_Camera_MediaMetadata {
       get {return _storage._mediaMetadata ?? Arsdk_Camera_MediaMetadata()}
       set {_uniqueStorage()._mediaMetadata = newValue}
@@ -2887,6 +3562,51 @@ struct Arsdk_Camera_Event {
     var hasMediaMetadata: Bool {return _storage._mediaMetadata != nil}
     /// Clears the value of `mediaMetadata`. Subsequent reads from it will return its default value.
     mutating func clearMediaMetadata() {_uniqueStorage()._mediaMetadata = nil}
+
+    var effectiveFramerate: Arsdk_Camera_Event.State.EffectiveFramerate {
+      get {return _storage._effectiveFramerate ?? Arsdk_Camera_Event.State.EffectiveFramerate()}
+      set {_uniqueStorage()._effectiveFramerate = newValue}
+    }
+    /// Returns true if `effectiveFramerate` has been explicitly set.
+    var hasEffectiveFramerate: Bool {return _storage._effectiveFramerate != nil}
+    /// Clears the value of `effectiveFramerate`. Subsequent reads from it will return its default value.
+    mutating func clearEffectiveFramerate() {_uniqueStorage()._effectiveFramerate = nil}
+
+    var userLfic: Arsdk_Camera_Event.State.UserLfic {
+      get {return _storage._userLfic ?? Arsdk_Camera_Event.State.UserLfic()}
+      set {_uniqueStorage()._userLfic = newValue}
+    }
+    /// Returns true if `userLfic` has been explicitly set.
+    var hasUserLfic: Bool {return _storage._userLfic != nil}
+    /// Clears the value of `userLfic`. Subsequent reads from it will return its default value.
+    mutating func clearUserLfic() {_uniqueStorage()._userLfic = nil}
+
+    var thermalAlignmentOffsets: Arsdk_Camera_AlignmentOffsets {
+      get {return _storage._thermalAlignmentOffsets ?? Arsdk_Camera_AlignmentOffsets()}
+      set {_uniqueStorage()._thermalAlignmentOffsets = newValue}
+    }
+    /// Returns true if `thermalAlignmentOffsets` has been explicitly set.
+    var hasThermalAlignmentOffsets: Bool {return _storage._thermalAlignmentOffsets != nil}
+    /// Clears the value of `thermalAlignmentOffsets`. Subsequent reads from it will return its default value.
+    mutating func clearThermalAlignmentOffsets() {_uniqueStorage()._thermalAlignmentOffsets = nil}
+
+    var thermalPalette: Arsdk_Thermalrendering_Palette {
+      get {return _storage._thermalPalette ?? Arsdk_Thermalrendering_Palette()}
+      set {_uniqueStorage()._thermalPalette = newValue}
+    }
+    /// Returns true if `thermalPalette` has been explicitly set.
+    var hasThermalPalette: Bool {return _storage._thermalPalette != nil}
+    /// Clears the value of `thermalPalette`. Subsequent reads from it will return its default value.
+    mutating func clearThermalPalette() {_uniqueStorage()._thermalPalette = nil}
+
+    var thermalRendering: Arsdk_Thermalrendering_Rendering {
+      get {return _storage._thermalRendering ?? Arsdk_Thermalrendering_Rendering()}
+      set {_uniqueStorage()._thermalRendering = newValue}
+    }
+    /// Returns true if `thermalRendering` has been explicitly set.
+    var hasThermalRendering: Bool {return _storage._thermalRendering != nil}
+    /// Clears the value of `thermalRendering`. Subsequent reads from it will return its default value.
+    mutating func clearThermalRendering() {_uniqueStorage()._thermalRendering = nil}
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2983,9 +3703,100 @@ struct Arsdk_Camera_Event {
 
       var zoomHighQualityLevelMax: Double = 0
 
+      var presets: [Arsdk_Camera_Event.State.Zoom.Preset] = []
+
+      var camRanges: [Arsdk_Camera_Event.State.Zoom.CameraRange] = []
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      struct Preset {
+        // SwiftProtobuf.Message conformance is added in an extension below. See the
+        // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+        // methods supported on all messages.
+
+        var preset: Arsdk_Camera_ZoomPresetEnum = .zoomPresetWide
+
+        var value: Float = 0
+
+        var unknownFields = SwiftProtobuf.UnknownStorage()
+
+        init() {}
+      }
+
+      struct CameraRange {
+        // SwiftProtobuf.Message conformance is added in an extension below. See the
+        // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+        // methods supported on all messages.
+
+        var physCam: Arsdk_Camera_CameraSubtype = .wide
+
+        var levelMin: Float = 0
+
+        var levelMax: Float = 0
+
+        var highQualityLevelMax: Float = 0
+
+        var hfovMin: SwiftProtobuf.Google_Protobuf_FloatValue {
+          get {return _hfovMin ?? SwiftProtobuf.Google_Protobuf_FloatValue()}
+          set {_hfovMin = newValue}
+        }
+        /// Returns true if `hfovMin` has been explicitly set.
+        var hasHfovMin: Bool {return self._hfovMin != nil}
+        /// Clears the value of `hfovMin`. Subsequent reads from it will return its default value.
+        mutating func clearHfovMin() {self._hfovMin = nil}
+
+        var hfovMax: SwiftProtobuf.Google_Protobuf_FloatValue {
+          get {return _hfovMax ?? SwiftProtobuf.Google_Protobuf_FloatValue()}
+          set {_hfovMax = newValue}
+        }
+        /// Returns true if `hfovMax` has been explicitly set.
+        var hasHfovMax: Bool {return self._hfovMax != nil}
+        /// Clears the value of `hfovMax`. Subsequent reads from it will return its default value.
+        mutating func clearHfovMax() {self._hfovMax = nil}
+
+        var unknownFields = SwiftProtobuf.UnknownStorage()
+
+        init() {}
+
+        fileprivate var _hfovMin: SwiftProtobuf.Google_Protobuf_FloatValue? = nil
+        fileprivate var _hfovMax: SwiftProtobuf.Google_Protobuf_FloatValue? = nil
+      }
+
+      init() {}
+    }
+
+    struct EffectiveFramerate {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      var effectiveFramerate: Arsdk_Camera_Framerate = .framerate24
+
       var unknownFields = SwiftProtobuf.UnknownStorage()
 
       init() {}
+    }
+
+    struct UserLfic {
+      // SwiftProtobuf.Message conformance is added in an extension below. See the
+      // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+      // methods supported on all messages.
+
+      /// Coordinates [0; 1] in the picture (null if no coordinates) 
+      var coords: Arsdk_Camera_Vec2 {
+        get {return _coords ?? Arsdk_Camera_Vec2()}
+        set {_coords = newValue}
+      }
+      /// Returns true if `coords` has been explicitly set.
+      var hasCoords: Bool {return self._coords != nil}
+      /// Clears the value of `coords`. Subsequent reads from it will return its default value.
+      mutating func clearCoords() {self._coords = nil}
+
+      var unknownFields = SwiftProtobuf.UnknownStorage()
+
+      init() {}
+
+      fileprivate var _coords: Arsdk_Camera_Vec2? = nil
     }
 
     init() {}
@@ -3029,9 +3840,20 @@ struct Arsdk_Camera_Event {
 
     var level: Double = 0
 
+    var hfov: SwiftProtobuf.Google_Protobuf_DoubleValue {
+      get {return _hfov ?? SwiftProtobuf.Google_Protobuf_DoubleValue()}
+      set {_hfov = newValue}
+    }
+    /// Returns true if `hfov` has been explicitly set.
+    var hasHfov: Bool {return self._hfov != nil}
+    /// Clears the value of `hfov`. Subsequent reads from it will return its default value.
+    mutating func clearHfov() {self._hfov = nil}
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
+
+    fileprivate var _hfov: SwiftProtobuf.Google_Protobuf_DoubleValue? = nil
   }
 
   struct NextPhotoInterval {
@@ -3044,6 +3866,20 @@ struct Arsdk_Camera_Event {
     var mode: Arsdk_Camera_PhotoMode = .single
 
     var interval: Double = 0
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct WhiteBalance {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var cameraID: UInt64 = 0
+
+    var temperature: Arsdk_Camera_WhiteBalanceTemperature = .whiteBalanceTemperature1500
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3097,6 +3933,18 @@ struct Arsdk_Camera_Capabilities {
   // methods supported on all messages.
 
   var rules: [Arsdk_Camera_Capabilities.Rule] = []
+
+  var thermalAlignmentOffsetRanges: Arsdk_Camera_Capabilities.AlignmentOffsetRanges {
+    get {return _thermalAlignmentOffsetRanges ?? Arsdk_Camera_Capabilities.AlignmentOffsetRanges()}
+    set {_thermalAlignmentOffsetRanges = newValue}
+  }
+  /// Returns true if `thermalAlignmentOffsetRanges` has been explicitly set.
+  var hasThermalAlignmentOffsetRanges: Bool {return self._thermalAlignmentOffsetRanges != nil}
+  /// Clears the value of `thermalAlignmentOffsetRanges`. Subsequent reads from it will return its default value.
+  mutating func clearThermalAlignmentOffsetRanges() {self._thermalAlignmentOffsetRanges = nil}
+
+  /// option (support) = "091f:8.4.0;0920:8.4.0;0924:8.4.0;0925:8.4.0";
+  var thermalMixingModes: [Arsdk_Thermalrendering_MixingMode] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3294,33 +4142,6 @@ struct Arsdk_Camera_Capabilities {
       set {_uniqueStorage()._autoRecordModes = newValue}
     }
 
-    var alignmentOffsetPitchRange: Arsdk_Camera_DoubleRange {
-      get {return _storage._alignmentOffsetPitchRange ?? Arsdk_Camera_DoubleRange()}
-      set {_uniqueStorage()._alignmentOffsetPitchRange = newValue}
-    }
-    /// Returns true if `alignmentOffsetPitchRange` has been explicitly set.
-    var hasAlignmentOffsetPitchRange: Bool {return _storage._alignmentOffsetPitchRange != nil}
-    /// Clears the value of `alignmentOffsetPitchRange`. Subsequent reads from it will return its default value.
-    mutating func clearAlignmentOffsetPitchRange() {_uniqueStorage()._alignmentOffsetPitchRange = nil}
-
-    var alignmentOffsetRollRange: Arsdk_Camera_DoubleRange {
-      get {return _storage._alignmentOffsetRollRange ?? Arsdk_Camera_DoubleRange()}
-      set {_uniqueStorage()._alignmentOffsetRollRange = newValue}
-    }
-    /// Returns true if `alignmentOffsetRollRange` has been explicitly set.
-    var hasAlignmentOffsetRollRange: Bool {return _storage._alignmentOffsetRollRange != nil}
-    /// Clears the value of `alignmentOffsetRollRange`. Subsequent reads from it will return its default value.
-    mutating func clearAlignmentOffsetRollRange() {_uniqueStorage()._alignmentOffsetRollRange = nil}
-
-    var alignmentOffsetYawRange: Arsdk_Camera_DoubleRange {
-      get {return _storage._alignmentOffsetYawRange ?? Arsdk_Camera_DoubleRange()}
-      set {_uniqueStorage()._alignmentOffsetYawRange = newValue}
-    }
-    /// Returns true if `alignmentOffsetYawRange` has been explicitly set.
-    var hasAlignmentOffsetYawRange: Bool {return _storage._alignmentOffsetYawRange != nil}
-    /// Clears the value of `alignmentOffsetYawRange`. Subsequent reads from it will return its default value.
-    mutating func clearAlignmentOffsetYawRange() {_uniqueStorage()._alignmentOffsetYawRange = nil}
-
     var photoSignatures: [Arsdk_Camera_DigitalSignature] {
       get {return _storage._photoSignatures}
       set {_uniqueStorage()._photoSignatures = newValue}
@@ -3341,6 +4162,21 @@ struct Arsdk_Camera_Capabilities {
       set {_uniqueStorage()._videoRecordingBitrates = newValue}
     }
 
+    var spectrums: [Arsdk_Camera_Spectrum] {
+      get {return _storage._spectrums}
+      set {_uniqueStorage()._spectrums = newValue}
+    }
+
+    var lowLightModeSelections: [Arsdk_Camera_LowLightModeSelection] {
+      get {return _storage._lowLightModeSelections}
+      set {_uniqueStorage()._lowLightModeSelections = newValue}
+    }
+
+    var lowLightModes: [Arsdk_Camera_LowLightMode] {
+      get {return _storage._lowLightModes}
+      set {_uniqueStorage()._lowLightModes = newValue}
+    }
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
@@ -3348,7 +4184,91 @@ struct Arsdk_Camera_Capabilities {
     fileprivate var _storage = _StorageClass.defaultInstance
   }
 
+  struct AlignmentOffsetRanges {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var pitch: Arsdk_Camera_DoubleRange {
+      get {return _pitch ?? Arsdk_Camera_DoubleRange()}
+      set {_pitch = newValue}
+    }
+    /// Returns true if `pitch` has been explicitly set.
+    var hasPitch: Bool {return self._pitch != nil}
+    /// Clears the value of `pitch`. Subsequent reads from it will return its default value.
+    mutating func clearPitch() {self._pitch = nil}
+
+    var roll: Arsdk_Camera_DoubleRange {
+      get {return _roll ?? Arsdk_Camera_DoubleRange()}
+      set {_roll = newValue}
+    }
+    /// Returns true if `roll` has been explicitly set.
+    var hasRoll: Bool {return self._roll != nil}
+    /// Clears the value of `roll`. Subsequent reads from it will return its default value.
+    mutating func clearRoll() {self._roll = nil}
+
+    var yaw: Arsdk_Camera_DoubleRange {
+      get {return _yaw ?? Arsdk_Camera_DoubleRange()}
+      set {_yaw = newValue}
+    }
+    /// Returns true if `yaw` has been explicitly set.
+    var hasYaw: Bool {return self._yaw != nil}
+    /// Clears the value of `yaw`. Subsequent reads from it will return its default value.
+    mutating func clearYaw() {self._yaw = nil}
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _pitch: Arsdk_Camera_DoubleRange? = nil
+    fileprivate var _roll: Arsdk_Camera_DoubleRange? = nil
+    fileprivate var _yaw: Arsdk_Camera_DoubleRange? = nil
+  }
+
   init() {}
+
+  fileprivate var _thermalAlignmentOffsetRanges: Arsdk_Camera_Capabilities.AlignmentOffsetRanges? = nil
+}
+
+struct Arsdk_Camera_AlignmentOffsets {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var pitch: SwiftProtobuf.Google_Protobuf_DoubleValue {
+    get {return _pitch ?? SwiftProtobuf.Google_Protobuf_DoubleValue()}
+    set {_pitch = newValue}
+  }
+  /// Returns true if `pitch` has been explicitly set.
+  var hasPitch: Bool {return self._pitch != nil}
+  /// Clears the value of `pitch`. Subsequent reads from it will return its default value.
+  mutating func clearPitch() {self._pitch = nil}
+
+  var roll: SwiftProtobuf.Google_Protobuf_DoubleValue {
+    get {return _roll ?? SwiftProtobuf.Google_Protobuf_DoubleValue()}
+    set {_roll = newValue}
+  }
+  /// Returns true if `roll` has been explicitly set.
+  var hasRoll: Bool {return self._roll != nil}
+  /// Clears the value of `roll`. Subsequent reads from it will return its default value.
+  mutating func clearRoll() {self._roll = nil}
+
+  var yaw: SwiftProtobuf.Google_Protobuf_DoubleValue {
+    get {return _yaw ?? SwiftProtobuf.Google_Protobuf_DoubleValue()}
+    set {_yaw = newValue}
+  }
+  /// Returns true if `yaw` has been explicitly set.
+  var hasYaw: Bool {return self._yaw != nil}
+  /// Clears the value of `yaw`. Subsequent reads from it will return its default value.
+  mutating func clearYaw() {self._yaw = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _pitch: SwiftProtobuf.Google_Protobuf_DoubleValue? = nil
+  fileprivate var _roll: SwiftProtobuf.Google_Protobuf_DoubleValue? = nil
+  fileprivate var _yaw: SwiftProtobuf.Google_Protobuf_DoubleValue? = nil
 }
 
 struct Arsdk_Camera_Config {
@@ -3516,21 +4436,6 @@ struct Arsdk_Camera_Config {
     set {_uniqueStorage()._autoRecordMode = newValue}
   }
 
-  var alignmentOffsetPitch: Double {
-    get {return _storage._alignmentOffsetPitch}
-    set {_uniqueStorage()._alignmentOffsetPitch = newValue}
-  }
-
-  var alignmentOffsetRoll: Double {
-    get {return _storage._alignmentOffsetRoll}
-    set {_uniqueStorage()._alignmentOffsetRoll = newValue}
-  }
-
-  var alignmentOffsetYaw: Double {
-    get {return _storage._alignmentOffsetYaw}
-    set {_uniqueStorage()._alignmentOffsetYaw = newValue}
-  }
-
   var photoSignature: Arsdk_Camera_DigitalSignature {
     get {return _storage._photoSignature}
     set {_uniqueStorage()._photoSignature = newValue}
@@ -3551,6 +4456,21 @@ struct Arsdk_Camera_Config {
     set {_uniqueStorage()._videoRecordingBitrate = newValue}
   }
 
+  var spectrum: Arsdk_Camera_Spectrum {
+    get {return _storage._spectrum}
+    set {_uniqueStorage()._spectrum = newValue}
+  }
+
+  var lowLightModeSelection: Arsdk_Camera_LowLightModeSelection {
+    get {return _storage._lowLightModeSelection}
+    set {_uniqueStorage()._lowLightModeSelection = newValue}
+  }
+
+  var lowLightMode: Arsdk_Camera_LowLightMode {
+    get {return _storage._lowLightMode}
+    set {_uniqueStorage()._lowLightMode = newValue}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -3566,6 +4486,20 @@ struct Arsdk_Camera_DoubleRange {
   var min: Double = 0
 
   var max: Double = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Arsdk_Camera_Vec2 {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var x: Float = 0
+
+  var y: Float = 0
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3629,80 +4563,21 @@ struct Arsdk_Camera_MediaMetadata {
   init() {}
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Camera_AudioRecordingMode: @unchecked Sendable {}
-extension Arsdk_Camera_AutoRecordMode: @unchecked Sendable {}
-extension Arsdk_Camera_BracketingPreset: @unchecked Sendable {}
-extension Arsdk_Camera_BurstValue: @unchecked Sendable {}
-extension Arsdk_Camera_CameraMode: @unchecked Sendable {}
-extension Arsdk_Camera_CameraModel: @unchecked Sendable {}
-extension Arsdk_Camera_DigitalSignature: @unchecked Sendable {}
-extension Arsdk_Camera_DynamicRange: @unchecked Sendable {}
-extension Arsdk_Camera_EvCompensation: @unchecked Sendable {}
-extension Arsdk_Camera_ExposureLockMode: @unchecked Sendable {}
-extension Arsdk_Camera_ExposureMetering: @unchecked Sendable {}
-extension Arsdk_Camera_ExposureMode: @unchecked Sendable {}
-extension Arsdk_Camera_Framerate: @unchecked Sendable {}
-extension Arsdk_Camera_ImageStyle: @unchecked Sendable {}
-extension Arsdk_Camera_IsoSensitivity: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoState: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoEvent: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoFileFormat: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoFormat: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoMode: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoResolution: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoStopReason: @unchecked Sendable {}
-extension Arsdk_Camera_PhotoStreamingMode: @unchecked Sendable {}
-extension Arsdk_Camera_RecordingEvent: @unchecked Sendable {}
-extension Arsdk_Camera_RecordingState: @unchecked Sendable {}
-extension Arsdk_Camera_RecordingStopReason: @unchecked Sendable {}
-extension Arsdk_Camera_VideoRecordingMode: @unchecked Sendable {}
-extension Arsdk_Camera_ShutterSpeed: @unchecked Sendable {}
-extension Arsdk_Camera_StoragePolicy: @unchecked Sendable {}
-extension Arsdk_Camera_StorageType: @unchecked Sendable {}
-extension Arsdk_Camera_VideoCodec: @unchecked Sendable {}
-extension Arsdk_Camera_VideoResolution: @unchecked Sendable {}
-extension Arsdk_Camera_WhiteBalanceLockMode: @unchecked Sendable {}
-extension Arsdk_Camera_WhiteBalanceMode: @unchecked Sendable {}
-extension Arsdk_Camera_WhiteBalanceTemperature: @unchecked Sendable {}
-extension Arsdk_Camera_ZoomControlMode: @unchecked Sendable {}
-extension Arsdk_Camera_ZoomVelocityControlQualityMode: @unchecked Sendable {}
-extension Arsdk_Camera_Command: @unchecked Sendable {}
-extension Arsdk_Camera_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Camera_Command.ListCameras: @unchecked Sendable {}
-extension Arsdk_Camera_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Camera_Command.Configure: @unchecked Sendable {}
-extension Arsdk_Camera_Command.SetZoomTarget: @unchecked Sendable {}
-extension Arsdk_Camera_Command.ResetZoom: @unchecked Sendable {}
-extension Arsdk_Camera_Command.StartPhoto: @unchecked Sendable {}
-extension Arsdk_Camera_Command.StopPhoto: @unchecked Sendable {}
-extension Arsdk_Camera_Command.StartRecording: @unchecked Sendable {}
-extension Arsdk_Camera_Command.StopRecording: @unchecked Sendable {}
-extension Arsdk_Camera_Command.LockExposure: @unchecked Sendable {}
-extension Arsdk_Camera_Command.LockWhiteBalance: @unchecked Sendable {}
-extension Arsdk_Camera_Command.SetMediaMetadata: @unchecked Sendable {}
-extension Arsdk_Camera_Event: @unchecked Sendable {}
-extension Arsdk_Camera_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Camera_Event.CameraList: @unchecked Sendable {}
-extension Arsdk_Camera_Event.State: @unchecked Sendable {}
-extension Arsdk_Camera_Event.State.Photo: @unchecked Sendable {}
-extension Arsdk_Camera_Event.State.Recording: @unchecked Sendable {}
-extension Arsdk_Camera_Event.State.WhiteBalanceLock: @unchecked Sendable {}
-extension Arsdk_Camera_Event.State.ExposureLock: @unchecked Sendable {}
-extension Arsdk_Camera_Event.State.Zoom: @unchecked Sendable {}
-extension Arsdk_Camera_Event.Exposure: @unchecked Sendable {}
-extension Arsdk_Camera_Event.ZoomLevel: @unchecked Sendable {}
-extension Arsdk_Camera_Event.NextPhotoInterval: @unchecked Sendable {}
-extension Arsdk_Camera_Event.Photo: @unchecked Sendable {}
-extension Arsdk_Camera_Event.Recording: @unchecked Sendable {}
-extension Arsdk_Camera_Capabilities: @unchecked Sendable {}
-extension Arsdk_Camera_Capabilities.Rule: @unchecked Sendable {}
-extension Arsdk_Camera_Config: @unchecked Sendable {}
-extension Arsdk_Camera_DoubleRange: @unchecked Sendable {}
-extension Arsdk_Camera_ExposureRoi: @unchecked Sendable {}
-extension Arsdk_Camera_ExposureRoi.Center: @unchecked Sendable {}
-extension Arsdk_Camera_MediaMetadata: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
+struct Arsdk_Camera_StreamCamera {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var receiver: Arsdk_Camera_StreamReceiver = .default
+
+  var type: Arsdk_Camera_CameraType = .default
+
+  var requester: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -3759,6 +4634,29 @@ extension Arsdk_Camera_CameraModel: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "CAMERA_MODEL_MAIN"),
     1: .same(proto: "CAMERA_MODEL_THERMAL_BLENDED"),
+  ]
+}
+
+extension Arsdk_Camera_StreamReceiver: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "STREAM_RECEIVER_DEFAULT"),
+    1: .same(proto: "STREAM_RECEIVER_SKYCONTROLLER"),
+  ]
+}
+
+extension Arsdk_Camera_CameraType: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "CAMERA_TYPE_DEFAULT"),
+    1: .same(proto: "CAMERA_TYPE_FRONT"),
+    2: .same(proto: "CAMERA_TYPE_STEREO_LEFT"),
+    3: .same(proto: "CAMERA_TYPE_STEREO_RIGHT"),
+    4: .same(proto: "CAMERA_TYPE_VERTICAL"),
+    5: .same(proto: "CAMERA_TYPE_DISPARITY"),
+    6: .same(proto: "CAMERA_TYPE_HORIZONTAL_STEREO_LEFT"),
+    7: .same(proto: "CAMERA_TYPE_HORIZONTAL_STEREO_RIGHT"),
+    8: .same(proto: "CAMERA_TYPE_DOWN_STEREO_LEFT"),
+    9: .same(proto: "CAMERA_TYPE_DOWN_STEREO_RIGHT"),
+    10: .same(proto: "CAMERA_TYPE_EXTERNAL"),
   ]
 }
 
@@ -3903,6 +4801,7 @@ extension Arsdk_Camera_PhotoEvent: SwiftProtobuf._ProtoNameProviding {
     0: .same(proto: "PHOTO_EVENT_START"),
     1: .same(proto: "PHOTO_EVENT_TAKING_PHOTO"),
     4: .same(proto: "PHOTO_EVENT_STOP"),
+    5: .same(proto: "PHOTO_EVENT_NONE"),
   ]
 }
 
@@ -3934,7 +4833,9 @@ extension Arsdk_Camera_PhotoMode: SwiftProtobuf._ProtoNameProviding {
 extension Arsdk_Camera_PhotoResolution: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "PHOTO_RESOLUTION_48_MEGA_PIXELS"),
+    1: .same(proto: "PHOTO_RESOLUTION_21_MEGA_PIXELS"),
     2: .same(proto: "PHOTO_RESOLUTION_12_MEGA_PIXELS"),
+    3: .same(proto: "PHOTO_RESOLUTION_50_MEGA_PIXELS"),
   ]
 }
 
@@ -3945,6 +4846,11 @@ extension Arsdk_Camera_PhotoStopReason: SwiftProtobuf._ProtoNameProviding {
     2: .same(proto: "PHOTO_STOP_REASON_CONFIGURATION_CHANGE"),
     3: .same(proto: "PHOTO_STOP_REASON_INTERNAL_ERROR"),
     4: .same(proto: "PHOTO_STOP_REASON_INSUFFICIENT_STORAGE_SPACE"),
+    5: .same(proto: "PHOTO_STOP_REASON_INACTIVE_CAMERA"),
+    6: .same(proto: "PHOTO_STOP_REASON_ARBITRATION"),
+    7: .same(proto: "PHOTO_STOP_REASON_ALREADY"),
+    8: .same(proto: "PHOTO_STOP_REASON_STORAGE_UNAVAILABLE"),
+    9: .same(proto: "PHOTO_STOP_REASON_STORAGE_ENCRYPTED"),
   ]
 }
 
@@ -3960,6 +4866,7 @@ extension Arsdk_Camera_RecordingEvent: SwiftProtobuf._ProtoNameProviding {
     0: .same(proto: "RECORDING_EVENT_START"),
     1: .same(proto: "RECORDING_EVENT_STOP"),
     2: .same(proto: "RECORDING_EVENT_STOPPING"),
+    3: .same(proto: "RECORDING_EVENT_NONE"),
   ]
 }
 
@@ -3978,6 +4885,12 @@ extension Arsdk_Camera_RecordingStopReason: SwiftProtobuf._ProtoNameProviding {
     3: .same(proto: "RECORDING_STOP_REASON_INTERNAL_ERROR"),
     4: .same(proto: "RECORDING_STOP_REASON_INSUFFICIENT_STORAGE_SPACE"),
     5: .same(proto: "RECORDING_STOP_REASON_INSUFFICIENT_STORAGE_SPEED"),
+    6: .same(proto: "RECORDING_STOP_REASON_INACTIVE_CAMERA"),
+    7: .same(proto: "RECORDING_STOP_REASON_ARBITRATION"),
+    8: .same(proto: "RECORDING_STOP_REASON_ALREADY"),
+    9: .same(proto: "RECORDING_STOP_REASON_STORAGE_UNAVAILABLE"),
+    10: .same(proto: "RECORDING_STOP_REASON_INSUFFICIENT_STORAGE_SPACE_FALLBACK"),
+    11: .same(proto: "RECORDING_STOP_REASON_STORAGE_ENCRYPTED"),
   ]
 }
 
@@ -4028,11 +4941,19 @@ extension Arsdk_Camera_ShutterSpeed: SwiftProtobuf._ProtoNameProviding {
   ]
 }
 
+extension Arsdk_Camera_Spectrum: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "SPECTRUM_VISIBLE"),
+    1: .same(proto: "SPECTRUM_THERMAL"),
+  ]
+}
+
 extension Arsdk_Camera_StoragePolicy: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "STORAGE_POLICY_AUTO"),
+    0: .same(proto: "STORAGE_POLICY_PRIORITY_REMOVABLE"),
     1: .same(proto: "STORAGE_POLICY_INTERNAL"),
     2: .same(proto: "STORAGE_POLICY_REMOVABLE"),
+    3: .same(proto: "STORAGE_POLICY_PRIORITY_INTERNAL"),
   ]
 }
 
@@ -4040,6 +4961,7 @@ extension Arsdk_Camera_StorageType: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "STORAGE_TYPE_INTERNAL"),
     1: .same(proto: "STORAGE_TYPE_REMOVABLE"),
+    2: .same(proto: "STORAGE_TYPE_NONE"),
   ]
 }
 
@@ -4055,6 +4977,7 @@ extension Arsdk_Camera_VideoResolution: SwiftProtobuf._ProtoNameProviding {
     0: .same(proto: "VIDEO_RESOLUTION_RESERVED"),
     1: .same(proto: "VIDEO_RESOLUTION_2160P"),
     3: .same(proto: "VIDEO_RESOLUTION_1080P"),
+    4: .same(proto: "VIDEO_RESOLUTION_720P"),
   ]
 }
 
@@ -4152,6 +5075,32 @@ extension Arsdk_Camera_ZoomControlMode: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "ZOOM_CONTROL_MODE_LEVEL"),
     1: .same(proto: "ZOOM_CONTROL_MODE_VELOCITY"),
+    2: .same(proto: "ZOOM_CONTROL_MODE_HFOV"),
+  ]
+}
+
+extension Arsdk_Camera_ZoomPresetEnum: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "ZOOM_PRESET_WIDE"),
+    1: .same(proto: "ZOOM_PRESET_THERMAL"),
+    2: .same(proto: "ZOOM_PRESET_TELE"),
+    3: .same(proto: "ZOOM_PRESET_MAX"),
+  ]
+}
+
+extension Arsdk_Camera_ZoomGotoPresetEnum: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "ZOOM_GOTO_PRESET_FIRST"),
+    1: .same(proto: "ZOOM_GOTO_PRESET_LAST"),
+    2: .same(proto: "ZOOM_GOTO_PRESET_PREV"),
+    3: .same(proto: "ZOOM_GOTO_PRESET_NEXT"),
+  ]
+}
+
+extension Arsdk_Camera_CameraSubtype: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "CAMERA_SUBTYPE_WIDE"),
+    1: .same(proto: "CAMERA_SUBTYPE_TELE"),
   ]
 }
 
@@ -4159,6 +5108,20 @@ extension Arsdk_Camera_ZoomVelocityControlQualityMode: SwiftProtobuf._ProtoNameP
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "ZOOM_VELOCITY_CONTROL_QUALITY_MODE_ALLOW_DEGRADATION"),
     1: .same(proto: "ZOOM_VELOCITY_CONTROL_QUALITY_MODE_STOP_BEFORE_DEGRADATION"),
+  ]
+}
+
+extension Arsdk_Camera_LowLightModeSelection: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "LOW_LIGHT_MODE_SELECTION_MANUAL"),
+    1: .same(proto: "LOW_LIGHT_MODE_SELECTION_AUTOMATIC"),
+  ]
+}
+
+extension Arsdk_Camera_LowLightMode: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "LOW_LIGHT_MODE_DISABLED"),
+    1: .same(proto: "LOW_LIGHT_MODE_ENABLED"),
   ]
 }
 
@@ -4177,6 +5140,12 @@ extension Arsdk_Camera_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     24: .standard(proto: "lock_white_balance"),
     25: .standard(proto: "set_media_metadata"),
     26: .standard(proto: "reset_zoom"),
+    27: .standard(proto: "zoom_goto_preset"),
+    28: .standard(proto: "set_user_lfic"),
+    29: .standard(proto: "notify_stream_camera"),
+    30: .standard(proto: "set_thermal_alignment_offsets"),
+    31: .standard(proto: "set_thermal_palette"),
+    32: .standard(proto: "set_thermal_rendering"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4341,6 +5310,84 @@ extension Arsdk_Camera_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
           self.id = .resetZoom(v)
         }
       }()
+      case 27: try {
+        var v: Arsdk_Camera_Command.ZoomGotoPreset?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .zoomGotoPreset(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .zoomGotoPreset(v)
+        }
+      }()
+      case 28: try {
+        var v: Arsdk_Camera_Command.SetUserLfic?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .setUserLfic(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .setUserLfic(v)
+        }
+      }()
+      case 29: try {
+        var v: Arsdk_Camera_StreamCamera?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .notifyStreamCamera(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .notifyStreamCamera(v)
+        }
+      }()
+      case 30: try {
+        var v: Arsdk_Camera_Command.SetAlignmentOffsets?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .setThermalAlignmentOffsets(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .setThermalAlignmentOffsets(v)
+        }
+      }()
+      case 31: try {
+        var v: Arsdk_Camera_Command.SetThermalPalette?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .setThermalPalette(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .setThermalPalette(v)
+        }
+      }()
+      case 32: try {
+        var v: Arsdk_Camera_Command.SetThermalRendering?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .setThermalRendering(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .setThermalRendering(v)
+        }
+      }()
       default: break
       }
     }
@@ -4399,6 +5446,30 @@ extension Arsdk_Camera_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     case .resetZoom?: try {
       guard case .resetZoom(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
+    }()
+    case .zoomGotoPreset?: try {
+      guard case .zoomGotoPreset(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 27)
+    }()
+    case .setUserLfic?: try {
+      guard case .setUserLfic(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
+    }()
+    case .notifyStreamCamera?: try {
+      guard case .notifyStreamCamera(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 29)
+    }()
+    case .setThermalAlignmentOffsets?: try {
+      guard case .setThermalAlignmentOffsets(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
+    }()
+    case .setThermalPalette?: try {
+      guard case .setThermalPalette(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 31)
+    }()
+    case .setThermalRendering?: try {
+      guard case .setThermalRendering(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 32)
     }()
     case nil: break
     }
@@ -4595,6 +5666,86 @@ extension Arsdk_Camera_Command.ResetZoom: SwiftProtobuf.Message, SwiftProtobuf._
 
   static func ==(lhs: Arsdk_Camera_Command.ResetZoom, rhs: Arsdk_Camera_Command.ResetZoom) -> Bool {
     if lhs.cameraID != rhs.cameraID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Command.ZoomGotoPreset: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Command.protoMessageName + ".ZoomGotoPreset"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "camera_id"),
+    2: .standard(proto: "goto_preset"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cameraID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.gotoPreset) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.cameraID != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cameraID, fieldNumber: 1)
+    }
+    if self.gotoPreset != .zoomGotoPresetFirst {
+      try visitor.visitSingularEnumField(value: self.gotoPreset, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Command.ZoomGotoPreset, rhs: Arsdk_Camera_Command.ZoomGotoPreset) -> Bool {
+    if lhs.cameraID != rhs.cameraID {return false}
+    if lhs.gotoPreset != rhs.gotoPreset {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Command.SetUserLfic: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Command.protoMessageName + ".SetUserLfic"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "camera_id"),
+    2: .same(proto: "coords"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cameraID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._coords) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.cameraID != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cameraID, fieldNumber: 1)
+    }
+    try { if let v = self._coords {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Command.SetUserLfic, rhs: Arsdk_Camera_Command.SetUserLfic) -> Bool {
+    if lhs.cameraID != rhs.cameraID {return false}
+    if lhs._coords != rhs._coords {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -4856,16 +6007,144 @@ extension Arsdk_Camera_Command.SetMediaMetadata: SwiftProtobuf.Message, SwiftPro
   }
 }
 
+extension Arsdk_Camera_Command.SetAlignmentOffsets: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Command.protoMessageName + ".SetAlignmentOffsets"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "camera_id"),
+    2: .standard(proto: "alignment_offsets"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cameraID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._alignmentOffsets) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.cameraID != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cameraID, fieldNumber: 1)
+    }
+    try { if let v = self._alignmentOffsets {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Command.SetAlignmentOffsets, rhs: Arsdk_Camera_Command.SetAlignmentOffsets) -> Bool {
+    if lhs.cameraID != rhs.cameraID {return false}
+    if lhs._alignmentOffsets != rhs._alignmentOffsets {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Command.SetThermalPalette: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Command.protoMessageName + ".SetThermalPalette"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "camera_id"),
+    2: .same(proto: "palette"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cameraID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._palette) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.cameraID != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cameraID, fieldNumber: 1)
+    }
+    try { if let v = self._palette {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Command.SetThermalPalette, rhs: Arsdk_Camera_Command.SetThermalPalette) -> Bool {
+    if lhs.cameraID != rhs.cameraID {return false}
+    if lhs._palette != rhs._palette {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Command.SetThermalRendering: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Command.protoMessageName + ".SetThermalRendering"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "camera_id"),
+    2: .same(proto: "rendering"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cameraID) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._rendering) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.cameraID != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cameraID, fieldNumber: 1)
+    }
+    try { if let v = self._rendering {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Command.SetThermalRendering, rhs: Arsdk_Camera_Command.SetThermalRendering) -> Bool {
+    if lhs.cameraID != rhs.cameraID {return false}
+    if lhs._rendering != rhs._rendering {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Camera_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Event"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "camera_exposure"),
     2: .standard(proto: "zoom_level"),
     3: .standard(proto: "next_photo_interval"),
+    4: .standard(proto: "camera_white_balance"),
     16: .standard(proto: "camera_list"),
     17: .same(proto: "state"),
     18: .same(proto: "photo"),
     19: .same(proto: "recording"),
+    20: .standard(proto: "request_stream_camera"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -4911,6 +6190,19 @@ extension Arsdk_Camera_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.id = .nextPhotoInterval(v)
+        }
+      }()
+      case 4: try {
+        var v: Arsdk_Camera_Event.WhiteBalance?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .cameraWhiteBalance(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .cameraWhiteBalance(v)
         }
       }()
       case 16: try {
@@ -4965,6 +6257,19 @@ extension Arsdk_Camera_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
           self.id = .recording(v)
         }
       }()
+      case 20: try {
+        var v: Arsdk_Camera_StreamCamera?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .requestStreamCamera(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .requestStreamCamera(v)
+        }
+      }()
       default: break
       }
     }
@@ -4988,6 +6293,10 @@ extension Arsdk_Camera_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
       guard case .nextPhotoInterval(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     }()
+    case .cameraWhiteBalance?: try {
+      guard case .cameraWhiteBalance(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
     case .cameraList?: try {
       guard case .cameraList(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
@@ -5003,6 +6312,10 @@ extension Arsdk_Camera_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     case .recording?: try {
       guard case .recording(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+    }()
+    case .requestStreamCamera?: try {
+      guard case .requestStreamCamera(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     case nil: break
     }
@@ -5062,7 +6375,13 @@ extension Arsdk_Camera_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messag
     9: .standard(proto: "white_balance_lock"),
     10: .standard(proto: "exposure_lock"),
     11: .same(proto: "zoom"),
+    18: .standard(proto: "zoom_is_locked"),
     12: .standard(proto: "media_metadata"),
+    13: .standard(proto: "effective_framerate"),
+    14: .standard(proto: "user_lfic"),
+    15: .standard(proto: "thermal_alignment_offsets"),
+    16: .standard(proto: "thermal_palette"),
+    17: .standard(proto: "thermal_rendering"),
   ]
 
   fileprivate class _StorageClass {
@@ -5077,7 +6396,13 @@ extension Arsdk_Camera_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messag
     var _whiteBalanceLock: Arsdk_Camera_Event.State.WhiteBalanceLock? = nil
     var _exposureLock: Arsdk_Camera_Event.State.ExposureLock? = nil
     var _zoom: Arsdk_Camera_Event.State.Zoom? = nil
+    var _zoomIsLocked: SwiftProtobuf.Google_Protobuf_BoolValue? = nil
     var _mediaMetadata: Arsdk_Camera_MediaMetadata? = nil
+    var _effectiveFramerate: Arsdk_Camera_Event.State.EffectiveFramerate? = nil
+    var _userLfic: Arsdk_Camera_Event.State.UserLfic? = nil
+    var _thermalAlignmentOffsets: Arsdk_Camera_AlignmentOffsets? = nil
+    var _thermalPalette: Arsdk_Thermalrendering_Palette? = nil
+    var _thermalRendering: Arsdk_Thermalrendering_Rendering? = nil
 
     static let defaultInstance = _StorageClass()
 
@@ -5095,7 +6420,13 @@ extension Arsdk_Camera_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messag
       _whiteBalanceLock = source._whiteBalanceLock
       _exposureLock = source._exposureLock
       _zoom = source._zoom
+      _zoomIsLocked = source._zoomIsLocked
       _mediaMetadata = source._mediaMetadata
+      _effectiveFramerate = source._effectiveFramerate
+      _userLfic = source._userLfic
+      _thermalAlignmentOffsets = source._thermalAlignmentOffsets
+      _thermalPalette = source._thermalPalette
+      _thermalRendering = source._thermalRendering
     }
   }
 
@@ -5126,6 +6457,12 @@ extension Arsdk_Camera_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messag
         case 10: try { try decoder.decodeSingularMessageField(value: &_storage._exposureLock) }()
         case 11: try { try decoder.decodeSingularMessageField(value: &_storage._zoom) }()
         case 12: try { try decoder.decodeSingularMessageField(value: &_storage._mediaMetadata) }()
+        case 13: try { try decoder.decodeSingularMessageField(value: &_storage._effectiveFramerate) }()
+        case 14: try { try decoder.decodeSingularMessageField(value: &_storage._userLfic) }()
+        case 15: try { try decoder.decodeSingularMessageField(value: &_storage._thermalAlignmentOffsets) }()
+        case 16: try { try decoder.decodeSingularMessageField(value: &_storage._thermalPalette) }()
+        case 17: try { try decoder.decodeSingularMessageField(value: &_storage._thermalRendering) }()
+        case 18: try { try decoder.decodeSingularMessageField(value: &_storage._zoomIsLocked) }()
         default: break
         }
       }
@@ -5174,6 +6511,24 @@ extension Arsdk_Camera_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messag
       try { if let v = _storage._mediaMetadata {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
       } }()
+      try { if let v = _storage._effectiveFramerate {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+      } }()
+      try { if let v = _storage._userLfic {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+      } }()
+      try { if let v = _storage._thermalAlignmentOffsets {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+      } }()
+      try { if let v = _storage._thermalPalette {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+      } }()
+      try { if let v = _storage._thermalRendering {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+      } }()
+      try { if let v = _storage._zoomIsLocked {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -5194,7 +6549,13 @@ extension Arsdk_Camera_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messag
         if _storage._whiteBalanceLock != rhs_storage._whiteBalanceLock {return false}
         if _storage._exposureLock != rhs_storage._exposureLock {return false}
         if _storage._zoom != rhs_storage._zoom {return false}
+        if _storage._zoomIsLocked != rhs_storage._zoomIsLocked {return false}
         if _storage._mediaMetadata != rhs_storage._mediaMetadata {return false}
+        if _storage._effectiveFramerate != rhs_storage._effectiveFramerate {return false}
+        if _storage._userLfic != rhs_storage._userLfic {return false}
+        if _storage._thermalAlignmentOffsets != rhs_storage._thermalAlignmentOffsets {return false}
+        if _storage._thermalPalette != rhs_storage._thermalPalette {return false}
+        if _storage._thermalRendering != rhs_storage._thermalRendering {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -5393,6 +6754,8 @@ extension Arsdk_Camera_Event.State.Zoom: SwiftProtobuf.Message, SwiftProtobuf._M
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "zoom_level_max"),
     2: .standard(proto: "zoom_high_quality_level_max"),
+    3: .same(proto: "presets"),
+    4: .standard(proto: "cam_ranges"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5403,6 +6766,8 @@ extension Arsdk_Camera_Event.State.Zoom: SwiftProtobuf.Message, SwiftProtobuf._M
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularDoubleField(value: &self.zoomLevelMax) }()
       case 2: try { try decoder.decodeSingularDoubleField(value: &self.zoomHighQualityLevelMax) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.presets) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.camRanges) }()
       default: break
       }
     }
@@ -5415,12 +6780,192 @@ extension Arsdk_Camera_Event.State.Zoom: SwiftProtobuf.Message, SwiftProtobuf._M
     if self.zoomHighQualityLevelMax != 0 {
       try visitor.visitSingularDoubleField(value: self.zoomHighQualityLevelMax, fieldNumber: 2)
     }
+    if !self.presets.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.presets, fieldNumber: 3)
+    }
+    if !self.camRanges.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.camRanges, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Camera_Event.State.Zoom, rhs: Arsdk_Camera_Event.State.Zoom) -> Bool {
     if lhs.zoomLevelMax != rhs.zoomLevelMax {return false}
     if lhs.zoomHighQualityLevelMax != rhs.zoomHighQualityLevelMax {return false}
+    if lhs.presets != rhs.presets {return false}
+    if lhs.camRanges != rhs.camRanges {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Event.State.Zoom.Preset: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Event.State.Zoom.protoMessageName + ".Preset"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "preset"),
+    2: .same(proto: "value"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.preset) }()
+      case 2: try { try decoder.decodeSingularFloatField(value: &self.value) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.preset != .zoomPresetWide {
+      try visitor.visitSingularEnumField(value: self.preset, fieldNumber: 1)
+    }
+    if self.value != 0 {
+      try visitor.visitSingularFloatField(value: self.value, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Event.State.Zoom.Preset, rhs: Arsdk_Camera_Event.State.Zoom.Preset) -> Bool {
+    if lhs.preset != rhs.preset {return false}
+    if lhs.value != rhs.value {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Event.State.Zoom.CameraRange: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Event.State.Zoom.protoMessageName + ".CameraRange"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "phys_cam"),
+    2: .standard(proto: "level_min"),
+    3: .standard(proto: "level_max"),
+    4: .standard(proto: "high_quality_level_max"),
+    5: .standard(proto: "hfov_min"),
+    6: .standard(proto: "hfov_max"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.physCam) }()
+      case 2: try { try decoder.decodeSingularFloatField(value: &self.levelMin) }()
+      case 3: try { try decoder.decodeSingularFloatField(value: &self.levelMax) }()
+      case 4: try { try decoder.decodeSingularFloatField(value: &self.highQualityLevelMax) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._hfovMin) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._hfovMax) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.physCam != .wide {
+      try visitor.visitSingularEnumField(value: self.physCam, fieldNumber: 1)
+    }
+    if self.levelMin != 0 {
+      try visitor.visitSingularFloatField(value: self.levelMin, fieldNumber: 2)
+    }
+    if self.levelMax != 0 {
+      try visitor.visitSingularFloatField(value: self.levelMax, fieldNumber: 3)
+    }
+    if self.highQualityLevelMax != 0 {
+      try visitor.visitSingularFloatField(value: self.highQualityLevelMax, fieldNumber: 4)
+    }
+    try { if let v = self._hfovMin {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
+    try { if let v = self._hfovMax {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Event.State.Zoom.CameraRange, rhs: Arsdk_Camera_Event.State.Zoom.CameraRange) -> Bool {
+    if lhs.physCam != rhs.physCam {return false}
+    if lhs.levelMin != rhs.levelMin {return false}
+    if lhs.levelMax != rhs.levelMax {return false}
+    if lhs.highQualityLevelMax != rhs.highQualityLevelMax {return false}
+    if lhs._hfovMin != rhs._hfovMin {return false}
+    if lhs._hfovMax != rhs._hfovMax {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Event.State.EffectiveFramerate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Event.State.protoMessageName + ".EffectiveFramerate"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "effective_framerate"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.effectiveFramerate) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.effectiveFramerate != .framerate24 {
+      try visitor.visitSingularEnumField(value: self.effectiveFramerate, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Event.State.EffectiveFramerate, rhs: Arsdk_Camera_Event.State.EffectiveFramerate) -> Bool {
+    if lhs.effectiveFramerate != rhs.effectiveFramerate {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Event.State.UserLfic: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Event.State.protoMessageName + ".UserLfic"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "coords"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._coords) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._coords {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Event.State.UserLfic, rhs: Arsdk_Camera_Event.State.UserLfic) -> Bool {
+    if lhs._coords != rhs._coords {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5485,6 +7030,7 @@ extension Arsdk_Camera_Event.ZoomLevel: SwiftProtobuf.Message, SwiftProtobuf._Me
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "camera_id"),
     2: .same(proto: "level"),
+    3: .same(proto: "hfov"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5495,24 +7041,33 @@ extension Arsdk_Camera_Event.ZoomLevel: SwiftProtobuf.Message, SwiftProtobuf._Me
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cameraID) }()
       case 2: try { try decoder.decodeSingularDoubleField(value: &self.level) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._hfov) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.cameraID != 0 {
       try visitor.visitSingularUInt64Field(value: self.cameraID, fieldNumber: 1)
     }
     if self.level != 0 {
       try visitor.visitSingularDoubleField(value: self.level, fieldNumber: 2)
     }
+    try { if let v = self._hfov {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Camera_Event.ZoomLevel, rhs: Arsdk_Camera_Event.ZoomLevel) -> Bool {
     if lhs.cameraID != rhs.cameraID {return false}
     if lhs.level != rhs.level {return false}
+    if lhs._hfov != rhs._hfov {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5557,6 +7112,44 @@ extension Arsdk_Camera_Event.NextPhotoInterval: SwiftProtobuf.Message, SwiftProt
     if lhs.cameraID != rhs.cameraID {return false}
     if lhs.mode != rhs.mode {return false}
     if lhs.interval != rhs.interval {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Event.WhiteBalance: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Event.protoMessageName + ".WhiteBalance"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "camera_id"),
+    2: .same(proto: "temperature"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.cameraID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.temperature) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.cameraID != 0 {
+      try visitor.visitSingularUInt64Field(value: self.cameraID, fieldNumber: 1)
+    }
+    if self.temperature != .whiteBalanceTemperature1500 {
+      try visitor.visitSingularEnumField(value: self.temperature, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Event.WhiteBalance, rhs: Arsdk_Camera_Event.WhiteBalance) -> Bool {
+    if lhs.cameraID != rhs.cameraID {return false}
+    if lhs.temperature != rhs.temperature {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5672,6 +7265,8 @@ extension Arsdk_Camera_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Messa
   static let protoMessageName: String = _protobuf_package + ".Capabilities"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "rules"),
+    2: .standard(proto: "thermal_alignment_offset_ranges"),
+    3: .standard(proto: "thermal_mixing_modes"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -5681,20 +7276,34 @@ extension Arsdk_Camera_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Messa
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.rules) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._thermalAlignmentOffsetRanges) }()
+      case 3: try { try decoder.decodeRepeatedEnumField(value: &self.thermalMixingModes) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.rules.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.rules, fieldNumber: 1)
+    }
+    try { if let v = self._thermalAlignmentOffsetRanges {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    if !self.thermalMixingModes.isEmpty {
+      try visitor.visitPackedEnumField(value: self.thermalMixingModes, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Camera_Capabilities, rhs: Arsdk_Camera_Capabilities) -> Bool {
     if lhs.rules != rhs.rules {return false}
+    if lhs._thermalAlignmentOffsetRanges != rhs._thermalAlignmentOffsetRanges {return false}
+    if lhs.thermalMixingModes != rhs.thermalMixingModes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5736,13 +7345,13 @@ extension Arsdk_Camera_Capabilities.Rule: SwiftProtobuf.Message, SwiftProtobuf._
     34: .standard(proto: "zoom_max_speed_range"),
     35: .standard(proto: "zoom_velocity_control_quality_modes"),
     36: .standard(proto: "auto_record_modes"),
-    37: .standard(proto: "alignment_offset_pitch_range"),
-    38: .standard(proto: "alignment_offset_roll_range"),
-    39: .standard(proto: "alignment_offset_yaw_range"),
     40: .standard(proto: "photo_signatures"),
     41: .standard(proto: "exposure_meterings"),
     42: .standard(proto: "storage_policies"),
     43: .standard(proto: "video_recording_bitrates"),
+    44: .same(proto: "spectrums"),
+    45: .standard(proto: "low_light_mode_selections"),
+    46: .standard(proto: "low_light_modes"),
   ]
 
   fileprivate class _StorageClass {
@@ -5779,13 +7388,13 @@ extension Arsdk_Camera_Capabilities.Rule: SwiftProtobuf.Message, SwiftProtobuf._
     var _zoomMaxSpeedRange: Arsdk_Camera_DoubleRange? = nil
     var _zoomVelocityControlQualityModes: [Arsdk_Camera_ZoomVelocityControlQualityMode] = []
     var _autoRecordModes: [Arsdk_Camera_AutoRecordMode] = []
-    var _alignmentOffsetPitchRange: Arsdk_Camera_DoubleRange? = nil
-    var _alignmentOffsetRollRange: Arsdk_Camera_DoubleRange? = nil
-    var _alignmentOffsetYawRange: Arsdk_Camera_DoubleRange? = nil
     var _photoSignatures: [Arsdk_Camera_DigitalSignature] = []
     var _exposureMeterings: [Arsdk_Camera_ExposureMetering] = []
     var _storagePolicies: [Arsdk_Camera_StoragePolicy] = []
     var _videoRecordingBitrates: [UInt32] = []
+    var _spectrums: [Arsdk_Camera_Spectrum] = []
+    var _lowLightModeSelections: [Arsdk_Camera_LowLightModeSelection] = []
+    var _lowLightModes: [Arsdk_Camera_LowLightMode] = []
 
     static let defaultInstance = _StorageClass()
 
@@ -5825,13 +7434,13 @@ extension Arsdk_Camera_Capabilities.Rule: SwiftProtobuf.Message, SwiftProtobuf._
       _zoomMaxSpeedRange = source._zoomMaxSpeedRange
       _zoomVelocityControlQualityModes = source._zoomVelocityControlQualityModes
       _autoRecordModes = source._autoRecordModes
-      _alignmentOffsetPitchRange = source._alignmentOffsetPitchRange
-      _alignmentOffsetRollRange = source._alignmentOffsetRollRange
-      _alignmentOffsetYawRange = source._alignmentOffsetYawRange
       _photoSignatures = source._photoSignatures
       _exposureMeterings = source._exposureMeterings
       _storagePolicies = source._storagePolicies
       _videoRecordingBitrates = source._videoRecordingBitrates
+      _spectrums = source._spectrums
+      _lowLightModeSelections = source._lowLightModeSelections
+      _lowLightModes = source._lowLightModes
     }
   }
 
@@ -5883,13 +7492,13 @@ extension Arsdk_Camera_Capabilities.Rule: SwiftProtobuf.Message, SwiftProtobuf._
         case 34: try { try decoder.decodeSingularMessageField(value: &_storage._zoomMaxSpeedRange) }()
         case 35: try { try decoder.decodeRepeatedEnumField(value: &_storage._zoomVelocityControlQualityModes) }()
         case 36: try { try decoder.decodeRepeatedEnumField(value: &_storage._autoRecordModes) }()
-        case 37: try { try decoder.decodeSingularMessageField(value: &_storage._alignmentOffsetPitchRange) }()
-        case 38: try { try decoder.decodeSingularMessageField(value: &_storage._alignmentOffsetRollRange) }()
-        case 39: try { try decoder.decodeSingularMessageField(value: &_storage._alignmentOffsetYawRange) }()
         case 40: try { try decoder.decodeRepeatedEnumField(value: &_storage._photoSignatures) }()
         case 41: try { try decoder.decodeRepeatedEnumField(value: &_storage._exposureMeterings) }()
         case 42: try { try decoder.decodeRepeatedEnumField(value: &_storage._storagePolicies) }()
         case 43: try { try decoder.decodeRepeatedUInt32Field(value: &_storage._videoRecordingBitrates) }()
+        case 44: try { try decoder.decodeRepeatedEnumField(value: &_storage._spectrums) }()
+        case 45: try { try decoder.decodeRepeatedEnumField(value: &_storage._lowLightModeSelections) }()
+        case 46: try { try decoder.decodeRepeatedEnumField(value: &_storage._lowLightModes) }()
         default: break
         }
       }
@@ -6001,15 +7610,6 @@ extension Arsdk_Camera_Capabilities.Rule: SwiftProtobuf.Message, SwiftProtobuf._
       if !_storage._autoRecordModes.isEmpty {
         try visitor.visitPackedEnumField(value: _storage._autoRecordModes, fieldNumber: 36)
       }
-      try { if let v = _storage._alignmentOffsetPitchRange {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 37)
-      } }()
-      try { if let v = _storage._alignmentOffsetRollRange {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 38)
-      } }()
-      try { if let v = _storage._alignmentOffsetYawRange {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 39)
-      } }()
       if !_storage._photoSignatures.isEmpty {
         try visitor.visitPackedEnumField(value: _storage._photoSignatures, fieldNumber: 40)
       }
@@ -6021,6 +7621,15 @@ extension Arsdk_Camera_Capabilities.Rule: SwiftProtobuf.Message, SwiftProtobuf._
       }
       if !_storage._videoRecordingBitrates.isEmpty {
         try visitor.visitPackedUInt32Field(value: _storage._videoRecordingBitrates, fieldNumber: 43)
+      }
+      if !_storage._spectrums.isEmpty {
+        try visitor.visitPackedEnumField(value: _storage._spectrums, fieldNumber: 44)
+      }
+      if !_storage._lowLightModeSelections.isEmpty {
+        try visitor.visitPackedEnumField(value: _storage._lowLightModeSelections, fieldNumber: 45)
+      }
+      if !_storage._lowLightModes.isEmpty {
+        try visitor.visitPackedEnumField(value: _storage._lowLightModes, fieldNumber: 46)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -6064,17 +7673,113 @@ extension Arsdk_Camera_Capabilities.Rule: SwiftProtobuf.Message, SwiftProtobuf._
         if _storage._zoomMaxSpeedRange != rhs_storage._zoomMaxSpeedRange {return false}
         if _storage._zoomVelocityControlQualityModes != rhs_storage._zoomVelocityControlQualityModes {return false}
         if _storage._autoRecordModes != rhs_storage._autoRecordModes {return false}
-        if _storage._alignmentOffsetPitchRange != rhs_storage._alignmentOffsetPitchRange {return false}
-        if _storage._alignmentOffsetRollRange != rhs_storage._alignmentOffsetRollRange {return false}
-        if _storage._alignmentOffsetYawRange != rhs_storage._alignmentOffsetYawRange {return false}
         if _storage._photoSignatures != rhs_storage._photoSignatures {return false}
         if _storage._exposureMeterings != rhs_storage._exposureMeterings {return false}
         if _storage._storagePolicies != rhs_storage._storagePolicies {return false}
         if _storage._videoRecordingBitrates != rhs_storage._videoRecordingBitrates {return false}
+        if _storage._spectrums != rhs_storage._spectrums {return false}
+        if _storage._lowLightModeSelections != rhs_storage._lowLightModeSelections {return false}
+        if _storage._lowLightModes != rhs_storage._lowLightModes {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Capabilities.AlignmentOffsetRanges: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Camera_Capabilities.protoMessageName + ".AlignmentOffsetRanges"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "pitch"),
+    2: .same(proto: "roll"),
+    3: .same(proto: "yaw"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._pitch) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._roll) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._yaw) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._pitch {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._roll {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._yaw {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Capabilities.AlignmentOffsetRanges, rhs: Arsdk_Camera_Capabilities.AlignmentOffsetRanges) -> Bool {
+    if lhs._pitch != rhs._pitch {return false}
+    if lhs._roll != rhs._roll {return false}
+    if lhs._yaw != rhs._yaw {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_AlignmentOffsets: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".AlignmentOffsets"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "pitch"),
+    2: .same(proto: "roll"),
+    3: .same(proto: "yaw"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._pitch) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._roll) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._yaw) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._pitch {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._roll {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._yaw {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_AlignmentOffsets, rhs: Arsdk_Camera_AlignmentOffsets) -> Bool {
+    if lhs._pitch != rhs._pitch {return false}
+    if lhs._roll != rhs._roll {return false}
+    if lhs._yaw != rhs._yaw {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6115,13 +7820,13 @@ extension Arsdk_Camera_Config: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     33: .standard(proto: "zoom_max_speed"),
     34: .standard(proto: "zoom_velocity_control_quality_mode"),
     35: .standard(proto: "auto_record_mode"),
-    36: .standard(proto: "alignment_offset_pitch"),
-    37: .standard(proto: "alignment_offset_roll"),
-    38: .standard(proto: "alignment_offset_yaw"),
     39: .standard(proto: "photo_signature"),
     40: .standard(proto: "exposure_metering"),
     41: .standard(proto: "storage_policy"),
     42: .standard(proto: "video_recording_bitrate"),
+    43: .same(proto: "spectrum"),
+    44: .standard(proto: "low_light_mode_selection"),
+    45: .standard(proto: "low_light_mode"),
   ]
 
   fileprivate class _StorageClass {
@@ -6157,13 +7862,13 @@ extension Arsdk_Camera_Config: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     var _zoomMaxSpeed: Double = 0
     var _zoomVelocityControlQualityMode: Arsdk_Camera_ZoomVelocityControlQualityMode = .allowDegradation
     var _autoRecordMode: Arsdk_Camera_AutoRecordMode = .disabled
-    var _alignmentOffsetPitch: Double = 0
-    var _alignmentOffsetRoll: Double = 0
-    var _alignmentOffsetYaw: Double = 0
     var _photoSignature: Arsdk_Camera_DigitalSignature = .none
     var _exposureMetering: Arsdk_Camera_ExposureMetering = .standard
-    var _storagePolicy: Arsdk_Camera_StoragePolicy = .auto
+    var _storagePolicy: Arsdk_Camera_StoragePolicy = .priorityRemovable
     var _videoRecordingBitrate: UInt32 = 0
+    var _spectrum: Arsdk_Camera_Spectrum = .visible
+    var _lowLightModeSelection: Arsdk_Camera_LowLightModeSelection = .manual
+    var _lowLightMode: Arsdk_Camera_LowLightMode = .disabled
 
     static let defaultInstance = _StorageClass()
 
@@ -6202,13 +7907,13 @@ extension Arsdk_Camera_Config: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
       _zoomMaxSpeed = source._zoomMaxSpeed
       _zoomVelocityControlQualityMode = source._zoomVelocityControlQualityMode
       _autoRecordMode = source._autoRecordMode
-      _alignmentOffsetPitch = source._alignmentOffsetPitch
-      _alignmentOffsetRoll = source._alignmentOffsetRoll
-      _alignmentOffsetYaw = source._alignmentOffsetYaw
       _photoSignature = source._photoSignature
       _exposureMetering = source._exposureMetering
       _storagePolicy = source._storagePolicy
       _videoRecordingBitrate = source._videoRecordingBitrate
+      _spectrum = source._spectrum
+      _lowLightModeSelection = source._lowLightModeSelection
+      _lowLightMode = source._lowLightMode
     }
   }
 
@@ -6259,13 +7964,13 @@ extension Arsdk_Camera_Config: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
         case 33: try { try decoder.decodeSingularDoubleField(value: &_storage._zoomMaxSpeed) }()
         case 34: try { try decoder.decodeSingularEnumField(value: &_storage._zoomVelocityControlQualityMode) }()
         case 35: try { try decoder.decodeSingularEnumField(value: &_storage._autoRecordMode) }()
-        case 36: try { try decoder.decodeSingularDoubleField(value: &_storage._alignmentOffsetPitch) }()
-        case 37: try { try decoder.decodeSingularDoubleField(value: &_storage._alignmentOffsetRoll) }()
-        case 38: try { try decoder.decodeSingularDoubleField(value: &_storage._alignmentOffsetYaw) }()
         case 39: try { try decoder.decodeSingularEnumField(value: &_storage._photoSignature) }()
         case 40: try { try decoder.decodeSingularEnumField(value: &_storage._exposureMetering) }()
         case 41: try { try decoder.decodeSingularEnumField(value: &_storage._storagePolicy) }()
         case 42: try { try decoder.decodeSingularUInt32Field(value: &_storage._videoRecordingBitrate) }()
+        case 43: try { try decoder.decodeSingularEnumField(value: &_storage._spectrum) }()
+        case 44: try { try decoder.decodeSingularEnumField(value: &_storage._lowLightModeSelection) }()
+        case 45: try { try decoder.decodeSingularEnumField(value: &_storage._lowLightMode) }()
         default: break
         }
       }
@@ -6370,26 +8075,26 @@ extension Arsdk_Camera_Config: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
       if _storage._autoRecordMode != .disabled {
         try visitor.visitSingularEnumField(value: _storage._autoRecordMode, fieldNumber: 35)
       }
-      if _storage._alignmentOffsetPitch != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._alignmentOffsetPitch, fieldNumber: 36)
-      }
-      if _storage._alignmentOffsetRoll != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._alignmentOffsetRoll, fieldNumber: 37)
-      }
-      if _storage._alignmentOffsetYaw != 0 {
-        try visitor.visitSingularDoubleField(value: _storage._alignmentOffsetYaw, fieldNumber: 38)
-      }
       if _storage._photoSignature != .none {
         try visitor.visitSingularEnumField(value: _storage._photoSignature, fieldNumber: 39)
       }
       if _storage._exposureMetering != .standard {
         try visitor.visitSingularEnumField(value: _storage._exposureMetering, fieldNumber: 40)
       }
-      if _storage._storagePolicy != .auto {
+      if _storage._storagePolicy != .priorityRemovable {
         try visitor.visitSingularEnumField(value: _storage._storagePolicy, fieldNumber: 41)
       }
       if _storage._videoRecordingBitrate != 0 {
         try visitor.visitSingularUInt32Field(value: _storage._videoRecordingBitrate, fieldNumber: 42)
+      }
+      if _storage._spectrum != .visible {
+        try visitor.visitSingularEnumField(value: _storage._spectrum, fieldNumber: 43)
+      }
+      if _storage._lowLightModeSelection != .manual {
+        try visitor.visitSingularEnumField(value: _storage._lowLightModeSelection, fieldNumber: 44)
+      }
+      if _storage._lowLightMode != .disabled {
+        try visitor.visitSingularEnumField(value: _storage._lowLightMode, fieldNumber: 45)
       }
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -6432,13 +8137,13 @@ extension Arsdk_Camera_Config: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
         if _storage._zoomMaxSpeed != rhs_storage._zoomMaxSpeed {return false}
         if _storage._zoomVelocityControlQualityMode != rhs_storage._zoomVelocityControlQualityMode {return false}
         if _storage._autoRecordMode != rhs_storage._autoRecordMode {return false}
-        if _storage._alignmentOffsetPitch != rhs_storage._alignmentOffsetPitch {return false}
-        if _storage._alignmentOffsetRoll != rhs_storage._alignmentOffsetRoll {return false}
-        if _storage._alignmentOffsetYaw != rhs_storage._alignmentOffsetYaw {return false}
         if _storage._photoSignature != rhs_storage._photoSignature {return false}
         if _storage._exposureMetering != rhs_storage._exposureMetering {return false}
         if _storage._storagePolicy != rhs_storage._storagePolicy {return false}
         if _storage._videoRecordingBitrate != rhs_storage._videoRecordingBitrate {return false}
+        if _storage._spectrum != rhs_storage._spectrum {return false}
+        if _storage._lowLightModeSelection != rhs_storage._lowLightModeSelection {return false}
+        if _storage._lowLightMode != rhs_storage._lowLightMode {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -6481,6 +8186,44 @@ extension Arsdk_Camera_DoubleRange: SwiftProtobuf.Message, SwiftProtobuf._Messag
   static func ==(lhs: Arsdk_Camera_DoubleRange, rhs: Arsdk_Camera_DoubleRange) -> Bool {
     if lhs.min != rhs.min {return false}
     if lhs.max != rhs.max {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_Vec2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".Vec2"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "x"),
+    2: .same(proto: "y"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularFloatField(value: &self.x) }()
+      case 2: try { try decoder.decodeSingularFloatField(value: &self.y) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.x != 0 {
+      try visitor.visitSingularFloatField(value: self.x, fieldNumber: 1)
+    }
+    if self.y != 0 {
+      try visitor.visitSingularFloatField(value: self.y, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_Vec2, rhs: Arsdk_Camera_Vec2) -> Bool {
+    if lhs.x != rhs.x {return false}
+    if lhs.y != rhs.y {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -6617,6 +8360,50 @@ extension Arsdk_Camera_MediaMetadata: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if lhs.copyright != rhs.copyright {return false}
     if lhs.customID != rhs.customID {return false}
     if lhs.customTitle != rhs.customTitle {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Camera_StreamCamera: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".StreamCamera"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "receiver"),
+    2: .same(proto: "type"),
+    3: .same(proto: "requester"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.receiver) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.requester) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.receiver != .default {
+      try visitor.visitSingularEnumField(value: self.receiver, fieldNumber: 1)
+    }
+    if self.type != .default {
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 2)
+    }
+    if !self.requester.isEmpty {
+      try visitor.visitSingularStringField(value: self.requester, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Camera_StreamCamera, rhs: Arsdk_Camera_StreamCamera) -> Bool {
+    if lhs.receiver != rhs.receiver {return false}
+    if lhs.type != rhs.type {return false}
+    if lhs.requester != rhs.requester {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

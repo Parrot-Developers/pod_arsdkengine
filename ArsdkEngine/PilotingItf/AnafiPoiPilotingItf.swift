@@ -97,9 +97,6 @@ class AnafiPoiPilotingItf: ActivablePilotingItfController {
     }
 
     override func requestDeactivation() {
-        // remove any pending PointOfInterest request PointOfInterest
-        pendingPointOfInterest = nil
-
         // send a stop if a current Poi is active
         if currentPointOfInterest != nil {
             sendStopPoi()
@@ -109,9 +106,9 @@ class AnafiPoiPilotingItf: ActivablePilotingItfController {
     override func requestActivation() {
         // check if we have a pending command received before activation sate
         if let pendingPointOfInterest = pendingPointOfInterest {
-                sendStartPoi(
-                    latitude: pendingPointOfInterest.latitude, longitude: pendingPointOfInterest.longitude,
-                    altitude: pendingPointOfInterest.altitude, mode: pendingPointOfInterest.mode)
+            sendStartPoi(
+                latitude: pendingPointOfInterest.latitude, longitude: pendingPointOfInterest.longitude,
+                altitude: pendingPointOfInterest.altitude, mode: pendingPointOfInterest.mode)
             self.pendingPointOfInterest = nil
         }
     }
@@ -218,12 +215,14 @@ extension AnafiPoiPilotingItf: PoiPilotingItfBackend {
                 arsdkMode = .lockedOnceGimbal
             case .freeGimbal:
                 arsdkMode = .freeGimbal
+            case .lockedOnceGimbalAndExit:
+                arsdkMode = .lockedOnceGimbalAndExit
             }
-            sendCommand(
+            _ = sendCommand(
                 ArsdkFeatureArdrone3Piloting.startPilotedPOIV2Encoder(
                     latitude: latitude, longitude: longitude, altitude: altitude, mode: arsdkMode))
         } else if mode == .lockedGimbal {
-            sendCommand(
+            _ = sendCommand(
                 ArsdkFeatureArdrone3Piloting.startPilotedPOIEncoder(
                     latitude: latitude, longitude: longitude, altitude: altitude))
         }
@@ -232,7 +231,7 @@ extension AnafiPoiPilotingItf: PoiPilotingItfBackend {
     /// Send the command to cancel a Point Of Interest
     /// Subclass must override this function to send the drone specific command
     private func sendStopPoi() {
-        sendCommand(ArsdkFeatureArdrone3Piloting.stopPilotedPOIEncoder())
+        _ = sendCommand(ArsdkFeatureArdrone3Piloting.stopPilotedPOIEncoder())
     }
 }
 
@@ -246,39 +245,41 @@ extension AnafiPoiPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
         latitude: Double, longitude: Double, altitude: Double,
         status: ArsdkFeatureArdrone3PilotingstatePilotedpoiStatus) {
 
-        ULog.d(.ctrlTag, "PoiPiloting: onPilotedPoi latitude=\(latitude) longitude=\(longitude)" +
-            " altitude=\(altitude) status=\(status)")
+            ULog.d(.ctrlTag, "PoiPiloting: onPilotedPoi latitude=\(latitude) longitude=\(longitude)" +
+                   " altitude=\(altitude) status=\(status)")
 
-        switch status {
-        case .unavailable:
-            currentPointOfInterest = nil
-            update(dronePoiFeatureAvailable: false, pointOfInterest: nil)
+            switch status {
+            case .unavailable:
+                currentPointOfInterest = nil
+                update(dronePoiFeatureAvailable: false, pointOfInterest: nil)
 
-        case .running:
-            let newPointOfInterest: PointOfInterestCore?
-            if latitude != AnafiPoiPilotingItf.UnknownCoordinate &&
-                longitude != AnafiPoiPilotingItf.UnknownCoordinate {
-                newPointOfInterest = PointOfInterestCore(latitude: latitude, longitude: longitude, altitude: altitude,
-                                                         mode: .lockedGimbal)
-            } else {
-                newPointOfInterest = nil
+            case .running:
+                let newPointOfInterest: PointOfInterestCore?
+                if latitude != AnafiPoiPilotingItf.UnknownCoordinate &&
+                    longitude != AnafiPoiPilotingItf.UnknownCoordinate {
+                    newPointOfInterest = PointOfInterestCore(latitude: latitude,
+                                                             longitude: longitude,
+                                                             altitude: altitude,
+                                                             mode: .lockedGimbal)
+                } else {
+                    newPointOfInterest = nil
+                }
+                update(dronePoiFeatureAvailable: true, pointOfInterest: newPointOfInterest)
+
+            case .sdkCoreUnknown:
+                // don't change anything if value is unknown
+                ULog.w(.tag, "Unknown onPilotedPoi status, skipping this event.")
+
+            default:
+                update(dronePoiFeatureAvailable: true, pointOfInterest: nil)
             }
-            update(dronePoiFeatureAvailable: true, pointOfInterest: newPointOfInterest)
-
-        case .sdkCoreUnknown:
-            // don't change anything if value is unknown
-            ULog.w(.tag, "Unknown onPilotedPoi status, skipping this event.")
-
-        default:
-            update(dronePoiFeatureAvailable: true, pointOfInterest: nil)
         }
-    }
 
     func onPilotedPOIV2(latitude: Double, longitude: Double, altitude: Double,
                         mode: ArsdkFeatureArdrone3PilotingstatePilotedpoiv2Mode,
                         status: ArsdkFeatureArdrone3PilotingstatePilotedpoiv2Status) {
         ULog.d(.ctrlTag, "PoiPiloting: onPilotedPoiV2 latitude=\(latitude) longitude=\(longitude)" +
-            " altitude=\(altitude) mode=\(mode) status=\(status)")
+               " altitude=\(altitude) mode=\(mode) status=\(status)")
 
         poiV2Supported = true
 
@@ -299,6 +300,8 @@ extension AnafiPoiPilotingItf: ArsdkFeatureArdrone3PilotingstateCallback {
                     newMode = .lockedOnceGimbal
                 case .freeGimbal:
                     newMode = .freeGimbal
+                case .lockedOnceGimbalAndExit:
+                    newMode = .lockedOnceGimbalAndExit
                 case .sdkCoreUnknown:
                     fallthrough
                 @unknown default:
@@ -377,5 +380,5 @@ extension POIIssue: ArsdkMappableEnum {
         .droneTooCloseToGround: .droneMinAltitude,
         .droneAboveMaxAltitude: .droneMaxAltitude,
         .droneNotFlying: .droneFlying
-        ])
+    ])
 }

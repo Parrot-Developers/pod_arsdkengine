@@ -48,43 +48,38 @@ class AnafiWifiFeature: WifiFeatureController {
     // MARK: - Send Commands
     override func sendOutdoorCommand(outdoor: Bool) -> Bool {
         if outdoor {
-            sendCommand(ArsdkFeatureWifi.setEnvironmentEncoder(environment: .outdoor))
+            return sendCommand(ArsdkFeatureWifi.setEnvironmentEncoder(environment: .outdoor))
         } else {
-            sendCommand(ArsdkFeatureWifi.setEnvironmentEncoder(environment: .indoor))
+            return sendCommand(ArsdkFeatureWifi.setEnvironmentEncoder(environment: .indoor))
         }
-        return true
     }
 
     override func sendSetCountryCommand(isoCountry: String) -> Bool {
-        sendCommand(ArsdkFeatureWifi.setCountryEncoder(selectionMode: .manual, code: isoCountry))
-        return true
+        return sendCommand(ArsdkFeatureWifi.setCountryEncoder(selectionMode: .manual, code: isoCountry))
     }
 
     override func sendProductNameCommand(name: String) -> Bool {
-        sendCommand(ArsdkFeatureCommonSettings.productNameEncoder(name: name))
-        return true
+        return sendCommand(ArsdkFeatureCommonSettings.productNameEncoder(name: name))
     }
 
     override func sendSetSecurityCommand(security: SecurityMode, password: String?) -> Bool {
         switch security {
         case .open:
-            sendCommand(ArsdkFeatureWifi.setSecurityEncoder(type: .open, key: "", keyType: .plain))
+            return sendCommand(ArsdkFeatureWifi.setSecurityEncoder(type: .open, key: "", keyType: .plain))
         case .wpa2Secured:
             // can force unwrapp because password is not nil when security is wpa2 secured
-            sendCommand(ArsdkFeatureWifi.setSecurityEncoder(type: .wpa2, key: password!, keyType: .plain))
+            return sendCommand(ArsdkFeatureWifi.setSecurityEncoder(type: .wpa2, key: password!, keyType: .plain))
         case .wepSecured, .wpaSecured, .wpa3Secured:
             // Not supported on this implementation.
             return false
         }
-        return true
     }
 
     override func sendSetChannelCommand(channel: WifiChannel) -> Bool {
-        sendCommand(ArsdkFeatureWifi.setApChannelEncoder(
+        return sendCommand(ArsdkFeatureWifi.setApChannelEncoder(
             type: .manual,
             band: channel.getBand().toArsdkBand(),
             channel: UInt(channel.getChannelId())))
-        return true
     }
 
     override func sendAutoSelectChannelCommand(onBand band: Band?) -> Bool {
@@ -97,17 +92,15 @@ class AnafiWifiFeature: WifiFeatureController {
                 selectionType = .auto5Ghz
             }
         }
-        sendCommand(ArsdkFeatureWifi.setApChannelEncoder(
+        return sendCommand(ArsdkFeatureWifi.setApChannelEncoder(
             type: selectionType,
             band: .band2_4Ghz,
             channel: 0))
-        return true
     }
 
     override func sendStartScanCommand() -> Bool {
-        sendCommand(ArsdkFeatureWifi.scanEncoder(
+        return sendCommand(ArsdkFeatureWifi.scanEncoder(
             bandBitField: Bitfield<ArsdkFeatureWifiBand>.of(.band2_4Ghz, .band5Ghz)))
-        return true
     }
 }
 
@@ -139,7 +132,7 @@ extension AnafiWifiFeature: ArsdkFeatureWifiCallback {
                 wifiScanner.update(scanResults: scanResults).notifyUpdated()
 
                 // send again the scan command
-                sendCommand(
+                _ = sendCommand(
                     ArsdkFeatureWifi.scanEncoder(
                         bandBitField: Bitfield<ArsdkFeatureWifiBand>.of(.band2_4Ghz, .band5Ghz)))
             }
@@ -148,45 +141,45 @@ extension AnafiWifiFeature: ArsdkFeatureWifiCallback {
 
     func onAuthorizedChannel(
         band: ArsdkFeatureWifiBand, channel: UInt, environmentBitField: UInt, listFlagsBitField: UInt) {
-        let clearList = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
-        if clearList {
-            indoorChannels.removeAll()
-            outdoorChannels.removeAll()
-        } else {
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+            let clearList = ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField)
+            if clearList {
                 indoorChannels.removeAll()
                 outdoorChannels.removeAll()
-            }
+            } else {
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                    indoorChannels.removeAll()
+                    outdoorChannels.removeAll()
+                }
 
-            if let channel = WifiChannel(failableFromArsdkBand: band, channelId: Int(channel)) {
-                // add or remove it from the correct set
-                if ArsdkFeatureWifiEnvironmentBitField.isSet(.indoor, inBitField: environmentBitField) {
-                    if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
-                        indoorChannels.remove(channel)
-                    } else {
-                        indoorChannels.insert(channel)
+                if let channel = WifiChannel(failableFromArsdkBand: band, channelId: Int(channel)) {
+                    // add or remove it from the correct set
+                    if ArsdkFeatureWifiEnvironmentBitField.isSet(.indoor, inBitField: environmentBitField) {
+                        if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+                            indoorChannels.remove(channel)
+                        } else {
+                            indoorChannels.insert(channel)
+                        }
+                    }
+                    if ArsdkFeatureWifiEnvironmentBitField.isSet(.outdoor, inBitField: environmentBitField) {
+                        if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
+                            outdoorChannels.remove(channel)
+                        } else {
+                            outdoorChannels.insert(channel)
+                        }
                     }
                 }
-                if ArsdkFeatureWifiEnvironmentBitField.isSet(.outdoor, inBitField: environmentBitField) {
-                    if ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
-                        outdoorChannels.remove(channel)
-                    } else {
-                        outdoorChannels.insert(channel)
-                    }
+            }
+
+            if let environment = environment,
+               clearList || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
+                switch environment {
+                case .indoor:
+                    wifiAccessPoint.update(availableChannels: indoorChannels).notifyUpdated()
+                case .outdoor:
+                    wifiAccessPoint.update(availableChannels: outdoorChannels).notifyUpdated()
                 }
             }
         }
-
-        if let environment = environment,
-            clearList || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-            switch environment {
-            case .indoor:
-                wifiAccessPoint.update(availableChannels: indoorChannels).notifyUpdated()
-            case .outdoor:
-                wifiAccessPoint.update(availableChannels: outdoorChannels).notifyUpdated()
-            }
-        }
-    }
 
     func onApChannelChanged(type: ArsdkFeatureWifiSelectionType, band: ArsdkFeatureWifiBand, channel: UInt) {
         let selectionMode: ChannelSelectionMode
@@ -206,7 +199,7 @@ extension AnafiWifiFeature: ArsdkFeatureWifiCallback {
             ULog.w(.tag, "Unknown wifi selection type, skipping this event.")
             return
         }
-        wifiAccessPoint.update(selectionMode: selectionMode)
+        wifiAccessPoint.update(channelSelectionMode: selectionMode)
             .update(channel: WifiChannel(fromArsdkBand: band, channelId: Int(channel)))
             .notifyUpdated()
     }
@@ -246,7 +239,7 @@ extension AnafiWifiFeature: ArsdkFeatureWifiCallback {
     func onCountryChanged(selectionMode: ArsdkFeatureWifiCountrySelection, code: String) {
         country = code
         automaticCountrySelectionEnabled = (selectionMode == .auto)
-        sendCommand(ArsdkFeatureWifi.updateAuthorizedChannelsEncoder())
+        _ = sendCommand(ArsdkFeatureWifi.updateAuthorizedChannelsEncoder())
         wifiAccessPoint.notifyUpdated()
     }
 

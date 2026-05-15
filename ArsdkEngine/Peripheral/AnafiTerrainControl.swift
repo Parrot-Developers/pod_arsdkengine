@@ -55,7 +55,7 @@ class AnafiTerrainControl: DeviceComponentController {
 /// Terrain control backend implementation.
 extension AnafiTerrainControl: TerrainControlBackend {
     func sendAmsl(elevation: Double, latitude: Double, longitude: Double) {
-        sendCommand(ArsdkFeatureTerrain.setAmslReferenceEncoder(elevation: Float(elevation), latitude: latitude,
+        _ = sendCommand(ArsdkFeatureTerrain.setAmslReferenceEncoder(elevation: Float(elevation), latitude: latitude,
                                                                 longitude: longitude))
     }
 }

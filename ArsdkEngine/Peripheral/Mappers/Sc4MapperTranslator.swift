@@ -115,18 +115,18 @@ final class Sc4InputTranslator {
     ///     - axes: the set of axes to translate
     /// - Returns: a struct containing a buttons mask (key `buttonsMask`) and an axis mask (key `axesMask`)
     static func convert(buttons: Set<SkyCtrl4Button>, axes: Set<SkyCtrl4Axis>)
-        -> MapperMask {
-            var buttonsMask = MapperButtonsMask.none
-            var axesMask = MapperAxesMask.none
-            for button in buttons {
-                buttonsMask.insert(convert(button: button))
-            }
-            for axis in axes {
-                let mask = convert(axis: axis)
-                buttonsMask.insert(mask.buttonsMask)
-                axesMask.insert(mask.axesMask)
-            }
-            return MapperMask(buttonsMask: buttonsMask, axesMask: axesMask)
+    -> MapperMask {
+        var buttonsMask = MapperButtonsMask.none
+        var axesMask = MapperAxesMask.none
+        for button in buttons {
+            buttonsMask.insert(convert(button: button))
+        }
+        for axis in axes {
+            let mask = convert(axis: axis)
+            buttonsMask.insert(mask.buttonsMask)
+            axesMask.insert(mask.axesMask)
+        }
+        return MapperMask(buttonsMask: buttonsMask, axesMask: axesMask)
     }
 }
 
@@ -186,15 +186,15 @@ final class Sc4Buttons {
     ///     - pressedButtons: mask of all pressed buttons
     /// - Returns: a dictionary of button events indexed by button events.
     class func statesFrom(buttons: MapperButtonsMask, pressedButtons: MapperButtonsMask)
-        -> [SkyCtrl4ButtonEvent: SkyCtrl4ButtonEventState] {
-            var states = [SkyCtrl4ButtonEvent: SkyCtrl4ButtonEventState]()
-            for button in MapperButton.allCases {
-                let buttonMask = MapperButtonsMask.from(button)
-                if buttons.contains(buttonMask), let buttonEvent = buttonEvents[button] {
-                    states[buttonEvent] = (pressedButtons.contains(buttonMask)) ? .pressed : .released
-                }
+    -> [SkyCtrl4ButtonEvent: SkyCtrl4ButtonEventState] {
+        var states = [SkyCtrl4ButtonEvent: SkyCtrl4ButtonEventState]()
+        for button in MapperButton.allCases {
+            let buttonMask = MapperButtonsMask.from(button)
+            if buttons.contains(buttonMask), let buttonEvent = buttonEvents[button] {
+                states[buttonEvent] = (pressedButtons.contains(buttonMask)) ? .pressed : .released
             }
-            return states
+        }
+        return states
     }
 
     /// Translates a buttons mask into a set of button events.

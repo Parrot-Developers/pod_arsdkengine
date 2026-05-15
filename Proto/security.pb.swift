@@ -44,11 +44,20 @@ struct Arsdk_Security_Command {
     set {id = .registerApcDroneList(newValue)}
   }
 
+  var registerApcCloudAntennaList: Arsdk_Security_Command.RegisterApcCloudAntennaList {
+    get {
+      if case .registerApcCloudAntennaList(let v)? = id {return v}
+      return Arsdk_Security_Command.RegisterApcCloudAntennaList()
+    }
+    set {id = .registerApcCloudAntennaList(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
     case registerApcToken(Arsdk_Security_Command.RegisterApcToken)
     case registerApcDroneList(Arsdk_Security_Command.RegisterApcDroneList)
+    case registerApcCloudAntennaList(Arsdk_Security_Command.RegisterApcCloudAntennaList)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Security_Command.OneOf_ID, rhs: Arsdk_Security_Command.OneOf_ID) -> Bool {
@@ -62,6 +71,10 @@ struct Arsdk_Security_Command {
       }()
       case (.registerApcDroneList, .registerApcDroneList): return {
         guard case .registerApcDroneList(let l) = lhs, case .registerApcDroneList(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.registerApcCloudAntennaList, .registerApcCloudAntennaList): return {
+        guard case .registerApcCloudAntennaList(let l) = lhs, case .registerApcCloudAntennaList(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -94,15 +107,20 @@ struct Arsdk_Security_Command {
     init() {}
   }
 
+  struct RegisterApcCloudAntennaList {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var list: String = String()
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
   init() {}
 }
-
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Security_Command: @unchecked Sendable {}
-extension Arsdk_Security_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Security_Command.RegisterApcToken: @unchecked Sendable {}
-extension Arsdk_Security_Command.RegisterApcDroneList: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -113,6 +131,7 @@ extension Arsdk_Security_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .standard(proto: "register_apc_token"),
     17: .standard(proto: "register_apc_drone_list"),
+    18: .standard(proto: "register_apc_cloud_antenna_list"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -147,6 +166,19 @@ extension Arsdk_Security_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageI
           self.id = .registerApcDroneList(v)
         }
       }()
+      case 18: try {
+        var v: Arsdk_Security_Command.RegisterApcCloudAntennaList?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .registerApcCloudAntennaList(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .registerApcCloudAntennaList(v)
+        }
+      }()
       default: break
       }
     }
@@ -165,6 +197,10 @@ extension Arsdk_Security_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     case .registerApcDroneList?: try {
       guard case .registerApcDroneList(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case .registerApcCloudAntennaList?: try {
+      guard case .registerApcCloudAntennaList(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
     }()
     case nil: break
     }
@@ -236,6 +272,38 @@ extension Arsdk_Security_Command.RegisterApcDroneList: SwiftProtobuf.Message, Sw
   }
 
   static func ==(lhs: Arsdk_Security_Command.RegisterApcDroneList, rhs: Arsdk_Security_Command.RegisterApcDroneList) -> Bool {
+    if lhs.list != rhs.list {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Security_Command.RegisterApcCloudAntennaList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Security_Command.protoMessageName + ".RegisterApcCloudAntennaList"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "list"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.list) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.list.isEmpty {
+      try visitor.visitSingularStringField(value: self.list, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Security_Command.RegisterApcCloudAntennaList, rhs: Arsdk_Security_Command.RegisterApcCloudAntennaList) -> Bool {
     if lhs.list != rhs.list {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

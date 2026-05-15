@@ -41,7 +41,7 @@ class HttpServerController: DeviceComponentController {
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        httpServer = HttpServerCore(store: deviceController.device.peripheralStore)
+        httpServer = HttpServerCore(desc: Peripherals.httpServer, store: deviceController.device.peripheralStore)
     }
 
     override func didConnect() {

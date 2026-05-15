@@ -66,13 +66,11 @@ class AnafiBeeper: DeviceComponentController {
 /// Beeper backend implementation
 extension AnafiBeeper: BeeperBackend {
     func startAlertSound() -> Bool {
-        sendCommand(ArsdkFeatureArdrone3Sound.startAlertSoundEncoder())
-        return true
+        return sendCommand(ArsdkFeatureArdrone3Sound.startAlertSoundEncoder())
     }
 
     func stopAlertSound() -> Bool {
-        sendCommand(ArsdkFeatureArdrone3Sound.stopAlertSoundEncoder())
-        return true
+        return sendCommand(ArsdkFeatureArdrone3Sound.stopAlertSoundEncoder())
     }
 }
 

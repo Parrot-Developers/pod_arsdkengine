@@ -139,41 +139,46 @@ class WifiAccessPointController: RadioComponentController {
 
             switch config.channelSelectionType {
             case .manualChannel:
-                wifiAccessPoint.update(selectionMode: .manual)
+                wifiAccessPoint.update(channelSelectionMode: .manual)
             case .automaticChannel(let selectionMode):
                 let bands = Set(selectionMode.allowedBands.compactMap(Band.init(fromArsdk:)))
                 if bands == [.band_2_4_Ghz, .band_5_Ghz] {
-                    wifiAccessPoint.update(selectionMode: .autoAnyBand)
+                    wifiAccessPoint.update(channelSelectionMode: .autoAnyBand)
                 } else if bands.contains(.band_2_4_Ghz) {
-                    wifiAccessPoint.update(selectionMode: .auto2_4GhzBand)
+                    wifiAccessPoint.update(channelSelectionMode: .auto2_4GhzBand)
                 } else if bands.contains(.band_5_Ghz) {
-                    wifiAccessPoint.update(selectionMode: .auto5GhzBand)
+                    wifiAccessPoint.update(channelSelectionMode: .auto5GhzBand)
                 }
-            case .none:
+            case .frequencyHoppingList(_), .none:
                 break
             }
         }
 
         // channel
         if state.hasChannel,
-           case .wifiChannel(let arsdkChannel) = state.channel.type,
-           let wifiChannel = WifiChannel(fromArsdk: arsdkChannel) {
+           case .radioChannel(let channel) = state.channel.type,
+           let wifiChannel = WifiChannel(fromArsdk: channel) {
             wifiAccessPoint.update(channel: wifiChannel)
         }
 
         // authorized channels
-        if state.hasAuthorizedChannels {
-            let channels = state.authorizedChannels.channel.filter {
-                // assume that the device always sends an authorizedChannels update when we change the environment
-                Environment(fromArsdk: $0.environment) == wifiAccessPoint.environment.value
-            }.compactMap {
+        switch state.authorizedChannelsType {
+        case .authorizedPackedChannels:
+            let channels = state.authorizedPackedChannels.channels.compactMap {
+                WifiChannel.fromArsdk($0)
+            }.joined()
+            wifiAccessPoint.update(availableChannels: Set(channels))
+        case .authorizedChannels:
+            let channels = state.authorizedChannels.channel.compactMap {
                 if $0.hasChannel,
-                   case .wifiChannel(let arsdkChannel) = $0.channel.type {
-                    return WifiChannel(fromArsdk: arsdkChannel)
+                   case .radioChannel(let channel) = $0.channel.type {
+                    return WifiChannel(fromArsdk: channel)
                 }
                 return nil
             }
             wifiAccessPoint.update(availableChannels: Set(channels))
+        default:
+            break
         }
 
         // mode
@@ -185,18 +190,23 @@ class WifiAccessPointController: RadioComponentController {
             }
         }
 
-        // check autoSelectWifiCountry config
+        // check autoSelectCountry config
         if !stateReceived {
             stateReceived = true
-            manageAutoSelectWifiCountry()
+            manageAutoSelectCountry()
         }
 
         wifiAccessPoint.publish()
-        wifiAccessPoint.notifyUpdated()
     }
 
-    /// Checks `autoSelectWifiCountry` flag in configuartion, and enables this feature, when appropriate.
-    private func manageAutoSelectWifiCountry() {
+    func processSystemEvent(state: Arsdk_System_Event.State) {
+        if state.hasProductName {
+            wifiAccessPoint.resetSsid().notifyUpdated()
+        }
+    }
+
+    /// Checks `autoSelectWifiCountry` flag in configuration, and enables this feature, when appropriate.
+    private func manageAutoSelectCountry() {
         if GroundSdkConfig.sharedInstance.autoSelectWifiCountry {
             // force environment to outdoor
             if wifiAccessPoint.environment.value != .outdoor {
@@ -212,7 +222,7 @@ class WifiAccessPointController: RadioComponentController {
                        isoCountryCode != self.wifiAccessPoint.country.value.rawValue {
                         _ = self.set(country: country)
                     }
-            }
+                }
 
             // force country to the one found by reverse geocoding location
             if let isoCountryCode = reverseGeocoderUtility?.placemark?.isoCountryCode?.uppercased(),
@@ -257,25 +267,13 @@ extension WifiAccessPointController: WifiAccessPointBackend {
         return delegate.configure(radioId: radioId, config: config)
     }
 
-    func set(security: Set<SecurityMode>, password: String?) -> Bool {
-        let encryptions = security.compactMap { $0.arsdkValue }
-        guard !encryptions.isEmpty else { return false }
-
-        var config = Arsdk_Connectivity_AccessPointConfig()
-        config.security = Arsdk_Connectivity_NetworkSecurityMode()
-        config.security.encryption = encryptions
-        config.security.passphrase = password ?? ""
-        return delegate.configure(radioId: radioId, config: config)
-    }
-
     func select(channel: WifiChannel) -> Bool {
         guard let arsdkBand = channel.getBand().arsdkValue else { return false }
 
-        var arsdkWifiChannel = Arsdk_Connectivity_WifiChannel()
-        arsdkWifiChannel.band = arsdkBand
-        arsdkWifiChannel.channel = UInt32(channel.getChannelId())
+        let radioChannel = Arsdk_Connectivity_RadioChannel(band: arsdkBand,
+                                                           id: UInt32(channel.getChannelId()))
         var arsdkChannel = Arsdk_Connectivity_Channel()
-        arsdkChannel.type = .wifiChannel(arsdkWifiChannel)
+        arsdkChannel.type = .radioChannel(radioChannel)
         var config = Arsdk_Connectivity_AccessPointConfig()
         config.channelSelectionType = .manualChannel(arsdkChannel)
         return delegate.configure(radioId: radioId, config: config)
@@ -286,10 +284,21 @@ extension WifiAccessPointController: WifiAccessPointBackend {
         if let arsdkBand = band?.arsdkValue {
             selection.allowedBands = [arsdkBand]
         } else {
-            selection.allowedBands = [.wifiBand24Ghz, .wifiBand5Ghz]
+            selection.allowedBands = [.band24Ghz, .band50Ghz]
         }
         var config = Arsdk_Connectivity_AccessPointConfig()
         config.channelSelectionType = .automaticChannel(selection)
+        return delegate.configure(radioId: radioId, config: config)
+    }
+
+    func set(security: Set<SecurityMode>, password: String?) -> Bool {
+        let encryptions = security.compactMap { $0.arsdkValue }
+        guard !encryptions.isEmpty else { return false }
+
+        var config = Arsdk_Connectivity_AccessPointConfig()
+        config.security = Arsdk_Connectivity_NetworkSecurityMode()
+        config.security.encryption = encryptions
+        config.security.passphrase = password ?? ""
         return delegate.configure(radioId: radioId, config: config)
     }
 }

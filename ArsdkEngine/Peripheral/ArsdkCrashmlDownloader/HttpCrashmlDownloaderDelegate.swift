@@ -122,20 +122,20 @@ class HttpCrashmlDownloaderDelegate: ArsdkCrashmlDownloaderDelegate {
                     // download light report
                     self.currentRequest = self.reportApi?.downloadReport(
                         report, toDirectory: directory, type: .light) { fileUrl in
-                        self.downloadCount += 1
-                        downloader.crashReportDownloader.update(downloadedCount: self.downloadCount).notifyUpdated()
-                        var arrayUrl = [URL]()
-                        arrayUrl.append(notifyUrl)
-                        if let fileUrl = fileUrl {
-                            arrayUrl.append(fileUrl)
-                        }
-                        downloader.crashReportStorage.notifyReportReady(reportUrlCollection: arrayUrl)
+                            self.downloadCount += 1
+                            downloader.crashReportDownloader.update(downloadedCount: self.downloadCount).notifyUpdated()
+                            var arrayUrl = [URL]()
+                            arrayUrl.append(notifyUrl)
+                            if let fileUrl = fileUrl {
+                                arrayUrl.append(fileUrl)
+                            }
+                            downloader.crashReportStorage.notifyReportReady(reportUrlCollection: arrayUrl)
 
-                        // at last full report was download, remove distant report and download next one.
-                        self.currentRequest = self.reportApi?.deleteReport(report) { _ in
-                            self.removeFirstAndDownloadNextReport(toDirectory: directory, downloader: downloader)
+                            // at last full report was download, remove distant report and download next one.
+                            self.currentRequest = self.reportApi?.deleteReport(report) { _ in
+                                self.removeFirstAndDownloadNextReport(toDirectory: directory, downloader: downloader)
+                            }
                         }
-                    }
                 } else { // failed to download full report, trying to download light report
                     // download light report
                     if !self.isCanceled {

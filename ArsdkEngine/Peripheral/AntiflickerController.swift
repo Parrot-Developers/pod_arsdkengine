@@ -38,9 +38,9 @@ class AntiflickerController: DeviceComponentController, AntiflickerBackend {
     /// List of countries with 60Hz electrical network. It's assumed that all other countries have 50hz
     /// electrical network
     private let countries60Hz: Set<String> =
-        ["DO", "BM", "HT", "KN", "HN", "BR", "BS", "FM", "BZ", "PR", "NI", "PW", "TW", "TT", "PA", "PF", "PE", "LR",
-         "PH", "GU", "GT", "CO", "VE", "AG", "VG", "AI", "VI", "CA", "GY", "AS", "EC", "AW", "CR", "SA", "CU", "MF",
-         "SR", "SV", "US", "KR", "KP", "MS", "KY", "MX"]
+    ["DO", "BM", "HT", "KN", "HN", "BR", "BS", "FM", "BZ", "PR", "NI", "PW", "TW", "TT", "PA", "PF", "PE", "LR",
+     "PH", "GU", "GT", "CO", "VE", "AG", "VG", "AI", "VI", "CA", "GY", "AS", "EC", "AW", "CR", "SA", "CU", "MF",
+     "SR", "SV", "US", "KR", "KP", "MS", "KY", "MX"]
 
     /// Antiflicker component
     private(set) var antiflicker: AntiflickerCore!
@@ -50,6 +50,9 @@ class AntiflickerController: DeviceComponentController, AntiflickerBackend {
 
     /// Preset store for this piloting interface
     private var presetStore: SettingsStore?
+
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { deviceStore?.new == false }
 
     /// Reverse geocoder for location based auto mode
     private let reverseGeocoder: ReverseGeocoderUtilityCore?
@@ -127,9 +130,9 @@ class AntiflickerController: DeviceComponentController, AntiflickerBackend {
         super.init(deviceController: deviceController)
         antiflicker = AntiflickerCore(store: deviceController.device.peripheralStore, backend: self)
         setDefaults()
-        // load settings
-        if let deviceStore = deviceStore, let presetStore = presetStore, !deviceStore.new && !presetStore.new {
-            loadPresets()
+
+        loadPresets()
+        if isPersisted {
             antiflicker.publish()
         }
     }
@@ -193,11 +196,17 @@ class AntiflickerController: DeviceComponentController, AntiflickerBackend {
 
         stopCountryMonitoring()
 
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
+        if isPersisted {
+            antiflicker.publish()
+        } else {
             antiflicker.unpublish()
         }
-        antiflicker.notifyUpdated()
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        antiflicker.unpublish()
     }
 
     /// Preset has been changed
@@ -222,7 +231,7 @@ class AntiflickerController: DeviceComponentController, AntiflickerBackend {
                 switch setting {
                 case .mode:
                     if let supportedModesValues: StorableArray<AntiflickerMode> = deviceStore.read(key: setting.key),
-                        let mode: AntiflickerMode = presetStore.read(key: setting.key) {
+                       let mode: AntiflickerMode = presetStore.read(key: setting.key) {
                         let supportedModes = updateSupportedModes(Set(supportedModesValues.storableValue))
                         if supportedModes.contains(mode) {
                             antiflicker.update(supportedModes: supportedModes).update(mode: mode)
@@ -275,7 +284,7 @@ class AntiflickerController: DeviceComponentController, AntiflickerBackend {
         droneSettings.insert(setting)
         switch setting {
         case .mode(let mode):
-             if canSendCommand {
+            if canSendCommand {
                 if mode == .auto && !droneSupportsAutoMode {
                     _ = startCountryMonitoring()
                 } else {
@@ -328,7 +337,7 @@ class AntiflickerController: DeviceComponentController, AntiflickerBackend {
         if reverseGeocoderMonitor == nil {
             reverseGeocoderMonitor = reverseGeocoder?.startReverseGeocoderMonitoring { [unowned self] placemark in
                 if let locationBasedValue = getAntiflickerValue(forIsoCountryCode: placemark?.isoCountryCode) {
-                   cmdSent = applyAutoMode(withLocationBasedValue: locationBasedValue)
+                    cmdSent = applyAutoMode(withLocationBasedValue: locationBasedValue)
                 }
             }
         } else {

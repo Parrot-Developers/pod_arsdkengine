@@ -38,6 +38,7 @@ class StreamServerController: DeviceComponentController, StreamServerBackend {
 
     /// All currently maintained streams.
     private var controllers: [StreamController] = []
+
     /// Stream controller listeners owner.
     private var controllerListeners = [StreamController: StreamControllerListenerCore]()
 
@@ -77,22 +78,33 @@ class StreamServerController: DeviceComponentController, StreamServerBackend {
         }
     }
 
+    /// Stream sharing manager monitor.
+    private var streamSharingMonitor: MonitorCore?
+
+    /// Decoder for camera events.
+    private var arsdkDecoder: ArsdkCameraEventDecoder!
+
     /// Constructor
     ///
     /// - Parameters:
     ///    - deviceController: the drone controller that owns this peripheral controller.
-    ///    - maxConcurrentStreams: Maximum amount of streams that are allowed to be open at the same time.
-    ///      Opening a stream beyond this limit will result in the least recently open stream to be suspended in case of a
-    ///      camera live stream, or closed in case of a media replay stream
-    ///      A value of `0` disables any limit (default value).
-    ///    - liveSourceMap: allows to remap requested live sources onto other live sources, mainly to provide
-    ///      By default, remapping is disabled, sources are open as-is.
+    ///    - maxConcurrentStreams: Maximum amount of streams that are allowed to be open at the same
+    ///      time. Opening a stream beyond this limit will result in the least recently open stream
+    ///      to be suspended in case of a camera live stream, or closed in case of a media replay
+    ///      stream. A value of `0` disables any limit (default value).
+    ///    - liveSourceMap: allows to remap requested live sources onto other live sources, mainly
+    ///      to provide By default, remapping is disabled, sources are open as-is.
     init(deviceController: DeviceController, maxConcurrentStreams: UInt = 0,
          liveSourceMap: @escaping (CameraLiveSource) -> CameraLiveSource = { source in source }) {
         self.maxConcurrentStreams = maxConcurrentStreams
         self.liveSourceMap = liveSourceMap
         super.init(deviceController: deviceController)
+        arsdkDecoder = ArsdkCameraEventDecoder(listener: self)
         streamServerCore = StreamServerCore(store: deviceController.device.peripheralStore, backend: self)
+    }
+
+    override func didReceiveCommand(_ command: OpaquePointer) {
+        arsdkDecoder.decode(command)
     }
 
     /// Drone is connected.
@@ -104,10 +116,26 @@ class StreamServerController: DeviceComponentController, StreamServerBackend {
 
         streamServerCore.enabled = true
         streamServerCore.publish()
+
+        if let streamSharingManager = deviceController.engine.utilities.getUtility(Utilities.streamSharingManager) {
+            if streamSharingManager.serviceStarted {
+                _ = getCameraLive(source: .frontCamera).play()
+            }
+
+            streamSharingMonitor = streamSharingManager.startMonitoring(
+                didEnable: {},
+                serviceDidStart: { [weak self] in
+                    _ = self?.getCameraLive(source: .frontCamera).play()
+                },
+                recordingStateDidChange: { _, _, _ in },
+                streamingStateDidChange: { _, _, _ in })
+        }
     }
 
     /// Drone is disconnected.
     override func didDisconnect() {
+        streamSharingMonitor?.stop()
+        streamSharingMonitor = nil
         // dispose all stream controllers to correctly stop the sdkcoreStream in background
         controllers.forEach { strmCtrl in
             strmCtrl.dispose()
@@ -144,8 +172,7 @@ class StreamServerController: DeviceComponentController, StreamServerBackend {
     /// - Parameter stream: media replay stream to release
     func releaseMediaReplay(stream: MediaReplayCore) {
         // remove the controller of this media replay stream
-        guard let index = controllers.compactMap({ $0 as? StreamController.Media })
-                .firstIndex(where: {$0.gsdkStream == stream}) else {
+        guard let index = controllers.firstIndex(where: {$0.gsdkStream == stream}) else {
             return
         }
         let strCtrl = controllers.remove(at: index)
@@ -165,7 +192,7 @@ class StreamServerController: DeviceComponentController, StreamServerBackend {
 
         // If a live stream controller of this source exists
         if let ctrl = controllers.compactMap({ $0 as? StreamController.Live })
-                .first(where: { $0.gsdkSource == liveSource }) {
+            .first(where: { $0.gsdkSource == liveSource }) {
             return ctrl.gsdkStreamLive
         } else {
             // Create a new live stream controller for this source
@@ -251,9 +278,9 @@ class StreamServerController: DeviceComponentController, StreamServerBackend {
 
             // if there is any stream suspended by concurrent streams limit.
             if streamServerCtrl.enabled &&
-               streamServerCtrl.controllers.filter({ strmCtrl in
-                   strmCtrl.gsdkStream.state == .starting || strmCtrl.gsdkStream.state == .started
-               }).count < streamServerCtrl.maxConcurrentStreams {
+                streamServerCtrl.controllers.filter({ strmCtrl in
+                    strmCtrl.gsdkStream.state == .starting || strmCtrl.gsdkStream.state == .started
+                }).count < streamServerCtrl.maxConcurrentStreams {
 
                 // resume the last live stream supended.
                 streamServerCtrl.controllers.last { strmCtrl in
@@ -274,6 +301,68 @@ extension StreamController {
         if self is StreamController.Media || self is StreamController.FileReplay {
             // stop file and media replay streams
             stop()
+        }
+    }
+}
+
+/// Extension for events processing.
+extension StreamServerController: ArsdkCameraEventDecoderListener {
+    func onCameraExposure(_ cameraExposure: Arsdk_Camera_Event.Exposure) {}
+    func onZoomLevel(_ zoomLevel: Arsdk_Camera_Event.ZoomLevel) {}
+    func onNextPhotoInterval(_ nextPhotoInterval: Arsdk_Camera_Event.NextPhotoInterval) {}
+    func onCameraWhiteBalance(_ cameraWhiteBalance: Arsdk_Camera_Event.WhiteBalance) {}
+    func onCameraList(_ cameraList: Arsdk_Camera_Event.CameraList) {}
+    func onState(_ state: Arsdk_Camera_Event.State) {}
+    func onPhoto(_ photo: Arsdk_Camera_Event.Photo) {}
+    func onRecording(_ recording: Arsdk_Camera_Event.Recording) {}
+
+    func onRequestStreamCamera(_ requestStreamCamera: Arsdk_Camera_StreamCamera) {
+        guard requestStreamCamera.receiver == .default else { return }
+        if let source = requestStreamCamera.type.gsdk,
+           let live = controllers.compactMap({ $0 as? StreamController.Live }).first?.gsdkStreamLive {
+            live.update(requestedCamera: RequestedCamera(source: source, requester: requestStreamCamera.requester))
+                .notifyUpdated()
+            live.update(requestedCamera: nil)
+        }
+    }
+}
+
+/// Extension that adds conversion to gsdk.
+extension Arsdk_Camera_CameraType {
+    var gsdk: CameraLiveSource? {
+        switch self {
+        case .front: return .frontCamera
+        case .stereoLeft: return .frontStereoCameraLeft
+        case .stereoRight: return .frontStereoCameraRight
+        case .vertical: return .verticalCamera
+        case .disparity: return .disparity
+        case .horizontalStereoLeft: return .horizontalStereoCameraLeft
+        case .horizontalStereoRight: return .horizontalStereoCameraRight
+        case .downStereoLeft: return .downStereoCameraLeft
+        case .downStereoRight: return .downStereoCameraRight
+        case .external: return .externalCamera
+        case .UNRECOGNIZED, .default:
+            return nil
+        }
+    }
+}
+
+/// Extension that adds conversion to arsdk.
+extension CameraLiveSource {
+    var arsdkType: Arsdk_Camera_CameraType? {
+        switch self {
+        case .frontCamera: return .front
+        case .frontStereoCameraLeft: return .stereoLeft
+        case .frontStereoCameraRight: return .stereoRight
+        case .verticalCamera: return .vertical
+        case .disparity: return .disparity
+        case .horizontalStereoCameraLeft: return .horizontalStereoLeft
+        case .horizontalStereoCameraRight: return .horizontalStereoRight
+        case .downStereoCameraLeft: return .downStereoLeft
+        case .downStereoCameraRight: return .downStereoRight
+        case .externalCamera: return .external
+        case .unspecified:
+            return nil
         }
     }
 }

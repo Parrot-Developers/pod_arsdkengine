@@ -67,14 +67,10 @@ class GimbalFeatureCalibratableGimbal: DeviceComponentController, ArsdkFeatureGi
 
     /// Drone is disconnected
     override func didDisconnect() {
-        gimbal.update(currentErrors: [])
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            gimbal.unpublish()
-        }
-        gimbal.update(calibrationProcessState: .none)
-        gimbal.notifyUpdated()
         supported = false
+
+        gimbal.update(currentErrors: [])
+            .update(calibrationProcessState: .none)
     }
 
     /// Drone is about to be forgotten
@@ -97,7 +93,7 @@ extension GimbalFeatureCalibratableGimbal: CalibratableGimbalBackend {
             ULog.e(.gimbalTag, "Can't start calibration: gimbal ID undefined")
             return
         }
-        sendCommand(ArsdkFeatureGimbal.calibrateEncoder(gimbalId: gimbalId))
+        _ = sendCommand(ArsdkFeatureGimbal.calibrateEncoder(gimbalId: gimbalId))
     }
 
     func cancelCalibration() {
@@ -105,7 +101,7 @@ extension GimbalFeatureCalibratableGimbal: CalibratableGimbalBackend {
             ULog.e(.gimbalTag, "Can't cancel calibration: gimbal ID undefined")
             return
         }
-        sendCommand(ArsdkFeatureGimbal.cancelCalibrationEncoder(gimbalId: gimbalId))
+        _ = sendCommand(ArsdkFeatureGimbal.cancelCalibrationEncoder(gimbalId: gimbalId))
     }
 }
 

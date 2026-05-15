@@ -36,8 +36,8 @@ class HttpFirmwareUploader: UpdaterFirmwareUploader {
     /// Not nil when uploader has been configured. Nil after a reset.
     private var updateApi: UpdateRestApi?
 
-    func configure(updater: UpdaterController) {
-        if let droneServer = updater.deviceController.deviceServer {
+    func configure(updater: UpdaterController, deviceServer: DeviceServer?) {
+        if let droneServer = deviceServer {
             updateApi = UpdateRestApi(server: droneServer)
         }
     }
@@ -58,7 +58,7 @@ class HttpFirmwareUploader: UpdaterFirmwareUploader {
                 reboot: reboot,
                 progress: { percent in
                     uploadProgress(percent)
-            },
+                },
                 completion: { result in
                     switch result {
                     case .success:
@@ -68,7 +68,7 @@ class HttpFirmwareUploader: UpdaterFirmwareUploader {
                     case .canceled:
                         updateEndStatus(.canceled)
                     }
-            })
+                })
         }
         return nil
     }

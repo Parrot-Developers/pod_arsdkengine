@@ -61,7 +61,7 @@ class AutoLookAtPilotingItf: ActivablePilotingItfController {
 
     /// Reasons that preclude this piloting interface from being available at present.
     private var availabilityIssues = [LookAtMode: Set<TrackingIssue>]() {
-         didSet {
+        didSet {
             if availabilityIssues != oldValue {
                 updateAvailabilityIssues()
                 updateState()
@@ -152,15 +152,15 @@ class AutoLookAtPilotingItf: ActivablePilotingItfController {
     func sendStartLookAtCommand(mode: LookAtMode) {
         switch mode {
         case .lookAt:
-            sendCommand(ArsdkFeatureAutoLookAt.startEncoder(mode: .target))
+            _ = sendCommand(ArsdkFeatureAutoLookAt.startEncoder(mode: .target))
         case .lookAtController:
-            sendCommand(ArsdkFeatureAutoLookAt.startEncoder(mode: .pilot))
+            _ = sendCommand(ArsdkFeatureAutoLookAt.startEncoder(mode: .pilot))
         }
     }
 
     /// Stop look at.
     func sendStopLookAtCommand() {
-        sendCommand(ArsdkFeatureAutoLookAt.stopEncoder())
+        _ = sendCommand(ArsdkFeatureAutoLookAt.stopEncoder())
     }
 
     /// A command has been received
@@ -298,5 +298,5 @@ extension TrackingIssue: ArsdkMappableEnum {
         .targetHorizontalSpeedKO: .targetHorizSpeed,
         .targetVerticalSpeedKO: .targetVertSpeed,
         .targetAltitudeAccuracyKO: .targetAltitudeAccuracy
-        ])
+    ])
 }

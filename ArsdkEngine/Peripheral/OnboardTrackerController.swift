@@ -50,13 +50,21 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
     /// Set of abandoned tracking objects ids.
     var abandonList = Set<UInt>()
 
+    /// Decoder for tracking events.
+    private var trackingDecoder: ArsdkTrackingEventDecoder!
+
     /// Constructor.
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
         onboardTracker = OnboardTrackerCore(store: deviceController.device.peripheralStore,
-                                                                  backend: self)
+                                            backend: self)
+        trackingDecoder = ArsdkTrackingEventDecoder(listener: self)
+    }
+
+    override func willConnect() {
+        _ = sendTrackingGetStateCommand()
     }
 
     override func didConnect() {
@@ -67,7 +75,7 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
     }
 
     override func didDisconnect() {
-        onboardTracker.update(trackingEngineState: .droneActivated)
+        onboardTracker.update(trackingEngineState: .droneActivated).update(trackingMargins: nil)
         onboardTracker.unpublish()
         super.didDisconnect()
     }
@@ -82,8 +90,8 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
     ///   - width: width of the rect
     ///   - cookie: cookie id given by the user to identify rect.
     func addTargetFromRect(timeStamp: UInt64, horizontalPosition: Float, verticalPosition: Float, height: Float,
-                             width: Float, cookie: UInt) {
-            sendCommand(ArsdkFeatureOnboardTracker.addTargetFromRectEncoder(timestamp: timeStamp,
+                           width: Float, cookie: UInt) {
+        _ = sendCommand(ArsdkFeatureOnboardTracker.addTargetFromRectEncoder(timestamp: timeStamp,
                                                                         horizontalPosition: horizontalPosition,
                                                                         verticalPosition: verticalPosition,
                                                                         height: height, width: width, cookie: cookie))
@@ -96,8 +104,8 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
     ///   - targetId: id of the target given by the drone
     ///   - cookie: cookie given by the user.
     func addTargetFromProposal(timeStamp: UInt64, targetId: UInt, cookie: UInt) {
-            sendCommand(ArsdkFeatureOnboardTracker.addTargetFromProposalEncoder(timestamp: timeStamp,
-                                                                                targetId: targetId, cookie: cookie))
+        _ = sendCommand(ArsdkFeatureOnboardTracker.addTargetFromProposalEncoder(timestamp: timeStamp,
+                                                                            targetId: targetId, cookie: cookie))
     }
 
     /// Adds a new target to track.
@@ -106,14 +114,14 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
     func addNewTarget(trackingRequest: TrackingRequestCore) {
         switch trackingRequest {
         case let rectangleRequest as RectTrackingRequestCore:
-            sendCommand(ArsdkFeatureOnboardTracker.addTargetFromRectEncoder(
+            _ = sendCommand(ArsdkFeatureOnboardTracker.addTargetFromRectEncoder(
                 timestamp: rectangleRequest.timestamp,
                 horizontalPosition: rectangleRequest.horizontalPosition,
                 verticalPosition: rectangleRequest.verticalPosition,
                 height: rectangleRequest.height, width: rectangleRequest.width,
                 cookie: UInt(rectangleRequest.cookie)))
         case let proposalRequest as ProposalTrackingRequestCore:
-            sendCommand(ArsdkFeatureOnboardTracker.addTargetFromProposalEncoder(
+            _ = sendCommand(ArsdkFeatureOnboardTracker.addTargetFromProposalEncoder(
                 timestamp: proposalRequest.timestamp,
                 targetId: proposalRequest.proposalId, cookie: UInt(proposalRequest.cookie)))
         default:
@@ -127,14 +135,14 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
     func replaceAllTargetsBy(trackingRequest: TrackingRequestCore) {
         switch trackingRequest {
         case let rectangleRequest as RectTrackingRequestCore:
-            sendCommand(ArsdkFeatureOnboardTracker.replaceAllByTargetFromRectEncoder(
+            _ = sendCommand(ArsdkFeatureOnboardTracker.replaceAllByTargetFromRectEncoder(
                 timestamp: rectangleRequest.timestamp,
                 horizontalPosition: rectangleRequest.horizontalPosition,
                 verticalPosition: rectangleRequest.verticalPosition,
                 height: rectangleRequest.height, width: rectangleRequest.width,
                 cookie: UInt(rectangleRequest.cookie)))
         case let proposalRequest as ProposalTrackingRequestCore:
-            sendCommand(ArsdkFeatureOnboardTracker.replaceAllByTargetFromProposalEncoder(
+            _ = sendCommand(ArsdkFeatureOnboardTracker.replaceAllByTargetFromProposalEncoder(
                 timestamp: proposalRequest.timestamp,
                 targetId: proposalRequest.proposalId, cookie: UInt(proposalRequest.cookie)))
         default:
@@ -144,17 +152,17 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
 
     /// Send command removeAllTargets
     func removeAllTargets() {
-        sendCommand(ArsdkFeatureOnboardTracker.removeAllTargetsEncoder())
+        _ = sendCommand(ArsdkFeatureOnboardTracker.removeAllTargetsEncoder())
     }
 
     /// Send command to start tracking engine.
     func startTrackingEngine(boxProposals: Bool) {
-        sendCommand(ArsdkFeatureOnboardTracker.startTrackingEngineEncoder(boxProposals: boxProposals ? 1 : 0))
+        _ = sendCommand(ArsdkFeatureOnboardTracker.startTrackingEngineEncoder(boxProposals: boxProposals ? 1 : 0))
     }
 
     /// Send command to stop tracking engine.
     func stopTrackingEngine() {
-        sendCommand(ArsdkFeatureOnboardTracker.stopTrackingEngineEncoder())
+        _ = sendCommand(ArsdkFeatureOnboardTracker.stopTrackingEngineEncoder())
     }
 
     /// Send command removeTarget
@@ -162,12 +170,17 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
     /// - Parameters:
     ///   - targetId: id of the target given by the drone
     func removeTarget(targetId: UInt) {
-        sendCommand(ArsdkFeatureOnboardTracker.removeTargetEncoder(targetId: targetId))
+        _ = sendCommand(ArsdkFeatureOnboardTracker.removeTargetEncoder(targetId: targetId))
     }
 
     override func didReceiveCommand(_ command: OpaquePointer) {
-        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureOnboardTrackerUid {
+        let featureId = ArsdkCommand.getFeatureId(command)
+        switch featureId {
+        case kArsdkFeatureOnboardTrackerUid:
             ArsdkFeatureOnboardTracker.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            trackingDecoder.decode(command)
+        default: break
         }
     }
 
@@ -176,10 +189,30 @@ class OnboardTrackerController: DeviceComponentController, OnboardTrackerBackend
         for target in abandonList {
             ignoreTrackingAnswer = true
             self.abandonList.remove(target)
-            sendCommand(ArsdkFeatureOnboardTracker.removeTargetEncoder(targetId: target))
+            _ = sendCommand(ArsdkFeatureOnboardTracker.removeTargetEncoder(targetId: target))
             return
         }
         ignoreTrackingAnswer = false
+    }
+
+    /// Sends tracking get state command.
+    ///
+    /// - Returns: `true` if the command has been sent
+    func sendTrackingGetStateCommand() -> Bool {
+        var getState = Arsdk_Tracking_Command.GetState()
+        getState.includeDefaultCapabilities = true
+        return sendTrackingCommand(.getState(getState))
+    }
+
+    /// Sends to the drone a tracking command.
+    ///
+    /// - Parameter command: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendTrackingCommand(_ command: Arsdk_Tracking_Command.OneOf_ID) -> Bool {
+        if let encoder = ArsdkTrackingCommandEncoder.encoder(command) {
+            return sendCommand(encoder)
+        }
+        return false
     }
 }
 
@@ -206,6 +239,8 @@ extension OnboardTrackerController: ArsdkFeatureOnboardTrackerCallback {
                 targetsList[targetId] = Target(targetId: targetId, cookie: cookie, state: .tracked)
             case .searching:
                 targetsList[targetId] = Target(targetId: targetId, cookie: cookie, state: .lost)
+            case .pause:
+                targetsList[targetId] = Target(targetId: targetId, cookie: cookie, state: .pause)
             case .abandon:
                 abandonList.insert(targetId)
             case .sdkCoreUnknown:
@@ -216,7 +251,7 @@ extension OnboardTrackerController: ArsdkFeatureOnboardTrackerCallback {
             }
         }
         if clearList || ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-           onboardTracker.update(targetsList: targetsList).notifyUpdated()
+            onboardTracker.update(targetsList: targetsList).notifyUpdated()
         }
         if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) ||
             ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) {
@@ -266,4 +301,18 @@ extension OnboardTrackerController: ArsdkFeatureOnboardTrackerCallback {
         }
         onboardTracker.notifyUpdated()
     }
+}
+
+/// Onboard tracker controller tracking event decode callback implementation
+extension OnboardTrackerController: ArsdkTrackingEventDecoderListener {
+    func onState(_ state: Arsdk_Tracking_Event.State) {
+        if state.hasMargins {
+            onboardTracker.update(trackingMargins: TrackingMargins(left: Double(state.margins.left),
+                                                                   right: Double(state.margins.right),
+                                                                   top: Double(state.margins.top),
+                                                                   bottom: Double(state.margins.bottom)))
+                .notifyUpdated()
+        }
+    }
+
 }

@@ -108,12 +108,10 @@ extension Anafi3KillSwitch {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendKillSwitchCommand(_ command: Arsdk_Killswitch_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkKillswitchCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends get state command.
@@ -157,7 +155,6 @@ extension Anafi3KillSwitch: ArsdkKillswitchEventDecoderListener {
         }
 
         killSwitch.publish()
-        killSwitch.notifyUpdated()
     }
 }
 

@@ -29,6 +29,7 @@
 
 import Foundation
 import GroundSdk
+import SwiftProtobuf
 
 /// Gps component controller for Anafi messages based drones
 class AnafiGps: DeviceComponentController {
@@ -58,13 +59,17 @@ class AnafiGps: DeviceComponentController {
     /// Store device specific values, like last position
     private let deviceStore: SettingsStore
 
+    /// Decoder for backup link events.
+    private var arsdkDecoder: ArsdkBackuplinkEventDecoder!
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         deviceStore = deviceController.deviceStore.getSettingsStore(key: AnafiGps.settingKey)
         super.init(deviceController: deviceController)
-        self.gps = GpsCore(store: deviceController.device.instrumentStore)
+        arsdkDecoder = ArsdkBackuplinkEventDecoder(listener: self)
+        gps = GpsCore(store: deviceController.device.instrumentStore)
 
         if !deviceStore.new {
             loadPersistedData()
@@ -81,11 +86,19 @@ class AnafiGps: DeviceComponentController {
     override func didDisconnect() {
         useOnGpsLocationChanged = false
         // clear all non saved settings
-        gps.update(fixed: false).update(satelliteCount: 0).notifyUpdated()
+        gps.update(fixed: nil).update(satelliteCount: nil).notifyUpdated()
         // unpublish if offline settings are disabled
         if deviceStore.new {
             gps.unpublish()
         }
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        gps.update(satelliteCount: nil)
+            .update(verticalAccuracy: -1)
+            .update(horizontalAccuracy: -1)
+            .publish()
     }
 
     /// Drone is about to be forgotten
@@ -98,12 +111,17 @@ class AnafiGps: DeviceComponentController {
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
-        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureArdrone3PilotingstateUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureArdrone3PilotingstateUid:
             ArsdkFeatureArdrone3Pilotingstate.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureArdrone3GpssettingsstateUid {
+        case kArsdkFeatureArdrone3GpssettingsstateUid:
             ArsdkFeatureArdrone3Gpssettingsstate.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureArdrone3GpsstateUid {
+        case kArsdkFeatureArdrone3GpsstateUid:
             ArsdkFeatureArdrone3Gpsstate.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkDecoder.decode(command)
+        default:
+            break
         }
     }
 
@@ -174,9 +192,9 @@ extension AnafiGps: ArsdkFeatureArdrone3PilotingstateCallback {
 extension AnafiGps: ArsdkFeatureArdrone3GpssettingsstateCallback {
     func onGPSFixStateChanged(fixed: UInt) {
         // as the number of satellite is not sent back when gps is not fixed,
-        // put the satellite number to 0 if the gps is not fixed
+        // put the satellite number to `nil` if the gps is not fixed
         if fixed == 0 {
-            gps.update(satelliteCount: 0)
+            gps.update(satelliteCount: nil)
         }
         gps.update(fixed: (fixed != 0)).notifyUpdated()
     }
@@ -186,5 +204,25 @@ extension AnafiGps: ArsdkFeatureArdrone3GpssettingsstateCallback {
 extension AnafiGps: ArsdkFeatureArdrone3GpsstateCallback {
     func onNumberOfSatelliteChanged(numberofsatellite: UInt) {
         gps.update(satelliteCount: Int(numberofsatellite)).notifyUpdated()
+    }
+}
+
+/// Backup link decode callback implementation.
+extension AnafiGps: ArsdkBackuplinkEventDecoderListener {
+    func onTelemetry(_ telemetry: Arsdk_Backuplink_Event.Telemetry) {
+        let fixed = telemetry.latitude != AnafiGps.UnknownCoordinate &&
+        telemetry.longitude != AnafiGps.UnknownCoordinate
+        if fixed {
+            gps.update(latitude: Double(telemetry.latitude),
+                       longitude: Double(telemetry.longitude),
+                       altitude: nil,
+                       date: Date())
+        }
+        gps.update(fixed: fixed)
+            .notifyUpdated()
+    }
+
+    func onMainRadioDisconnecting(_ mainRadioDisconnecting: SwiftProtobuf.Google_Protobuf_Empty) {
+        // nothing to do
     }
 }

@@ -38,8 +38,6 @@ class SkyControllerCellularSession: DeviceComponentController {
     typealias Encoder = ArsdkControllernetworkCommandEncoder
     typealias Decoder = ArsdkControllernetworkEventDecoder
 
-    /// Cellular link status component.
-    private var cellularLink: CellularLinkCore!
     /// Cellular session component.
     private var cellularSession: CellularSessionCore!
 
@@ -51,7 +49,6 @@ class SkyControllerCellularSession: DeviceComponentController {
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        cellularLink = CellularLinkCore(store: deviceController.device.instrumentStore)
         cellularSession = CellularSessionCore(store: deviceController.device.instrumentStore)
         arsdkDecoder = Decoder(listener: self)
     }
@@ -64,8 +61,6 @@ class SkyControllerCellularSession: DeviceComponentController {
 
     /// Device is disconnected.
     override func didDisconnect() {
-        cellularLink.unpublish()
-        cellularLink.update(status: nil)
         cellularSession.unpublish()
         cellularSession.update(status: nil)
     }
@@ -85,12 +80,10 @@ extension SkyControllerCellularSession {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendCommand(_ command: Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = Encoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends command to get state.
@@ -109,10 +102,7 @@ extension SkyControllerCellularSession: ArsdkControllernetworkEventDecoderListen
             processLinksStatus(state.linksStatus)
         }
 
-        cellularLink.publish()
         cellularSession.publish()
-        cellularLink.notifyUpdated()
-        cellularSession.notifyUpdated()
     }
 
     /// Processes a `LinksStatus` message.
@@ -120,47 +110,10 @@ extension SkyControllerCellularSession: ArsdkControllernetworkEventDecoderListen
     /// - Parameter linksStatus: message to process
     func processLinksStatus(_ linksStatus: Arsdk_Network_LinksStatus) {
         guard let cellularLinkInfo = linksStatus.links.filter({ $0.type == .cellular }).first else {
-            cellularLink.update(status: nil)
             cellularSession.update(status: nil)
             return
         }
-        cellularLink.update(status: cellularLinkInfo.gsdkCellularLinkStatus)
         cellularSession.update(status: CellularSessionStatus(fromArsdk: cellularLinkInfo.cellularStatus))
-    }
-}
-
-/// Extension that adds conversion from/to arsdk enum.
-///
-/// - Note: CellularLinkStatusError(fromArsdk: .none) will return `nil`.
-extension CellularLinkStatusError: ArsdkMappableEnum {
-    static let arsdkMapper = Mapper<CellularLinkStatusError, Arsdk_Network_LinkError>([
-        .authentication: .authentication,
-        .communicationLink: .commLink,
-        .connect: .connect,
-        .dns: .dns,
-        .publish: .publish,
-        .timeout: .timeout,
-        .invite: .invite])
-}
-
-/// Extension that adds conversion to gsdk.
-extension Arsdk_Network_LinksStatus.LinkInfo {
-    /// Creates a new `CellularLinkStatus` from `Arsdk_Network_LinksStatus.LinkInfo`.
-    var gsdkCellularLinkStatus: CellularLinkStatus? {
-        if type == .cellular {
-            switch status {
-            case .up: return .up
-            case .down: return .down
-            case .connecting: return .connecting
-            case .ready: return .ready
-            case .running: return .running
-            case .error:
-                return .error(error: CellularLinkStatusError(fromArsdk: error))
-            case .UNRECOGNIZED:
-                return nil
-            }
-        }
-        return nil
     }
 }
 

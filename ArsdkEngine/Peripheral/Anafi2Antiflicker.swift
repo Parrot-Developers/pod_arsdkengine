@@ -98,12 +98,10 @@ extension Anafi2Antiflicker {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendAntiflickerCommand(_ command: Arsdk_Antiflicker_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkAntiflickerCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends "get state" command.

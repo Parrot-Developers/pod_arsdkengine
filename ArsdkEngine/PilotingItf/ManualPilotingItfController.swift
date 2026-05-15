@@ -52,6 +52,10 @@ class ManualPilotingItfController: ActivablePilotingItfController {
         notifyIdle()
     }
 
+    override var hasActivationCommand: Bool {
+        return false
+    }
+
     func activate() -> Bool {
         return droneController.pilotingItfActivationController.activate(pilotingItf: self)
     }

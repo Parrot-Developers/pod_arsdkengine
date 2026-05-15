@@ -39,13 +39,16 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
     /// Component settings key
     private static let settingKey = "FlightCameraRecorderController"
 
-     /// All settings that can be stored
+    /// All settings that can be stored
     enum SettingKey: String, StoreKey {
         case pipelinesConfigurationKey = "pipelinesConfiguration"
     }
 
     /// Preset store for this flight camera recorder interface
     private var presetStore: SettingsStore?
+
+    /// `true` if this controller has persisted model specific values
+    private var isPersisted: Bool { presetStore?.new == false }
 
     /// Current pipelines configuration identifier on the drone.
     private var currentId = UInt64(0)
@@ -63,9 +66,9 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
 
         super.init(deviceController: deviceController)
         flightCameraRecorder = FlightCameraRecorderCore(store: deviceController.device.peripheralStore, backend: self)
-        // load settings
-        if let presetStore = presetStore, !presetStore.new {
-            loadPresets()
+
+        loadPresets()
+        if isPersisted {
             flightCameraRecorder.publish()
         }
     }
@@ -88,11 +91,18 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
     /// Drone is disconnected.
     override func didDisconnect() {
         flightCameraRecorder.cancelSettingsRollback()
-        // unpublish if offline settings are disabled
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
+
+        if isPersisted {
+            flightCameraRecorder.publish()
+        } else {
             flightCameraRecorder.unpublish()
         }
-        flightCameraRecorder.notifyUpdated()
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        flightCameraRecorder.unpublish()
     }
 
     /// Drone is about to be forgotten
@@ -155,7 +165,7 @@ class FlightCameraRecorderController: DeviceComponentController, FlightCameraRec
     ///
     /// - Parameter id: requested  pipeline configuration identifier.
     func sendConfigureCommand(_ id: UInt64) {
-        sendCommand(ArsdkFeatureFcr.configurePipelinesEncoder(id: id))
+        _ = sendCommand(ArsdkFeatureFcr.configurePipelinesEncoder(id: id))
     }
 
     /// A command has been received.

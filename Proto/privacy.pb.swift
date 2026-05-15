@@ -139,11 +139,29 @@ struct Arsdk_Privacy_Command {
     set {id = .setLogMode(newValue)}
   }
 
+  var enableLogEncryption: Arsdk_Privacy_Command.EnableLogEncryption {
+    get {
+      if case .enableLogEncryption(let v)? = id {return v}
+      return Arsdk_Privacy_Command.EnableLogEncryption()
+    }
+    set {id = .enableLogEncryption(newValue)}
+  }
+
+  var disableLogEncryption: Arsdk_Privacy_Command.DisableLogEncryption {
+    get {
+      if case .disableLogEncryption(let v)? = id {return v}
+      return Arsdk_Privacy_Command.DisableLogEncryption()
+    }
+    set {id = .disableLogEncryption(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
     case getState(Arsdk_Privacy_Command.GetState)
     case setLogMode(Arsdk_Privacy_Command.SetLogMode)
+    case enableLogEncryption(Arsdk_Privacy_Command.EnableLogEncryption)
+    case disableLogEncryption(Arsdk_Privacy_Command.DisableLogEncryption)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Privacy_Command.OneOf_ID, rhs: Arsdk_Privacy_Command.OneOf_ID) -> Bool {
@@ -157,6 +175,14 @@ struct Arsdk_Privacy_Command {
       }()
       case (.setLogMode, .setLogMode): return {
         guard case .setLogMode(let l) = lhs, case .setLogMode(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.enableLogEncryption, .enableLogEncryption): return {
+        guard case .enableLogEncryption(let l) = lhs, case .enableLogEncryption(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.disableLogEncryption, .disableLogEncryption): return {
+        guard case .disableLogEncryption(let l) = lhs, case .disableLogEncryption(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -189,6 +215,30 @@ struct Arsdk_Privacy_Command {
     var logStorage: Arsdk_Privacy_LogStorage = .persistent
 
     var logConfigPersistence: Arsdk_Privacy_LogConfigPersistence = .persistent
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  /// Enable encryption. 
+  struct EnableLogEncryption {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var publicKey: String = String()
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  /// Disable encryption. 
+  struct DisableLogEncryption {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -253,11 +303,33 @@ struct Arsdk_Privacy_Event {
 
     var logConfigPersistence: Arsdk_Privacy_LogConfigPersistence = .persistent
 
+    var logEncryption: Arsdk_Privacy_Event.LogEncryption {
+      get {return _logEncryption ?? Arsdk_Privacy_Event.LogEncryption()}
+      set {_logEncryption = newValue}
+    }
+    /// Returns true if `logEncryption` has been explicitly set.
+    var hasLogEncryption: Bool {return self._logEncryption != nil}
+    /// Clears the value of `logEncryption`. Subsequent reads from it will return its default value.
+    mutating func clearLogEncryption() {self._logEncryption = nil}
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
 
     fileprivate var _defaultCapabilities: Arsdk_Privacy_Capabilities? = nil
+    fileprivate var _logEncryption: Arsdk_Privacy_Event.LogEncryption? = nil
+  }
+
+  struct LogEncryption {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var enabled: Bool = false
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
   }
 
   init() {}
@@ -276,19 +348,6 @@ struct Arsdk_Privacy_Capabilities {
 
   init() {}
 }
-
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Privacy_LogConfigPersistence: @unchecked Sendable {}
-extension Arsdk_Privacy_LogStorage: @unchecked Sendable {}
-extension Arsdk_Privacy_Command: @unchecked Sendable {}
-extension Arsdk_Privacy_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Privacy_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Privacy_Command.SetLogMode: @unchecked Sendable {}
-extension Arsdk_Privacy_Event: @unchecked Sendable {}
-extension Arsdk_Privacy_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Privacy_Event.State: @unchecked Sendable {}
-extension Arsdk_Privacy_Capabilities: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -314,6 +373,8 @@ extension Arsdk_Privacy_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .standard(proto: "get_state"),
     17: .standard(proto: "set_log_mode"),
+    18: .standard(proto: "enable_log_encryption"),
+    19: .standard(proto: "disable_log_encryption"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -348,6 +409,32 @@ extension Arsdk_Privacy_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
           self.id = .setLogMode(v)
         }
       }()
+      case 18: try {
+        var v: Arsdk_Privacy_Command.EnableLogEncryption?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .enableLogEncryption(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .enableLogEncryption(v)
+        }
+      }()
+      case 19: try {
+        var v: Arsdk_Privacy_Command.DisableLogEncryption?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .disableLogEncryption(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .disableLogEncryption(v)
+        }
+      }()
       default: break
       }
     }
@@ -366,6 +453,14 @@ extension Arsdk_Privacy_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     case .setLogMode?: try {
       guard case .setLogMode(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case .enableLogEncryption?: try {
+      guard case .enableLogEncryption(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+    }()
+    case .disableLogEncryption?: try {
+      guard case .disableLogEncryption(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
     }()
     case nil: break
     }
@@ -449,6 +544,57 @@ extension Arsdk_Privacy_Command.SetLogMode: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
+extension Arsdk_Privacy_Command.EnableLogEncryption: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Privacy_Command.protoMessageName + ".EnableLogEncryption"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "public_key"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.publicKey) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.publicKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.publicKey, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Privacy_Command.EnableLogEncryption, rhs: Arsdk_Privacy_Command.EnableLogEncryption) -> Bool {
+    if lhs.publicKey != rhs.publicKey {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Privacy_Command.DisableLogEncryption: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Privacy_Command.protoMessageName + ".DisableLogEncryption"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Privacy_Command.DisableLogEncryption, rhs: Arsdk_Privacy_Command.DisableLogEncryption) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Privacy_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Event"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -503,6 +649,7 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     1: .standard(proto: "default_capabilities"),
     2: .standard(proto: "log_storage"),
     3: .standard(proto: "log_config_persistence"),
+    4: .standard(proto: "log_encryption"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -514,6 +661,7 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
       case 1: try { try decoder.decodeSingularMessageField(value: &self._defaultCapabilities) }()
       case 2: try { try decoder.decodeSingularEnumField(value: &self.logStorage) }()
       case 3: try { try decoder.decodeSingularEnumField(value: &self.logConfigPersistence) }()
+      case 4: try { try decoder.decodeSingularMessageField(value: &self._logEncryption) }()
       default: break
       }
     }
@@ -533,6 +681,9 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     if self.logConfigPersistence != .persistent {
       try visitor.visitSingularEnumField(value: self.logConfigPersistence, fieldNumber: 3)
     }
+    try { if let v = self._logEncryption {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -540,6 +691,39 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     if lhs._defaultCapabilities != rhs._defaultCapabilities {return false}
     if lhs.logStorage != rhs.logStorage {return false}
     if lhs.logConfigPersistence != rhs.logConfigPersistence {return false}
+    if lhs._logEncryption != rhs._logEncryption {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Privacy_Event.LogEncryption: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Privacy_Event.protoMessageName + ".LogEncryption"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "enabled"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Privacy_Event.LogEncryption, rhs: Arsdk_Privacy_Event.LogEncryption) -> Bool {
+    if lhs.enabled != rhs.enabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -131,6 +131,6 @@ struct BlackBoxRcPilotingCommandData: Encodable, Equatable {
 
     static func == (lhs: BlackBoxRcPilotingCommandData, rhs: BlackBoxRcPilotingCommandData) -> Bool {
         return lhs.roll == rhs.roll && lhs.pitch == rhs.pitch && lhs.yaw == rhs.yaw && lhs.gaz == rhs.gaz &&
-            lhs.source == rhs.source
+        lhs.source == rhs.source
     }
 }

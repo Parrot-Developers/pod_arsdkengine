@@ -30,6 +30,7 @@
 import Foundation
 import GroundSdk
 import CoreLocation
+import SwiftProtobuf
 
 /// Gps command supported enum
 public enum GpsCommandSupported: Int, CustomStringConvertible {
@@ -37,12 +38,15 @@ public enum GpsCommandSupported: Int, CustomStringConvertible {
     case gps
     /// gps_v2 command supported
     case gps_v2
+    /// mobile device location command supported
+    case mobileDeviceLocation
 
     /// Debug description.
     public var description: String {
         switch self {
         case .gps: return "gps"
         case .gps_v2: return "gps_v2"
+        case .mobileDeviceLocation: return "mobileDeviceLocation"
         }
     }
 }
@@ -96,6 +100,12 @@ class DroneController: DeviceController {
     /// Gps command is supported (capabilities were received)
     private var gpsCommandSupported = Set<GpsCommandSupported>()
 
+    /// Decoder for mobile device events.
+    private var arsdkMobileDeviceDecoder: ArsdkMobiledeviceEventDecoder!
+
+    /// Decoder for system events.
+    private var arsdkSystemEventDecoder: ArsdkSystemEventDecoder!
+
     /// Bitfield of available data
     private var availableData: UInt?
 
@@ -120,7 +130,7 @@ class DroneController: DeviceController {
         super.init(engine: engine, deviceUid: deviceUid,
                    deviceModel: .drone(model),
                    noAckLoopPeriod: pcmdEncoder.pilotingCommandPeriod) {  delegate in
-                    return DroneCore(uid: deviceUid, model: model, name: name, delegate: delegate)
+            return DroneCore(uid: deviceUid, model: model, name: name, delegate: delegate)
         }
 
         pilotingItfActivationController = PilotingItfActivationController(
@@ -129,6 +139,8 @@ class DroneController: DeviceController {
 
         getAllSettingsEncoder = ArsdkFeatureCommonSettings.allSettingsEncoder()
         getAllStatesEncoder = ArsdkFeatureCommonCommon.allStatesEncoder()
+        arsdkMobileDeviceDecoder = ArsdkMobiledeviceEventDecoder(listener: self)
+        arsdkSystemEventDecoder = ArsdkSystemEventDecoder(listener: self)
 
         ephemerisUtility = engine.utilities.getUtility(Utilities.ephemeris)
         if let eventLogger = engine.utilities.getUtility(Utilities.eventLogger) {
@@ -216,21 +228,23 @@ class DroneController: DeviceController {
         pilotingItfActivationController.didConnect()
         super.protocolDidConnect()
         /// Utility for device's location services.
-        systemPositionUtility = engine.utilities.getUtility(Utilities.systemPosition)
-        if let systemPositionUtility = systemPositionUtility {
-            userLocationMonitor = systemPositionUtility.startLocationMonitoring(
-                passive: false, userLocationDidChange: { [unowned self] newLocation in
-                    if let newLocation = newLocation {
-                        // Check that the location is not too old (15 sec max)
-                        if abs(newLocation.timestamp.timeIntervalSinceNow) <= 15 {
-                            // this position is valid and can be sent to the drone
-                            self.locationDidChange(newLocation)
-                        } else {
-                             ULog.d(.ctrlTag,
+        if !gpsCommandSupported.contains(.mobileDeviceLocation) {
+            systemPositionUtility = engine.utilities.getUtility(Utilities.systemPosition)
+            if let systemPositionUtility = systemPositionUtility {
+                userLocationMonitor = systemPositionUtility.startLocationMonitoring(
+                    passive: false, userLocationDidChange: { [unowned self] newLocation in
+                        if let newLocation = newLocation {
+                            // Check that the location is not too old (15 sec max)
+                            if abs(newLocation.timestamp.timeIntervalSinceNow) <= 15 {
+                                // this position is valid and can be sent to the drone
+                                self.locationDidChange(newLocation)
+                            } else {
+                                ULog.d(.ctrlTag,
                                     "reject old timestamp Location \(abs(newLocation.timestamp.timeIntervalSinceNow))")
+                            }
                         }
-                    }
-                }, stoppedDidChange: {_ in }, authorizedDidChange: {_ in })
+                    }, stoppedDidChange: {_ in }, authorizedDidChange: {_ in })
+            }
         }
 
         systemBarometerUtility = engine.utilities.getUtility(Utilities.systemBarometer)
@@ -239,11 +253,11 @@ class DroneController: DeviceController {
             userBarometerMonitor = systemBarometerUtility.startMonitoring(
                 measureDidChange: { [unowned self] barometerMeasure in
                     if let barometerMeasure = barometerMeasure {
-                        self.sendCommand(ArsdkFeatureControllerInfo.barometerEncoder(
+                        _ = self.sendCommand(ArsdkFeatureControllerInfo.barometerEncoder(
                             pressure: Float(barometerMeasure.pressure),
                             timestamp: barometerMeasure.timestamp.timeIntervalSince1970 * 1000))
                     }
-            })
+                })
         }
         uploadEphemerisIfAllowed()
     }
@@ -272,51 +286,57 @@ class DroneController: DeviceController {
     /// - Parameter command: received command
     override func protocolDidReceiveCommand(_ command: OpaquePointer) {
         deviceEventLogger?.onCommandReceived(command: command)
-        if ArsdkCommand.getFeatureId(command) == kArsdkFeatureCommonSettingsstateUid {
+        switch ArsdkCommand.getFeatureId(command) {
+        case kArsdkFeatureCommonSettingsstateUid:
             ArsdkFeatureCommonSettingsstate.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureCommonCommonstateUid {
+        case kArsdkFeatureCommonCommonstateUid:
             ArsdkFeatureCommonCommonstate.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureCommonNetworkeventUid {
+        case kArsdkFeatureCommonNetworkeventUid:
             ArsdkFeatureCommonNetworkevent.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureSkyctrlCommoneventstateUid {
+        case kArsdkFeatureSkyctrlCommoneventstateUid:
             ArsdkFeatureSkyctrlCommoneventstate.decode(command, callback: self)
-        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureControllerInfoUid {
+        case kArsdkFeatureControllerInfoUid:
             ArsdkFeatureControllerInfo.decode(command, callback: self)
+        case kArsdkFeatureGenericUid:
+            arsdkMobileDeviceDecoder.decode(command)
+            arsdkSystemEventDecoder.decode(command)
+        default:
+            break
         }
 
         super.protocolDidReceiveCommand(command)
     }
 
     override func firmwareDidUpload() {
-        sendCommand(ArsdkFeatureCommonCommon.rebootEncoder())
+        _ = sendCommand(ArsdkFeatureCommonCommon.rebootEncoder())
     }
 
     private func uploadEphemerisIfAllowed() {
         if let ephemerisConfig = ephemerisConfig,
-            let ephemerisUrl = ephemerisUtility?.getLatestEphemeris(forType: ephemerisConfig.fileType),
-            dataSyncAllowed {
+           let ephemerisUrl = ephemerisUtility?.getLatestEphemeris(forType: ephemerisConfig.fileType),
+           dataSyncAllowed {
             ephemerisConfig.uploader.upload(ephemeris: ephemerisUrl)
         }
     }
 
     /// Processes system geographic location changes and sends them to the drone.
     private func locationDidChange(_ newLocation: CLLocation) {
+        guard !gpsCommandSupported.contains(.mobileDeviceLocation) else { return }
+
         // converts speed and cource in north / east values
         var northSpeed = 0.0
         var eastSpeed = 0.0
         var speedAccuracy = 0.0
         var availableDataBitfield: UInt = (Bitfield<ArsdkFeatureControllerInfoAvailableData>.of(.amslAltitude,
-            .altitudeAccuracy))
+                                                                                                .altitudeAccuracy))
 
         // controller speed validity.
         let speedIsValid = { () -> Bool in
             guard newLocation.speedAccuracy >= 0 else { return false }
             if newLocation.speed == 0.0 {
                 return true
-            } else if #available(iOS 13.4, *) {
-                return newLocation.courseAccuracy >= 0 && newLocation.courseAccuracy < 180.0
             } else {
-                return newLocation.course >= 0
+                return newLocation.courseAccuracy >= 0 && newLocation.courseAccuracy < 180.0
             }
         }
 
@@ -326,30 +346,15 @@ class DroneController: DeviceController {
             eastSpeed = sin(courseRad) * newLocation.speed
             speedAccuracy = newLocation.speedAccuracy
             availableDataBitfield = availableDataBitfield
-                | Bitfield<ArsdkFeatureControllerInfoAvailableData>.of(.northVelocity, .eastVelocity, .velocityAccuracy)
-        }
-
-        // log controller location debug
-        if #available(iOS 13.4, *) {
-            ULog.d(.ctrlTag, "newLocation \(newLocation) |\n" +
-                    " .speed: \(newLocation.speed) .speedAccuracy: \(newLocation.speedAccuracy)" +
-                    " .course: \(newLocation.course) .courseAccuracy: \(newLocation.courseAccuracy) |\n" +
-                    " northSpeed: \(northSpeed) eastSpeed: \(eastSpeed) speedAccuracy: \(speedAccuracy)" +
-                    " availableDataBitfield: 0x\(String(format: "%02X", availableDataBitfield))")
-        } else {
-            ULog.d(.ctrlTag, "newLocation \(newLocation) |\n" +
-                    " .speed: \(newLocation.speed) .speedAccuracy: \(newLocation.speedAccuracy)" +
-                    " .course: \(newLocation.course) .courseAccuracy: --- |\n" +
-                    " northSpeed: \(northSpeed) eastSpeed: \(eastSpeed) speedAccuracy: \(speedAccuracy)" +
-                    " availableDataBitfield: 0x\(String(format: "%02X", availableDataBitfield))")
+            | Bitfield<ArsdkFeatureControllerInfoAvailableData>.of(.northVelocity, .eastVelocity, .velocityAccuracy)
         }
 
         if gpsCommandSupported.contains(.gps_v2) {
             // Send available data to drone.
             if availableData != availableDataBitfield {
                 availableData = availableDataBitfield
-                sendCommand(ArsdkFeatureControllerInfo.gpsV2AvailableDataEncoder(source: .main,
-                    availableDataBitField: availableData!))
+                _ = sendCommand(ArsdkFeatureControllerInfo.gpsV2AvailableDataEncoder(source: .main,
+                                                                                 availableDataBitField: availableData!))
             }
 
             // send command :
@@ -367,7 +372,7 @@ class DroneController: DeviceController {
             //          -> force 0 for downSpeed
             //        - Parameter velocityAccuracy: Velocity accuracy
             //        - Parameter timestamp: Timestamp of the gps info
-            sendCommand(ArsdkFeatureControllerInfo.gpsV2Encoder(
+            _ = sendCommand(ArsdkFeatureControllerInfo.gpsV2Encoder(
                 source: .main,
                 latitude: newLocation.coordinate.latitude, longitude: newLocation.coordinate.longitude,
                 amslAltitude: Float(newLocation.altitude), wgs84Altitude: 0,
@@ -389,7 +394,7 @@ class DroneController: DeviceController {
             //        - Parameter downSpeed: Vertical speed (in meter per second) (down is positive)
             //          -> force 0 for downSpeed
             //        - Parameter timestamp: Timestamp of the gps info
-            sendCommand(ArsdkFeatureControllerInfo.gpsEncoder(
+            _ = sendCommand(ArsdkFeatureControllerInfo.gpsEncoder(
                 latitude: newLocation.coordinate.latitude, longitude: newLocation.coordinate.longitude,
                 altitude: Float(newLocation.altitude), horizontalAccuracy: Float(newLocation.horizontalAccuracy),
                 verticalAccuracy: Float(newLocation.verticalAccuracy), northSpeed: Float(northSpeed),
@@ -461,9 +466,32 @@ extension DroneController: ArsdkFeatureSkyctrlCommoneventstateCallback {
 }
 
 extension DroneController: ArsdkFeatureControllerInfoCallback {
-
     func onCapabilities(supportedCommandBitField: UInt) {
+        if gpsCommandSupported.contains(.mobileDeviceLocation) { return }
+
         gpsCommandSupported = GpsCommandSupported.createSetFrom(bitField: supportedCommandBitField)
+    }
+}
+
+/// Mobile device events, used to received capabilities
+extension DroneController: ArsdkMobiledeviceEventDecoderListener {
+    func onCapabilities(_ capabilities: Arsdk_Mobiledevice_Event.Capabilities) {
+        if capabilities.supportedFeatures.contains(.location) {
+            gpsCommandSupported = [.mobileDeviceLocation]
+            // stop monitoring location
+            userLocationMonitor?.stop()
+            userLocationMonitor = nil
+        }
+    }
+}
+
+/// System events, used to received events.
+extension DroneController: ArsdkSystemEventDecoderListener {
+    func onState(_ state: Arsdk_System_Event.State) {
+        if state.hasProductName {
+            drone.nameHolder.update(name: state.productName.value)
+            deviceStore.write(key: PersistentStore.deviceName, value: state.productName.value).commit()
+        }
     }
 }
 

@@ -32,6 +32,11 @@ import GroundSdk
 
 class SkyControllerSystemInfo: ArsdkSystemInfo {
 
+    /// Remote control system info.
+    var remoteControlSystemInfo: RemoteControlSystemInfoCore {
+        return (systemInfo as! RemoteControlSystemInfoCore)
+    }
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
@@ -48,18 +53,43 @@ class SkyControllerSystemInfo: ArsdkSystemInfo {
             ArsdkFeatureSkyctrlSettingsstate.decode(command, callback: self)
         }
     }
+
+    override func loadPersistedData() {
+        super.loadPersistedData()
+        if let variant: ProductVariant = deviceStore.read(key: PersistedDataKey.productVariant) {
+            remoteControlSystemInfo.update(productVariant: variant)
+        }
+    }
+
+    override func createSystemInfo() {
+        systemInfo = RemoteControlSystemInfoCore(store: deviceController.device.peripheralStore, backend: self)
+    }
 }
 
 /// ArsdkSystemInfo backend implementation
 extension SkyControllerSystemInfo: ArsdkSystemInfoBackend {
     func doResetSettings() -> Bool {
-        sendCommand(ArsdkFeatureSkyctrlSettings.resetEncoder())
-        return true
+        return sendCommand(ArsdkFeatureSkyctrlSettings.resetEncoder())
     }
 
     func doFactoryReset() -> Bool {
-        sendCommand(ArsdkFeatureSkyctrlFactory.resetEncoder())
-        return true
+        return sendCommand(ArsdkFeatureSkyctrlFactory.resetEncoder())
+    }
+
+    func doPowerOff() -> Bool {
+        return false
+    }
+
+    func doReboot() -> Bool {
+        return false
+    }
+
+    func doSet(productName: String) -> Bool {
+        return false
+    }
+
+    func doSendGetState() -> Bool {
+        return false
     }
 }
 
@@ -76,4 +106,28 @@ extension SkyControllerSystemInfo: ArsdkFeatureSkyctrlSettingsstateCallback {
         systemInfo.notifyUpdated()
         deviceStore.write(key: PersistedDataKey.hardwareVersion, value: hardware).commit()
     }
+
+    func onProductVariantChanged(variant: ArsdkFeatureSkyctrlSettingsstateProductvariantchangedVariant) {
+        if let variant = ProductVariant(fromArsdk: variant) {
+            remoteControlSystemInfo.update(productVariant: variant).notifyUpdated()
+            deviceStore.write(key: PersistedDataKey.productVariant, value: variant).commit()
+        }
+    }
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension ProductVariant: ArsdkMappableEnum {
+    static var arsdkMapper = Mapper<ProductVariant,
+                                        ArsdkFeatureSkyctrlSettingsstateProductvariantchangedVariant>([
+        .ranger: .mee,
+        .standard: .standard,
+        .mission: .mission
+    ])
+}
+
+extension ProductVariant: StorableEnum {
+    static var storableMapper = Mapper<ProductVariant, String>([
+        .ranger: "ranger",
+        .standard: "standard",
+        .mission: "mission"])
 }

@@ -39,11 +39,24 @@ class MissionUpdaterController: DeviceComponentController {
     /// Mission updater rest api
     private var missionUpdaterRestApi: MissionUpdaterRestApi?
 
+    /// Mission list whose assets are not yet downloaded
+    private var pendingMissions: [String: MissionCore] = [:]
+
+    /// Queue of mission assets to be downloaded.
+    private var downloadAssetQueue: [String] = []
+
+    /// Whether or not the current overall task has been canceled
+    private var isCanceled = false
+
+    /// Mission asset storage utility.
+    private var missionAssetStorage: MissionAssetStorageCore!
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
+        missionAssetStorage = deviceController.engine.utilities.getUtility(Utilities.missionAssetStorage)
         missionUpdater = MissionUpdaterCore(store: deviceController.device.peripheralStore, backend: self)
     }
 
@@ -100,11 +113,104 @@ extension MissionUpdaterController: MissionUpdaterBackend {
     public func browse() {
         _ = missionUpdaterRestApi?.getMissionList { missionList in
             self.missionUpdater.update(missions: missionList).notifyUpdated()
+            self.pendingMissions = missionList
+            self.cleanUpMissionAssetStorage()
+            self.browseNextMissionAssets()
         }
+    }
 
+    /// Requests the list of assets of the next mission from the drone.
+    private func browseNextMissionAssets() {
+        if let mission = pendingMissions.first?.value {
+            _ = self.missionUpdaterRestApi?.browseAssets(mission: mission) { missionDetail in
+                if let missionDetail = missionDetail, let assets = missionDetail.assets, !assets.isEmpty {
+                    self.downloadAssetQueue = assets
+                    self.cleanAssets(in: self.missionAssetStorage.workDir
+                        .appendingPathComponent(mission.uid).absoluteString)
+                    self.downloadNextAsset(mission: missionDetail)
+                    self.pendingMissions.removeValue(forKey: missionDetail.uid)
+                } else {
+                    self.pendingMissions.removeValue(forKey: mission.uid)
+                    self.browseNextMissionAssets()
+                }
+            }
+        } else {
+            missionUpdater?.update(isDownloadingAsset: false)
+                .update(assetDownloadStatus: .success)
+                .notifyUpdated()
+            missionAssetStorage.notifyStoreChanged()
+        }
+    }
+
+    /// Clean up asset folders of inexistent missions
+    private func cleanUpMissionAssetStorage() {
+        let fileManager = FileManager.default
+        do {
+            let missionFolders = try fileManager.contentsOfDirectory(atPath: missionAssetStorage.workDir.path)
+            for folder in missionFolders {
+                let folderName = URL(fileURLWithPath: folder).lastPathComponent
+                if pendingMissions.keys.contains(folderName) == false {
+                    // Remove the entire mission folder if it is not pending
+                    do {
+                        try fileManager.removeItem(atPath: folder)
+                    } catch {
+                        ULog.e(.missionsTag, "Error deleting folder: \(folder): \(error)")
+                    }
+                }
+            }
+        } catch {
+            ULog.e(.missionsTag, "Error reading mission directory: \(missionAssetStorage.workDir.path) - \(error)")
+        }
+    }
+
+    /// Downloads the next mission asset from the drone.
+    ///
+    /// - Parameter mission: the corresponding mission
+    private func downloadNextAsset(mission: MissionCore) {
+        if let asset = downloadAssetQueue.first {
+            let missionUidDir = missionAssetStorage.workDir.appendingPathComponent(mission.uid)
+
+            _ = missionUpdaterRestApi?.downloadMissionFile(asset, toDirectory: missionUidDir,
+                                                           progress: { _ in },
+                                                           completion: { result, _ in
+                if case .canceled = result {
+                    self.missionUpdater?.update(isDownloadingAsset: false)
+                        .update(assetDownloadStatus: .interrupted)
+                        .notifyUpdated()
+                }
+                self.downloadAssetQueue.removeFirst()
+                self.downloadNextAsset(mission: mission)
+            })
+
+            missionUpdater?.update(isDownloadingAsset: true)
+                .update(assetDownloadStatus: .none)
+                .notifyUpdated()
+        } else {
+            self.browseNextMissionAssets()
+        }
+    }
+
+    /// Remove local saved assets not anymore existing in the drone.
+    private func cleanAssets(in folderPath: String) {
+        let fileManager = FileManager.default
+        do {
+            let assets = try fileManager.contentsOfDirectory(atPath: folderPath)
+            for asset in assets {
+                let fileName = URL(fileURLWithPath: asset).lastPathComponent
+                if !downloadAssetQueue.contains(where: { URL(fileURLWithPath: $0).lastPathComponent == fileName }) {
+                    do {
+                        try fileManager.removeItem(atPath: asset)
+                    } catch {
+                        ULog.e(.missionsTag, "Error deleting asset \(asset): \(error)")
+                    }
+                }
+            }
+        } catch {
+            ULog.e(.missionsTag, "Failed to clean assets in folder \(folderPath): \(error)")
+        }
     }
 
     public func complete() {
-        sendCommand(ArsdkFeatureCommonCommon.rebootEncoder())
+        _ = sendCommand(ArsdkFeatureCommonCommon.rebootEncoder())
     }
 }

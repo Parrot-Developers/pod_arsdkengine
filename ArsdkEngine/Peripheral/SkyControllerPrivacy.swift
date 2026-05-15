@@ -56,6 +56,16 @@ class SkyControllerPrivacy: PrivacyController {
 /// Extension for methods to send Controller Privacy commands.
 extension SkyControllerPrivacy: PrivacyControllerBackend {
 
+    func sendCommand(setEnableLogEncryption: Arsdk_Privacy_Command.EnableLogEncryption) -> Bool {
+        // nothing to do
+        return false
+    }
+
+    func sendCommand(setDisableLogEncryption: Arsdk_Privacy_Command.DisableLogEncryption) -> Bool {
+        // nothing to do
+        return false
+    }
+
     func sendCommand(getState: Arsdk_Privacy_Command.GetState) -> Bool {
         sendPrivacyCommand(.getState(getState))
     }
@@ -69,12 +79,10 @@ extension SkyControllerPrivacy: PrivacyControllerBackend {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendPrivacyCommand(_ command: Arsdk_Controllerprivacy_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkControllerprivacyCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 }
 

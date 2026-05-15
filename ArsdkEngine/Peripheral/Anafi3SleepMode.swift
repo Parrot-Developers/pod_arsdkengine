@@ -96,12 +96,10 @@ extension Anafi3SleepMode {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendSleepModeCommand(_ command: Arsdk_Sleepmode_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkSleepmodeCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends get state command.
@@ -123,7 +121,6 @@ extension Anafi3SleepMode: ArsdkSleepmodeEventDecoderListener {
         }
 
         sleepMode.publish()
-        sleepMode.notifyUpdated()
     }
 
     func onActivation(_ activation: Arsdk_Sleepmode_Event.Activation) {

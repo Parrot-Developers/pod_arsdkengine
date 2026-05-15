@@ -20,54 +20,6 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-enum Arsdk_Connectivity_CommandStatus: SwiftProtobuf.Enum {
-  typealias RawValue = Int
-  case ok // = 0
-  case busy // = 1
-  case notAllowed // = 2
-  case already // = 3
-  case UNRECOGNIZED(Int)
-
-  init() {
-    self = .ok
-  }
-
-  init?(rawValue: Int) {
-    switch rawValue {
-    case 0: self = .ok
-    case 1: self = .busy
-    case 2: self = .notAllowed
-    case 3: self = .already
-    default: self = .UNRECOGNIZED(rawValue)
-    }
-  }
-
-  var rawValue: Int {
-    switch self {
-    case .ok: return 0
-    case .busy: return 1
-    case .notAllowed: return 2
-    case .already: return 3
-    case .UNRECOGNIZED(let i): return i
-    }
-  }
-
-}
-
-#if swift(>=4.2)
-
-extension Arsdk_Connectivity_CommandStatus: CaseIterable {
-  // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Arsdk_Connectivity_CommandStatus] = [
-    .ok,
-    .busy,
-    .notAllowed,
-    .already,
-  ]
-}
-
-#endif  // swift(>=4.2)
-
 enum Arsdk_Connectivity_ConnectionStatus: SwiftProtobuf.Enum {
   typealias RawValue = Int
   case disconnected // = 0
@@ -122,10 +74,9 @@ enum Arsdk_Connectivity_EncryptionType: SwiftProtobuf.Enum {
   case wep // = 1
   case wpa // = 2
   case wpa2 // = 3
-
-  /// ENCRYPTION_TYPE_AES_128 = 3
-  /// ENCRYPTION_TYPE_AES_256 = 4
   case wpa3 // = 4
+  case aes128 // = 5
+  case aes256 // = 6
   case UNRECOGNIZED(Int)
 
   init() {
@@ -139,6 +90,8 @@ enum Arsdk_Connectivity_EncryptionType: SwiftProtobuf.Enum {
     case 2: self = .wpa
     case 3: self = .wpa2
     case 4: self = .wpa3
+    case 5: self = .aes128
+    case 6: self = .aes256
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -150,6 +103,8 @@ enum Arsdk_Connectivity_EncryptionType: SwiftProtobuf.Enum {
     case .wpa: return 2
     case .wpa2: return 3
     case .wpa3: return 4
+    case .aes128: return 5
+    case .aes256: return 6
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -166,6 +121,8 @@ extension Arsdk_Connectivity_EncryptionType: CaseIterable {
     .wpa,
     .wpa2,
     .wpa3,
+    .aes128,
+    .aes256,
   ]
 }
 
@@ -257,10 +214,8 @@ extension Arsdk_Connectivity_Mode: CaseIterable {
 
 enum Arsdk_Connectivity_RadioType: SwiftProtobuf.Enum {
   typealias RawValue = Int
-
-  /// RADIO_TYPE_MICROHARD = 1;
-  /// RADIO_TYPE_SIMPULSE = 2;
   case wifi // = 0
+  case mars // = 1
   case UNRECOGNIZED(Int)
 
   init() {
@@ -270,6 +225,7 @@ enum Arsdk_Connectivity_RadioType: SwiftProtobuf.Enum {
   init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .wifi
+    case 1: self = .mars
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -277,6 +233,7 @@ enum Arsdk_Connectivity_RadioType: SwiftProtobuf.Enum {
   var rawValue: Int {
     switch self {
     case .wifi: return 0
+    case .mars: return 1
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -289,6 +246,7 @@ extension Arsdk_Connectivity_RadioType: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
   static var allCases: [Arsdk_Connectivity_RadioType] = [
     .wifi,
+    .mars,
   ]
 }
 
@@ -378,28 +336,67 @@ extension Arsdk_Connectivity_SystemState: CaseIterable {
 
 #endif  // swift(>=4.2)
 
-enum Arsdk_Connectivity_WifiBand: SwiftProtobuf.Enum {
+enum Arsdk_Connectivity_Band: SwiftProtobuf.Enum {
   typealias RawValue = Int
-  case wifiBand24Ghz // = 0
-  case wifiBand5Ghz // = 1
+  case band24Ghz // = 0
+  case band50Ghz // = 1
+  case band16Ghz // = 2
+  case band18Ghz // = 3
+  case band20Ghz // = 4
+  case band22Ghz // = 5
+  case band23Ghz // = 6
+  case band25Ghz // = 7
+  case band35Ghz // = 8
+  case band45Ghz // = 9
+  case band185Ghz // = 10
+  case band21Ghz // = 11
+  case band27Ghz // = 12
+  case band38Ghz // = 13
+  case band50LowGhz // = 14
   case UNRECOGNIZED(Int)
 
   init() {
-    self = .wifiBand24Ghz
+    self = .band24Ghz
   }
 
   init?(rawValue: Int) {
     switch rawValue {
-    case 0: self = .wifiBand24Ghz
-    case 1: self = .wifiBand5Ghz
+    case 0: self = .band24Ghz
+    case 1: self = .band50Ghz
+    case 2: self = .band16Ghz
+    case 3: self = .band18Ghz
+    case 4: self = .band20Ghz
+    case 5: self = .band22Ghz
+    case 6: self = .band23Ghz
+    case 7: self = .band25Ghz
+    case 8: self = .band35Ghz
+    case 9: self = .band45Ghz
+    case 10: self = .band185Ghz
+    case 11: self = .band21Ghz
+    case 12: self = .band27Ghz
+    case 13: self = .band38Ghz
+    case 14: self = .band50LowGhz
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
 
   var rawValue: Int {
     switch self {
-    case .wifiBand24Ghz: return 0
-    case .wifiBand5Ghz: return 1
+    case .band24Ghz: return 0
+    case .band50Ghz: return 1
+    case .band16Ghz: return 2
+    case .band18Ghz: return 3
+    case .band20Ghz: return 4
+    case .band22Ghz: return 5
+    case .band23Ghz: return 6
+    case .band25Ghz: return 7
+    case .band35Ghz: return 8
+    case .band45Ghz: return 9
+    case .band185Ghz: return 10
+    case .band21Ghz: return 11
+    case .band27Ghz: return 12
+    case .band38Ghz: return 13
+    case .band50LowGhz: return 14
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -408,11 +405,24 @@ enum Arsdk_Connectivity_WifiBand: SwiftProtobuf.Enum {
 
 #if swift(>=4.2)
 
-extension Arsdk_Connectivity_WifiBand: CaseIterable {
+extension Arsdk_Connectivity_Band: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Arsdk_Connectivity_WifiBand] = [
-    .wifiBand24Ghz,
-    .wifiBand5Ghz,
+  static var allCases: [Arsdk_Connectivity_Band] = [
+    .band24Ghz,
+    .band50Ghz,
+    .band16Ghz,
+    .band18Ghz,
+    .band20Ghz,
+    .band22Ghz,
+    .band23Ghz,
+    .band25Ghz,
+    .band35Ghz,
+    .band45Ghz,
+    .band185Ghz,
+    .band21Ghz,
+    .band27Ghz,
+    .band38Ghz,
+    .band50LowGhz,
   ]
 }
 
@@ -528,6 +538,11 @@ struct Arsdk_Connectivity_Command {
 
     var includeDefaultCapabilities: Bool = false
 
+    /// Set to `true' if the controller supports the new
+    /// AuthorizedPackedChannels message instead of the legacy
+    /// AuthorizedChannels.
+    var supportsPackedChannels: Bool = false
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
@@ -641,14 +656,6 @@ struct Arsdk_Connectivity_Event {
     set {id = .state(newValue)}
   }
 
-  var commandResponse: Arsdk_Connectivity_Event.CommandResponse {
-    get {
-      if case .commandResponse(let v)? = id {return v}
-      return Arsdk_Connectivity_Event.CommandResponse()
-    }
-    set {id = .commandResponse(newValue)}
-  }
-
   var connection: Arsdk_Connectivity_Event.Connection {
     get {
       if case .connection(let v)? = id {return v}
@@ -670,7 +677,6 @@ struct Arsdk_Connectivity_Event {
   enum OneOf_ID: Equatable {
     case radioList(Arsdk_Connectivity_Event.RadioList)
     case state(Arsdk_Connectivity_Event.State)
-    case commandResponse(Arsdk_Connectivity_Event.CommandResponse)
     case connection(Arsdk_Connectivity_Event.Connection)
     case scanResult(Arsdk_Connectivity_Event.ScanResult)
 
@@ -686,10 +692,6 @@ struct Arsdk_Connectivity_Event {
       }()
       case (.state, .state): return {
         guard case .state(let l) = lhs, case .state(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.commandResponse, .commandResponse): return {
-        guard case .commandResponse(let l) = lhs, case .commandResponse(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       case (.connection, .connection): return {
@@ -794,16 +796,33 @@ struct Arsdk_Connectivity_Event {
     /// Clears the value of `channel`. Subsequent reads from it will return its default value.
     mutating func clearChannel() {_uniqueStorage()._channel = nil}
 
-    /// NOTE: the authorized channels are given for the _current mode_ country 
-    ///       configuration only.
-    var authorizedChannels: Arsdk_Connectivity_AuthorizedChannels {
-      get {return _storage._authorizedChannels ?? Arsdk_Connectivity_AuthorizedChannels()}
-      set {_uniqueStorage()._authorizedChannels = newValue}
+    /// NOTE: the authorized channels are given for the _current_ mode, country
+    ///       & environment configuration only.
+    var authorizedChannelsType: OneOf_AuthorizedChannelsType? {
+      get {return _storage._authorizedChannelsType}
+      set {_uniqueStorage()._authorizedChannelsType = newValue}
     }
-    /// Returns true if `authorizedChannels` has been explicitly set.
-    var hasAuthorizedChannels: Bool {return _storage._authorizedChannels != nil}
-    /// Clears the value of `authorizedChannels`. Subsequent reads from it will return its default value.
-    mutating func clearAuthorizedChannels() {_uniqueStorage()._authorizedChannels = nil}
+
+    /// Kept for legacy support, should no longer be sent if
+    /// `supports_packed_channels' is sent to true by the
+    /// controller
+    var authorizedChannels: Arsdk_Connectivity_AuthorizedChannels {
+      get {
+        if case .authorizedChannels(let v)? = _storage._authorizedChannelsType {return v}
+        return Arsdk_Connectivity_AuthorizedChannels()
+      }
+      set {_uniqueStorage()._authorizedChannelsType = .authorizedChannels(newValue)}
+    }
+
+    /// Newer version of the message allowing multiple channels in the same
+    /// band to be packed together, resulting in a much shorter message
+    var authorizedPackedChannels: Arsdk_Connectivity_AuthorizedPackedChannels {
+      get {
+        if case .authorizedPackedChannels(let v)? = _storage._authorizedChannelsType {return v}
+        return Arsdk_Connectivity_AuthorizedPackedChannels()
+      }
+      set {_uniqueStorage()._authorizedChannelsType = .authorizedPackedChannels(newValue)}
+    }
 
     var rssi: SwiftProtobuf.Google_Protobuf_Int32Value {
       get {return _storage._rssi ?? SwiftProtobuf.Google_Protobuf_Int32Value()}
@@ -845,23 +864,40 @@ struct Arsdk_Connectivity_Event {
     #endif
     }
 
+    /// NOTE: the authorized channels are given for the _current_ mode, country
+    ///       & environment configuration only.
+    enum OneOf_AuthorizedChannelsType: Equatable {
+      /// Kept for legacy support, should no longer be sent if
+      /// `supports_packed_channels' is sent to true by the
+      /// controller
+      case authorizedChannels(Arsdk_Connectivity_AuthorizedChannels)
+      /// Newer version of the message allowing multiple channels in the same
+      /// band to be packed together, resulting in a much shorter message
+      case authorizedPackedChannels(Arsdk_Connectivity_AuthorizedPackedChannels)
+
+    #if !swift(>=4.1)
+      static func ==(lhs: Arsdk_Connectivity_Event.State.OneOf_AuthorizedChannelsType, rhs: Arsdk_Connectivity_Event.State.OneOf_AuthorizedChannelsType) -> Bool {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch (lhs, rhs) {
+        case (.authorizedChannels, .authorizedChannels): return {
+          guard case .authorizedChannels(let l) = lhs, case .authorizedChannels(let r) = rhs else { preconditionFailure() }
+          return l == r
+        }()
+        case (.authorizedPackedChannels, .authorizedPackedChannels): return {
+          guard case .authorizedPackedChannels(let l) = lhs, case .authorizedPackedChannels(let r) = rhs else { preconditionFailure() }
+          return l == r
+        }()
+        default: return false
+        }
+      }
+    #endif
+    }
+
     init() {}
 
     fileprivate var _storage = _StorageClass.defaultInstance
-  }
-
-  struct CommandResponse {
-    // SwiftProtobuf.Message conformance is added in an extension below. See the
-    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-    // methods supported on all messages.
-
-    var radioID: UInt32 = 0
-
-    var status: Arsdk_Connectivity_CommandStatus = .ok
-
-    var unknownFields = SwiftProtobuf.UnknownStorage()
-
-    init() {}
   }
 
   struct Connection {
@@ -899,6 +935,8 @@ struct Arsdk_Connectivity_Capabilities {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  var model: String = String()
 
   var supportedModes: [Arsdk_Connectivity_Mode] = []
 
@@ -988,11 +1026,39 @@ struct Arsdk_Connectivity_AccessPointConfig {
     set {channelSelectionType = .automaticChannel(newValue)}
   }
 
+  var frequencyHoppingList: Arsdk_Connectivity_FrequencyHoppingList {
+    get {
+      if case .frequencyHoppingList(let v)? = channelSelectionType {return v}
+      return Arsdk_Connectivity_FrequencyHoppingList()
+    }
+    set {channelSelectionType = .frequencyHoppingList(newValue)}
+  }
+
+  /// only applicable for RADIO_TYPE_MARS
+  var backupFreqs: Arsdk_Connectivity_BackupFreqs {
+    get {return _backupFreqs ?? Arsdk_Connectivity_BackupFreqs()}
+    set {_backupFreqs = newValue}
+  }
+  /// Returns true if `backupFreqs` has been explicitly set.
+  var hasBackupFreqs: Bool {return self._backupFreqs != nil}
+  /// Clears the value of `backupFreqs`. Subsequent reads from it will return its default value.
+  mutating func clearBackupFreqs() {self._backupFreqs = nil}
+
+  var extraInfos: Arsdk_Connectivity_ExtraInfos {
+    get {return _extraInfos ?? Arsdk_Connectivity_ExtraInfos()}
+    set {_extraInfos = newValue}
+  }
+  /// Returns true if `extraInfos` has been explicitly set.
+  var hasExtraInfos: Bool {return self._extraInfos != nil}
+  /// Clears the value of `extraInfos`. Subsequent reads from it will return its default value.
+  mutating func clearExtraInfos() {self._extraInfos = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ChannelSelectionType: Equatable {
     case manualChannel(Arsdk_Connectivity_Channel)
     case automaticChannel(Arsdk_Connectivity_AutomaticChannelSelection)
+    case frequencyHoppingList(Arsdk_Connectivity_FrequencyHoppingList)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Connectivity_AccessPointConfig.OneOf_ChannelSelectionType, rhs: Arsdk_Connectivity_AccessPointConfig.OneOf_ChannelSelectionType) -> Bool {
@@ -1006,6 +1072,10 @@ struct Arsdk_Connectivity_AccessPointConfig {
       }()
       case (.automaticChannel, .automaticChannel): return {
         guard case .automaticChannel(let l) = lhs, case .automaticChannel(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.frequencyHoppingList, .frequencyHoppingList): return {
+        guard case .frequencyHoppingList(let l) = lhs, case .frequencyHoppingList(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -1022,6 +1092,8 @@ struct Arsdk_Connectivity_AccessPointConfig {
   fileprivate var _hwAddr: SwiftProtobuf.Google_Protobuf_BytesValue? = nil
   fileprivate var _country: SwiftProtobuf.Google_Protobuf_StringValue? = nil
   fileprivate var _environment: Arsdk_Connectivity_EnvironmentValue? = nil
+  fileprivate var _backupFreqs: Arsdk_Connectivity_BackupFreqs? = nil
+  fileprivate var _extraInfos: Arsdk_Connectivity_ExtraInfos? = nil
 }
 
 struct Arsdk_Connectivity_StationConfig {
@@ -1083,7 +1155,83 @@ struct Arsdk_Connectivity_StationConfig {
   /// Clears the value of `environment`. Subsequent reads from it will return its default value.
   mutating func clearEnvironment() {self._environment = nil}
 
+  /// only applicable for RADIO_TYPE_MARS
+  var channelSelectionType: Arsdk_Connectivity_StationConfig.OneOf_ChannelSelectionType? = nil
+
+  var manualChannel: Arsdk_Connectivity_Channel {
+    get {
+      if case .manualChannel(let v)? = channelSelectionType {return v}
+      return Arsdk_Connectivity_Channel()
+    }
+    set {channelSelectionType = .manualChannel(newValue)}
+  }
+
+  var automaticChannel: Arsdk_Connectivity_AutomaticChannelSelection {
+    get {
+      if case .automaticChannel(let v)? = channelSelectionType {return v}
+      return Arsdk_Connectivity_AutomaticChannelSelection()
+    }
+    set {channelSelectionType = .automaticChannel(newValue)}
+  }
+
+  var frequencyHoppingList: Arsdk_Connectivity_FrequencyHoppingList {
+    get {
+      if case .frequencyHoppingList(let v)? = channelSelectionType {return v}
+      return Arsdk_Connectivity_FrequencyHoppingList()
+    }
+    set {channelSelectionType = .frequencyHoppingList(newValue)}
+  }
+
+  /// only applicable for RADIO_TYPE_MARS
+  var backupFreqs: Arsdk_Connectivity_BackupFreqs {
+    get {return _backupFreqs ?? Arsdk_Connectivity_BackupFreqs()}
+    set {_backupFreqs = newValue}
+  }
+  /// Returns true if `backupFreqs` has been explicitly set.
+  var hasBackupFreqs: Bool {return self._backupFreqs != nil}
+  /// Clears the value of `backupFreqs`. Subsequent reads from it will return its default value.
+  mutating func clearBackupFreqs() {self._backupFreqs = nil}
+
+  var extraInfos: Arsdk_Connectivity_ExtraInfos {
+    get {return _extraInfos ?? Arsdk_Connectivity_ExtraInfos()}
+    set {_extraInfos = newValue}
+  }
+  /// Returns true if `extraInfos` has been explicitly set.
+  var hasExtraInfos: Bool {return self._extraInfos != nil}
+  /// Clears the value of `extraInfos`. Subsequent reads from it will return its default value.
+  mutating func clearExtraInfos() {self._extraInfos = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  /// only applicable for RADIO_TYPE_MARS
+  enum OneOf_ChannelSelectionType: Equatable {
+    case manualChannel(Arsdk_Connectivity_Channel)
+    case automaticChannel(Arsdk_Connectivity_AutomaticChannelSelection)
+    case frequencyHoppingList(Arsdk_Connectivity_FrequencyHoppingList)
+
+  #if !swift(>=4.1)
+    static func ==(lhs: Arsdk_Connectivity_StationConfig.OneOf_ChannelSelectionType, rhs: Arsdk_Connectivity_StationConfig.OneOf_ChannelSelectionType) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.manualChannel, .manualChannel): return {
+        guard case .manualChannel(let l) = lhs, case .manualChannel(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.automaticChannel, .automaticChannel): return {
+        guard case .automaticChannel(let l) = lhs, case .automaticChannel(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.frequencyHoppingList, .frequencyHoppingList): return {
+        guard case .frequencyHoppingList(let l) = lhs, case .frequencyHoppingList(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
 
   init() {}
 
@@ -1093,6 +1241,8 @@ struct Arsdk_Connectivity_StationConfig {
   fileprivate var _hwAddr: SwiftProtobuf.Google_Protobuf_BytesValue? = nil
   fileprivate var _country: SwiftProtobuf.Google_Protobuf_StringValue? = nil
   fileprivate var _environment: Arsdk_Connectivity_EnvironmentValue? = nil
+  fileprivate var _backupFreqs: Arsdk_Connectivity_BackupFreqs? = nil
+  fileprivate var _extraInfos: Arsdk_Connectivity_ExtraInfos? = nil
 }
 
 struct Arsdk_Connectivity_IdleState {
@@ -1136,24 +1286,26 @@ struct Arsdk_Connectivity_Channel {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// This indirection exists for sad backward-compatibility reasons.
+  /// Please, do not add any other case to the oneof below.
+  /// Also, this oneof should never be empty when sent or received.
   var type: Arsdk_Connectivity_Channel.OneOf_Type? = nil
 
-  /// MicrohardChannel microhard_channel = 2;
-  /// SimpulseChannel simpulse_channel = 3;
-  var wifiChannel: Arsdk_Connectivity_WifiChannel {
+  var radioChannel: Arsdk_Connectivity_RadioChannel {
     get {
-      if case .wifiChannel(let v)? = type {return v}
-      return Arsdk_Connectivity_WifiChannel()
+      if case .radioChannel(let v)? = type {return v}
+      return Arsdk_Connectivity_RadioChannel()
     }
-    set {type = .wifiChannel(newValue)}
+    set {type = .radioChannel(newValue)}
   }
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
+  /// This indirection exists for sad backward-compatibility reasons.
+  /// Please, do not add any other case to the oneof below.
+  /// Also, this oneof should never be empty when sent or received.
   enum OneOf_Type: Equatable {
-    /// MicrohardChannel microhard_channel = 2;
-    /// SimpulseChannel simpulse_channel = 3;
-    case wifiChannel(Arsdk_Connectivity_WifiChannel)
+    case radioChannel(Arsdk_Connectivity_RadioChannel)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Connectivity_Channel.OneOf_Type, rhs: Arsdk_Connectivity_Channel.OneOf_Type) -> Bool {
@@ -1161,8 +1313,8 @@ struct Arsdk_Connectivity_Channel {
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch (lhs, rhs) {
-      case (.wifiChannel, .wifiChannel): return {
-        guard case .wifiChannel(let l) = lhs, case .wifiChannel(let r) = rhs else { preconditionFailure() }
+      case (.radioChannel, .radioChannel): return {
+        guard case .radioChannel(let l) = lhs, case .radioChannel(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       }
@@ -1173,14 +1325,14 @@ struct Arsdk_Connectivity_Channel {
   init() {}
 }
 
-struct Arsdk_Connectivity_WifiChannel {
+struct Arsdk_Connectivity_RadioChannel {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var band: Arsdk_Connectivity_WifiBand = .wifiBand24Ghz
+  var band: Arsdk_Connectivity_Band = .band24Ghz
 
-  var channel: UInt32 = 0
+  var id: UInt32 = 0
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1192,14 +1344,26 @@ struct Arsdk_Connectivity_AuthorizedChannels {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var channel: [Arsdk_Connectivity_AuthorizedChannel] = []
+  var channel: [Arsdk_Connectivity_ChannelDescriptor] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 }
 
-struct Arsdk_Connectivity_AuthorizedChannel {
+struct Arsdk_Connectivity_AuthorizedPackedChannels {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var channels: [Arsdk_Connectivity_PackedChannelDescriptor] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Arsdk_Connectivity_ChannelDescriptor {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1213,7 +1377,8 @@ struct Arsdk_Connectivity_AuthorizedChannel {
   /// Clears the value of `channel`. Subsequent reads from it will return its default value.
   mutating func clearChannel() {self._channel = nil}
 
-  var environment: Arsdk_Connectivity_Environment = .indoor
+  /// frequency associated to this channel
+  var frequency: UInt32 = 0
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1222,12 +1387,44 @@ struct Arsdk_Connectivity_AuthorizedChannel {
   fileprivate var _channel: Arsdk_Connectivity_Channel? = nil
 }
 
+struct Arsdk_Connectivity_PackedChannelDescriptor {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Band of this channel list
+  var band: Arsdk_Connectivity_Band = .band24Ghz
+
+  /// Number of channels in the list
+  var numberOfChannels: UInt32 = 0
+
+  /// Id of the first channel in the list
+  var firstID: UInt32 = 0
+
+  /// Step between the identifier of channels in this list
+  /// To improve network efficiency, a step value of 0 is interpreted as
+  /// a step value of 1
+  var idStep: UInt32 = 0
+
+  /// Frequency (in MHz) of the first channel in the list
+  var firstFrequency: UInt32 = 0
+
+  /// Step (in MHz) between the frequencies of channels in this list
+  /// To improve network efficiency, a step value of 0 is interpreted as
+  /// a step value of 1
+  var frequencyStep: UInt32 = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 struct Arsdk_Connectivity_NetworkSecurityMode {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// NOTE: some modes, for example STA, only support a single encryption type; 
+  /// NOTE: some modes, for example STA, only support a single encryption type;
   ///       in that case only the first listed value will be considered
   var encryption: [Arsdk_Connectivity_EncryptionType] = []
 
@@ -1300,70 +1497,58 @@ struct Arsdk_Connectivity_AutomaticChannelSelection {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var allowedBands: [Arsdk_Connectivity_WifiBand] = []
+  var allowedBands: [Arsdk_Connectivity_Band] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Connectivity_CommandStatus: @unchecked Sendable {}
-extension Arsdk_Connectivity_ConnectionStatus: @unchecked Sendable {}
-extension Arsdk_Connectivity_EncryptionType: @unchecked Sendable {}
-extension Arsdk_Connectivity_Environment: @unchecked Sendable {}
-extension Arsdk_Connectivity_Mode: @unchecked Sendable {}
-extension Arsdk_Connectivity_RadioType: @unchecked Sendable {}
-extension Arsdk_Connectivity_StationConnectionState: @unchecked Sendable {}
-extension Arsdk_Connectivity_SystemState: @unchecked Sendable {}
-extension Arsdk_Connectivity_WifiBand: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command.ListRadios: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command.GetState: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command.SetMode: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command.Scan: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command.Configure: @unchecked Sendable {}
-extension Arsdk_Connectivity_Command.Configure.OneOf_Mode: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event.RadioList: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event.State: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event.State.OneOf_Mode: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event.CommandResponse: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event.Connection: @unchecked Sendable {}
-extension Arsdk_Connectivity_Event.ScanResult: @unchecked Sendable {}
-extension Arsdk_Connectivity_Capabilities: @unchecked Sendable {}
-extension Arsdk_Connectivity_AccessPointConfig: @unchecked Sendable {}
-extension Arsdk_Connectivity_AccessPointConfig.OneOf_ChannelSelectionType: @unchecked Sendable {}
-extension Arsdk_Connectivity_StationConfig: @unchecked Sendable {}
-extension Arsdk_Connectivity_IdleState: @unchecked Sendable {}
-extension Arsdk_Connectivity_AccessPointState: @unchecked Sendable {}
-extension Arsdk_Connectivity_StationState: @unchecked Sendable {}
-extension Arsdk_Connectivity_Channel: @unchecked Sendable {}
-extension Arsdk_Connectivity_Channel.OneOf_Type: @unchecked Sendable {}
-extension Arsdk_Connectivity_WifiChannel: @unchecked Sendable {}
-extension Arsdk_Connectivity_AuthorizedChannels: @unchecked Sendable {}
-extension Arsdk_Connectivity_AuthorizedChannel: @unchecked Sendable {}
-extension Arsdk_Connectivity_NetworkSecurityMode: @unchecked Sendable {}
-extension Arsdk_Connectivity_Network: @unchecked Sendable {}
-extension Arsdk_Connectivity_Bie: @unchecked Sendable {}
-extension Arsdk_Connectivity_EnvironmentValue: @unchecked Sendable {}
-extension Arsdk_Connectivity_AutomaticChannelSelection: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
+struct Arsdk_Connectivity_FrequencyHoppingList {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var txChannels: [Arsdk_Connectivity_Channel] = []
+
+  var rxChannels: [Arsdk_Connectivity_Channel] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Arsdk_Connectivity_BackupFreqs {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var rxFreqs: [UInt32] = []
+
+  var txFreqs: [UInt32] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Arsdk_Connectivity_ExtraInfos {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var realCountry: String = String()
+
+  var activeCellular: Bool = false
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.connectivity"
-
-extension Arsdk_Connectivity_CommandStatus: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "COMMAND_STATUS_OK"),
-    1: .same(proto: "COMMAND_STATUS_BUSY"),
-    2: .same(proto: "COMMAND_STATUS_NOT_ALLOWED"),
-    3: .same(proto: "COMMAND_STATUS_ALREADY"),
-  ]
-}
 
 extension Arsdk_Connectivity_ConnectionStatus: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -1381,6 +1566,8 @@ extension Arsdk_Connectivity_EncryptionType: SwiftProtobuf._ProtoNameProviding {
     2: .same(proto: "ENCRYPTION_TYPE_WPA"),
     3: .same(proto: "ENCRYPTION_TYPE_WPA2"),
     4: .same(proto: "ENCRYPTION_TYPE_WPA3"),
+    5: .same(proto: "ENCRYPTION_TYPE_AES_128"),
+    6: .same(proto: "ENCRYPTION_TYPE_AES_256"),
   ]
 }
 
@@ -1402,6 +1589,7 @@ extension Arsdk_Connectivity_Mode: SwiftProtobuf._ProtoNameProviding {
 extension Arsdk_Connectivity_RadioType: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "RADIO_TYPE_WIFI"),
+    1: .same(proto: "RADIO_TYPE_MARS"),
   ]
 }
 
@@ -1420,10 +1608,23 @@ extension Arsdk_Connectivity_SystemState: SwiftProtobuf._ProtoNameProviding {
   ]
 }
 
-extension Arsdk_Connectivity_WifiBand: SwiftProtobuf._ProtoNameProviding {
+extension Arsdk_Connectivity_Band: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    0: .same(proto: "WIFI_BAND_2_4_GHZ"),
-    1: .same(proto: "WIFI_BAND_5_GHZ"),
+    0: .same(proto: "BAND_2_4_GHZ"),
+    1: .same(proto: "BAND_5_0_GHZ"),
+    2: .same(proto: "BAND_1_6_GHZ"),
+    3: .same(proto: "BAND_1_8_GHZ"),
+    4: .same(proto: "BAND_2_0_GHZ"),
+    5: .same(proto: "BAND_2_2_GHZ"),
+    6: .same(proto: "BAND_2_3_GHZ"),
+    7: .same(proto: "BAND_2_5_GHZ"),
+    8: .same(proto: "BAND_3_5_GHZ"),
+    9: .same(proto: "BAND_4_5_GHZ"),
+    10: .same(proto: "BAND_1_85_GHZ"),
+    11: .same(proto: "BAND_2_1_GHZ"),
+    12: .same(proto: "BAND_2_7_GHZ"),
+    13: .same(proto: "BAND_3_8_GHZ"),
+    14: .same(proto: "BAND_5_0_LOW_GHZ"),
   ]
 }
 
@@ -1588,6 +1789,7 @@ extension Arsdk_Connectivity_Command.GetState: SwiftProtobuf.Message, SwiftProto
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "radio_id"),
     2: .standard(proto: "include_default_capabilities"),
+    3: .standard(proto: "supports_packed_channels"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1598,6 +1800,7 @@ extension Arsdk_Connectivity_Command.GetState: SwiftProtobuf.Message, SwiftProto
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularUInt32Field(value: &self.radioID) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.includeDefaultCapabilities) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.supportsPackedChannels) }()
       default: break
       }
     }
@@ -1610,12 +1813,16 @@ extension Arsdk_Connectivity_Command.GetState: SwiftProtobuf.Message, SwiftProto
     if self.includeDefaultCapabilities != false {
       try visitor.visitSingularBoolField(value: self.includeDefaultCapabilities, fieldNumber: 2)
     }
+    if self.supportsPackedChannels != false {
+      try visitor.visitSingularBoolField(value: self.supportsPackedChannels, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Connectivity_Command.GetState, rhs: Arsdk_Connectivity_Command.GetState) -> Bool {
     if lhs.radioID != rhs.radioID {return false}
     if lhs.includeDefaultCapabilities != rhs.includeDefaultCapabilities {return false}
+    if lhs.supportsPackedChannels != rhs.supportsPackedChannels {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1772,7 +1979,6 @@ extension Arsdk_Connectivity_Event: SwiftProtobuf.Message, SwiftProtobuf._Messag
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .standard(proto: "radio_list"),
     17: .same(proto: "state"),
-    18: .standard(proto: "command_response"),
     19: .same(proto: "connection"),
     20: .standard(proto: "scan_result"),
   ]
@@ -1807,19 +2013,6 @@ extension Arsdk_Connectivity_Event: SwiftProtobuf.Message, SwiftProtobuf._Messag
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.id = .state(v)
-        }
-      }()
-      case 18: try {
-        var v: Arsdk_Connectivity_Event.CommandResponse?
-        var hadOneofValue = false
-        if let current = self.id {
-          hadOneofValue = true
-          if case .commandResponse(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.id = .commandResponse(v)
         }
       }()
       case 19: try {
@@ -1866,10 +2059,6 @@ extension Arsdk_Connectivity_Event: SwiftProtobuf.Message, SwiftProtobuf._Messag
     case .state?: try {
       guard case .state(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
-    }()
-    case .commandResponse?: try {
-      guard case .commandResponse(let v)? = self.id else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
     }()
     case .connection?: try {
       guard case .connection(let v)? = self.id else { preconditionFailure() }
@@ -1935,6 +2124,7 @@ extension Arsdk_Connectivity_Event.State: SwiftProtobuf.Message, SwiftProtobuf._
     7: .same(proto: "station"),
     8: .same(proto: "channel"),
     9: .standard(proto: "authorized_channels"),
+    11: .standard(proto: "authorized_packed_channels"),
     10: .same(proto: "rssi"),
   ]
 
@@ -1945,7 +2135,7 @@ extension Arsdk_Connectivity_Event.State: SwiftProtobuf.Message, SwiftProtobuf._
     var _stationConfig: Arsdk_Connectivity_StationConfig? = nil
     var _mode: Arsdk_Connectivity_Event.State.OneOf_Mode?
     var _channel: Arsdk_Connectivity_Channel? = nil
-    var _authorizedChannels: Arsdk_Connectivity_AuthorizedChannels? = nil
+    var _authorizedChannelsType: Arsdk_Connectivity_Event.State.OneOf_AuthorizedChannelsType?
     var _rssi: SwiftProtobuf.Google_Protobuf_Int32Value? = nil
 
     static let defaultInstance = _StorageClass()
@@ -1959,7 +2149,7 @@ extension Arsdk_Connectivity_Event.State: SwiftProtobuf.Message, SwiftProtobuf._
       _stationConfig = source._stationConfig
       _mode = source._mode
       _channel = source._channel
-      _authorizedChannels = source._authorizedChannels
+      _authorizedChannelsType = source._authorizedChannelsType
       _rssi = source._rssi
     }
   }
@@ -2023,8 +2213,33 @@ extension Arsdk_Connectivity_Event.State: SwiftProtobuf.Message, SwiftProtobuf._
           }
         }()
         case 8: try { try decoder.decodeSingularMessageField(value: &_storage._channel) }()
-        case 9: try { try decoder.decodeSingularMessageField(value: &_storage._authorizedChannels) }()
+        case 9: try {
+          var v: Arsdk_Connectivity_AuthorizedChannels?
+          var hadOneofValue = false
+          if let current = _storage._authorizedChannelsType {
+            hadOneofValue = true
+            if case .authorizedChannels(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._authorizedChannelsType = .authorizedChannels(v)
+          }
+        }()
         case 10: try { try decoder.decodeSingularMessageField(value: &_storage._rssi) }()
+        case 11: try {
+          var v: Arsdk_Connectivity_AuthorizedPackedChannels?
+          var hadOneofValue = false
+          if let current = _storage._authorizedChannelsType {
+            hadOneofValue = true
+            if case .authorizedPackedChannels(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._authorizedChannelsType = .authorizedPackedChannels(v)
+          }
+        }()
         default: break
         }
       }
@@ -2067,11 +2282,14 @@ extension Arsdk_Connectivity_Event.State: SwiftProtobuf.Message, SwiftProtobuf._
       try { if let v = _storage._channel {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
       } }()
-      try { if let v = _storage._authorizedChannels {
+      try { if case .authorizedChannels(let v)? = _storage._authorizedChannelsType {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
       } }()
       try { if let v = _storage._rssi {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+      } }()
+      try { if case .authorizedPackedChannels(let v)? = _storage._authorizedChannelsType {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
       } }()
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -2088,50 +2306,12 @@ extension Arsdk_Connectivity_Event.State: SwiftProtobuf.Message, SwiftProtobuf._
         if _storage._stationConfig != rhs_storage._stationConfig {return false}
         if _storage._mode != rhs_storage._mode {return false}
         if _storage._channel != rhs_storage._channel {return false}
-        if _storage._authorizedChannels != rhs_storage._authorizedChannels {return false}
+        if _storage._authorizedChannelsType != rhs_storage._authorizedChannelsType {return false}
         if _storage._rssi != rhs_storage._rssi {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Arsdk_Connectivity_Event.CommandResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = Arsdk_Connectivity_Event.protoMessageName + ".CommandResponse"
-  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "radio_id"),
-    2: .same(proto: "status"),
-  ]
-
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.radioID) }()
-      case 2: try { try decoder.decodeSingularEnumField(value: &self.status) }()
-      default: break
-      }
-    }
-  }
-
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.radioID != 0 {
-      try visitor.visitSingularUInt32Field(value: self.radioID, fieldNumber: 1)
-    }
-    if self.status != .ok {
-      try visitor.visitSingularEnumField(value: self.status, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  static func ==(lhs: Arsdk_Connectivity_Event.CommandResponse, rhs: Arsdk_Connectivity_Event.CommandResponse) -> Bool {
-    if lhs.radioID != rhs.radioID {return false}
-    if lhs.status != rhs.status {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2216,6 +2396,7 @@ extension Arsdk_Connectivity_Event.ScanResult: SwiftProtobuf.Message, SwiftProto
 extension Arsdk_Connectivity_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Capabilities"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "model"),
     2: .standard(proto: "supported_modes"),
     3: .standard(proto: "supported_encryption_types"),
     4: .standard(proto: "supported_countries"),
@@ -2227,6 +2408,7 @@ extension Arsdk_Connectivity_Capabilities: SwiftProtobuf.Message, SwiftProtobuf.
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.model) }()
       case 2: try { try decoder.decodeRepeatedEnumField(value: &self.supportedModes) }()
       case 3: try { try decoder.decodeRepeatedEnumField(value: &self.supportedEncryptionTypes) }()
       case 4: try { try decoder.decodeRepeatedStringField(value: &self.supportedCountries) }()
@@ -2236,6 +2418,9 @@ extension Arsdk_Connectivity_Capabilities: SwiftProtobuf.Message, SwiftProtobuf.
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.model.isEmpty {
+      try visitor.visitSingularStringField(value: self.model, fieldNumber: 1)
+    }
     if !self.supportedModes.isEmpty {
       try visitor.visitPackedEnumField(value: self.supportedModes, fieldNumber: 2)
     }
@@ -2249,6 +2434,7 @@ extension Arsdk_Connectivity_Capabilities: SwiftProtobuf.Message, SwiftProtobuf.
   }
 
   static func ==(lhs: Arsdk_Connectivity_Capabilities, rhs: Arsdk_Connectivity_Capabilities) -> Bool {
+    if lhs.model != rhs.model {return false}
     if lhs.supportedModes != rhs.supportedModes {return false}
     if lhs.supportedEncryptionTypes != rhs.supportedEncryptionTypes {return false}
     if lhs.supportedCountries != rhs.supportedCountries {return false}
@@ -2268,6 +2454,9 @@ extension Arsdk_Connectivity_AccessPointConfig: SwiftProtobuf.Message, SwiftProt
     6: .same(proto: "environment"),
     7: .standard(proto: "manual_channel"),
     8: .standard(proto: "automatic_channel"),
+    9: .standard(proto: "frequency_hopping_list"),
+    10: .standard(proto: "backup_freqs"),
+    11: .standard(proto: "extra_infos"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2308,6 +2497,21 @@ extension Arsdk_Connectivity_AccessPointConfig: SwiftProtobuf.Message, SwiftProt
           self.channelSelectionType = .automaticChannel(v)
         }
       }()
+      case 9: try {
+        var v: Arsdk_Connectivity_FrequencyHoppingList?
+        var hadOneofValue = false
+        if let current = self.channelSelectionType {
+          hadOneofValue = true
+          if case .frequencyHoppingList(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.channelSelectionType = .frequencyHoppingList(v)
+        }
+      }()
+      case 10: try { try decoder.decodeSingularMessageField(value: &self._backupFreqs) }()
+      case 11: try { try decoder.decodeSingularMessageField(value: &self._extraInfos) }()
       default: break
       }
     }
@@ -2345,8 +2549,18 @@ extension Arsdk_Connectivity_AccessPointConfig: SwiftProtobuf.Message, SwiftProt
       guard case .automaticChannel(let v)? = self.channelSelectionType else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
     }()
+    case .frequencyHoppingList?: try {
+      guard case .frequencyHoppingList(let v)? = self.channelSelectionType else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    }()
     case nil: break
     }
+    try { if let v = self._backupFreqs {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    } }()
+    try { if let v = self._extraInfos {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2358,6 +2572,8 @@ extension Arsdk_Connectivity_AccessPointConfig: SwiftProtobuf.Message, SwiftProt
     if lhs._country != rhs._country {return false}
     if lhs._environment != rhs._environment {return false}
     if lhs.channelSelectionType != rhs.channelSelectionType {return false}
+    if lhs._backupFreqs != rhs._backupFreqs {return false}
+    if lhs._extraInfos != rhs._extraInfos {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2372,6 +2588,11 @@ extension Arsdk_Connectivity_StationConfig: SwiftProtobuf.Message, SwiftProtobuf
     4: .standard(proto: "hw_addr"),
     5: .same(proto: "country"),
     6: .same(proto: "environment"),
+    7: .standard(proto: "manual_channel"),
+    8: .standard(proto: "automatic_channel"),
+    9: .standard(proto: "frequency_hopping_list"),
+    10: .standard(proto: "backup_freqs"),
+    11: .standard(proto: "extra_infos"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2386,6 +2607,47 @@ extension Arsdk_Connectivity_StationConfig: SwiftProtobuf.Message, SwiftProtobuf
       case 4: try { try decoder.decodeSingularMessageField(value: &self._hwAddr) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._country) }()
       case 6: try { try decoder.decodeSingularMessageField(value: &self._environment) }()
+      case 7: try {
+        var v: Arsdk_Connectivity_Channel?
+        var hadOneofValue = false
+        if let current = self.channelSelectionType {
+          hadOneofValue = true
+          if case .manualChannel(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.channelSelectionType = .manualChannel(v)
+        }
+      }()
+      case 8: try {
+        var v: Arsdk_Connectivity_AutomaticChannelSelection?
+        var hadOneofValue = false
+        if let current = self.channelSelectionType {
+          hadOneofValue = true
+          if case .automaticChannel(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.channelSelectionType = .automaticChannel(v)
+        }
+      }()
+      case 9: try {
+        var v: Arsdk_Connectivity_FrequencyHoppingList?
+        var hadOneofValue = false
+        if let current = self.channelSelectionType {
+          hadOneofValue = true
+          if case .frequencyHoppingList(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.channelSelectionType = .frequencyHoppingList(v)
+        }
+      }()
+      case 10: try { try decoder.decodeSingularMessageField(value: &self._backupFreqs) }()
+      case 11: try { try decoder.decodeSingularMessageField(value: &self._extraInfos) }()
       default: break
       }
     }
@@ -2414,6 +2676,27 @@ extension Arsdk_Connectivity_StationConfig: SwiftProtobuf.Message, SwiftProtobuf
     try { if let v = self._environment {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
     } }()
+    switch self.channelSelectionType {
+    case .manualChannel?: try {
+      guard case .manualChannel(let v)? = self.channelSelectionType else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .automaticChannel?: try {
+      guard case .automaticChannel(let v)? = self.channelSelectionType else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
+    case .frequencyHoppingList?: try {
+      guard case .frequencyHoppingList(let v)? = self.channelSelectionType else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    }()
+    case nil: break
+    }
+    try { if let v = self._backupFreqs {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    } }()
+    try { if let v = self._extraInfos {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2424,6 +2707,9 @@ extension Arsdk_Connectivity_StationConfig: SwiftProtobuf.Message, SwiftProtobuf
     if lhs._hwAddr != rhs._hwAddr {return false}
     if lhs._country != rhs._country {return false}
     if lhs._environment != rhs._environment {return false}
+    if lhs.channelSelectionType != rhs.channelSelectionType {return false}
+    if lhs._backupFreqs != rhs._backupFreqs {return false}
+    if lhs._extraInfos != rhs._extraInfos {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2521,7 +2807,7 @@ extension Arsdk_Connectivity_StationState: SwiftProtobuf.Message, SwiftProtobuf.
 extension Arsdk_Connectivity_Channel: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Channel"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "wifi_channel"),
+    1: .standard(proto: "radio_channel"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2531,16 +2817,16 @@ extension Arsdk_Connectivity_Channel: SwiftProtobuf.Message, SwiftProtobuf._Mess
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try {
-        var v: Arsdk_Connectivity_WifiChannel?
+        var v: Arsdk_Connectivity_RadioChannel?
         var hadOneofValue = false
         if let current = self.type {
           hadOneofValue = true
-          if case .wifiChannel(let m) = current {v = m}
+          if case .radioChannel(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.type = .wifiChannel(v)
+          self.type = .radioChannel(v)
         }
       }()
       default: break
@@ -2553,7 +2839,7 @@ extension Arsdk_Connectivity_Channel: SwiftProtobuf.Message, SwiftProtobuf._Mess
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if case .wifiChannel(let v)? = self.type {
+    try { if case .radioChannel(let v)? = self.type {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
     try unknownFields.traverse(visitor: &visitor)
@@ -2566,11 +2852,11 @@ extension Arsdk_Connectivity_Channel: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Arsdk_Connectivity_WifiChannel: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".WifiChannel"
+extension Arsdk_Connectivity_RadioChannel: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".RadioChannel"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "band"),
-    2: .same(proto: "channel"),
+    2: .same(proto: "id"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2580,25 +2866,25 @@ extension Arsdk_Connectivity_WifiChannel: SwiftProtobuf.Message, SwiftProtobuf._
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularEnumField(value: &self.band) }()
-      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.channel) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.id) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.band != .wifiBand24Ghz {
+    if self.band != .band24Ghz {
       try visitor.visitSingularEnumField(value: self.band, fieldNumber: 1)
     }
-    if self.channel != 0 {
-      try visitor.visitSingularUInt32Field(value: self.channel, fieldNumber: 2)
+    if self.id != 0 {
+      try visitor.visitSingularUInt32Field(value: self.id, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Arsdk_Connectivity_WifiChannel, rhs: Arsdk_Connectivity_WifiChannel) -> Bool {
+  static func ==(lhs: Arsdk_Connectivity_RadioChannel, rhs: Arsdk_Connectivity_RadioChannel) -> Bool {
     if lhs.band != rhs.band {return false}
-    if lhs.channel != rhs.channel {return false}
+    if lhs.id != rhs.id {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2636,11 +2922,43 @@ extension Arsdk_Connectivity_AuthorizedChannels: SwiftProtobuf.Message, SwiftPro
   }
 }
 
-extension Arsdk_Connectivity_AuthorizedChannel: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".AuthorizedChannel"
+extension Arsdk_Connectivity_AuthorizedPackedChannels: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".AuthorizedPackedChannels"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "channels"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.channels) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.channels.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.channels, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Connectivity_AuthorizedPackedChannels, rhs: Arsdk_Connectivity_AuthorizedPackedChannels) -> Bool {
+    if lhs.channels != rhs.channels {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Connectivity_ChannelDescriptor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ChannelDescriptor"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "channel"),
-    2: .same(proto: "environment"),
+    3: .same(proto: "frequency"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2650,7 +2968,7 @@ extension Arsdk_Connectivity_AuthorizedChannel: SwiftProtobuf.Message, SwiftProt
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._channel) }()
-      case 2: try { try decoder.decodeSingularEnumField(value: &self.environment) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.frequency) }()
       default: break
       }
     }
@@ -2664,15 +2982,77 @@ extension Arsdk_Connectivity_AuthorizedChannel: SwiftProtobuf.Message, SwiftProt
     try { if let v = self._channel {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
-    if self.environment != .indoor {
-      try visitor.visitSingularEnumField(value: self.environment, fieldNumber: 2)
+    if self.frequency != 0 {
+      try visitor.visitSingularUInt32Field(value: self.frequency, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Arsdk_Connectivity_AuthorizedChannel, rhs: Arsdk_Connectivity_AuthorizedChannel) -> Bool {
+  static func ==(lhs: Arsdk_Connectivity_ChannelDescriptor, rhs: Arsdk_Connectivity_ChannelDescriptor) -> Bool {
     if lhs._channel != rhs._channel {return false}
-    if lhs.environment != rhs.environment {return false}
+    if lhs.frequency != rhs.frequency {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Connectivity_PackedChannelDescriptor: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".PackedChannelDescriptor"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "band"),
+    2: .standard(proto: "number_of_channels"),
+    3: .standard(proto: "first_id"),
+    4: .standard(proto: "id_step"),
+    5: .standard(proto: "first_frequency"),
+    6: .standard(proto: "frequency_step"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.band) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.numberOfChannels) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.firstID) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.idStep) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.firstFrequency) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.frequencyStep) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.band != .band24Ghz {
+      try visitor.visitSingularEnumField(value: self.band, fieldNumber: 1)
+    }
+    if self.numberOfChannels != 0 {
+      try visitor.visitSingularUInt32Field(value: self.numberOfChannels, fieldNumber: 2)
+    }
+    if self.firstID != 0 {
+      try visitor.visitSingularUInt32Field(value: self.firstID, fieldNumber: 3)
+    }
+    if self.idStep != 0 {
+      try visitor.visitSingularUInt32Field(value: self.idStep, fieldNumber: 4)
+    }
+    if self.firstFrequency != 0 {
+      try visitor.visitSingularUInt32Field(value: self.firstFrequency, fieldNumber: 5)
+    }
+    if self.frequencyStep != 0 {
+      try visitor.visitSingularUInt32Field(value: self.frequencyStep, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Connectivity_PackedChannelDescriptor, rhs: Arsdk_Connectivity_PackedChannelDescriptor) -> Bool {
+    if lhs.band != rhs.band {return false}
+    if lhs.numberOfChannels != rhs.numberOfChannels {return false}
+    if lhs.firstID != rhs.firstID {return false}
+    if lhs.idStep != rhs.idStep {return false}
+    if lhs.firstFrequency != rhs.firstFrequency {return false}
+    if lhs.frequencyStep != rhs.frequencyStep {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2867,6 +3247,120 @@ extension Arsdk_Connectivity_AutomaticChannelSelection: SwiftProtobuf.Message, S
 
   static func ==(lhs: Arsdk_Connectivity_AutomaticChannelSelection, rhs: Arsdk_Connectivity_AutomaticChannelSelection) -> Bool {
     if lhs.allowedBands != rhs.allowedBands {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Connectivity_FrequencyHoppingList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".FrequencyHoppingList"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "tx_channels"),
+    2: .standard(proto: "rx_channels"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.txChannels) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.rxChannels) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.txChannels.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.txChannels, fieldNumber: 1)
+    }
+    if !self.rxChannels.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.rxChannels, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Connectivity_FrequencyHoppingList, rhs: Arsdk_Connectivity_FrequencyHoppingList) -> Bool {
+    if lhs.txChannels != rhs.txChannels {return false}
+    if lhs.rxChannels != rhs.rxChannels {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Connectivity_BackupFreqs: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".BackupFreqs"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "rx_freqs"),
+    2: .standard(proto: "tx_freqs"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedUInt32Field(value: &self.rxFreqs) }()
+      case 2: try { try decoder.decodeRepeatedUInt32Field(value: &self.txFreqs) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.rxFreqs.isEmpty {
+      try visitor.visitPackedUInt32Field(value: self.rxFreqs, fieldNumber: 1)
+    }
+    if !self.txFreqs.isEmpty {
+      try visitor.visitPackedUInt32Field(value: self.txFreqs, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Connectivity_BackupFreqs, rhs: Arsdk_Connectivity_BackupFreqs) -> Bool {
+    if lhs.rxFreqs != rhs.rxFreqs {return false}
+    if lhs.txFreqs != rhs.txFreqs {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Connectivity_ExtraInfos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ExtraInfos"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "real_country"),
+    2: .standard(proto: "active_cellular"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.realCountry) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.activeCellular) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.realCountry.isEmpty {
+      try visitor.visitSingularStringField(value: self.realCountry, fieldNumber: 1)
+    }
+    if self.activeCellular != false {
+      try visitor.visitSingularBoolField(value: self.activeCellular, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Connectivity_ExtraInfos, rhs: Arsdk_Connectivity_ExtraInfos) -> Bool {
+    if lhs.realCountry != rhs.realCountry {return false}
+    if lhs.activeCellular != rhs.activeCellular {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

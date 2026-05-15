@@ -130,7 +130,7 @@ class WifiFeatureController: DeviceComponentController {
                     if let isoCountryCode = placemark?.isoCountryCode, isoCountryCode != self.country {
                         _ = self.sendSetCountryCommand(isoCountry: isoCountryCode)
                     }
-            }
+                }
         }
     }
 

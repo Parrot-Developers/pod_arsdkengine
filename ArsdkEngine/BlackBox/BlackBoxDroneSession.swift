@@ -229,8 +229,8 @@ extension BlackBoxDroneSession: ArsdkFeatureArdrone3PilotingstateCallback {
     func onNavigateHomeStateChanged(
         state: ArsdkFeatureArdrone3PilotingstateNavigatehomestatechangedState,
         reason: ArsdkFeatureArdrone3PilotingstateNavigatehomestatechangedReason) {
-        blackBox.add(event: BlackBoxEvent.returnHomeStateChange(state.rawValue))
-    }
+            blackBox.add(event: BlackBoxEvent.returnHomeStateChange(state.rawValue))
+        }
 
     func onPositionChanged(latitude: Double, longitude: Double, altitude: Double) {
         lastLocation = BlackBoxLocationData(latitude: latitude, longitude: longitude, altitude: altitude)
@@ -272,7 +272,7 @@ extension BlackBoxDroneSession: ArsdkFeatureArdrone3SettingsstateCallback {
 extension BlackBoxDroneSession: ArsdkFeatureBatteryCallback {
     func onAlert(alert: ArsdkFeatureBatteryAlert, level: ArsdkFeatureBatteryAlertLevel, listFlagsBitField: UInt) {
         if !ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) &&
-           !ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) &&
+            !ArsdkFeatureGenericListFlagsBitField.isSet(.remove, inBitField: listFlagsBitField) &&
             level != ArsdkFeatureBatteryAlertLevel.none {
             blackBox.add(event: BlackBoxEvent.batteryAlert(critical: level == ArsdkFeatureBatteryAlertLevel.critical,
                                                            type: alert.rawValue))
@@ -305,8 +305,8 @@ extension BlackBoxDroneSession: ArsdkFeatureCommonMavlinkstateCallback {
     func onMavlinkFilePlayingStateChanged(
         state: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedState,
         filepath: String, type: ArsdkFeatureCommonMavlinkstateMavlinkfileplayingstatechangedType) {
-        blackBox.add(event: BlackBoxEvent.flightPlanStateChange(state: state.rawValue))
-    }
+            blackBox.add(event: BlackBoxEvent.flightPlanStateChange(state: state.rawValue))
+        }
 }
 extension BlackBoxDroneSession: ArsdkFeatureCommonRunstateCallback {
     func onRunIdChanged(runid: String) {
@@ -322,8 +322,8 @@ extension BlackBoxDroneSession: ArsdkFeatureFollowMeCallback {
     func onState(
         mode: ArsdkFeatureFollowMeMode, behavior: ArsdkFeatureFollowMeBehavior,
         animation: ArsdkFeatureFollowMeAnimation, animationAvailableBitField: UInt) {
-        blackBox.add(event: BlackBoxEvent.followMeModeChange(mode: mode.rawValue))
-    }
+            blackBox.add(event: BlackBoxEvent.followMeModeChange(mode: mode.rawValue))
+        }
 }
 
 extension BlackBoxDroneSession: ArsdkFeatureMotorsCallback {

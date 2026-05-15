@@ -43,8 +43,7 @@ class CameraFeatureAntiflicker: AntiflickerController {
             ULog.w(.cameraTag, "Cannot send auto antiflicker mode, drone does not support auto mode")
             return false
         }
-        sendCommand(ArsdkFeatureCamera.setAntiflickerModeEncoder(mode: mode.arsdkValue!))
-        return true
+        return sendCommand(ArsdkFeatureCamera.setAntiflickerModeEncoder(mode: mode.arsdkValue!))
     }
 
     /// A command has been received

@@ -34,7 +34,7 @@ import GroundSdk
 class HttpFCRDownloaderDelegate: ArsdkFlightCameraRecordDownloaderDelegate {
 
     /// Device controller.
-    private let deviceController: DeviceController
+    private unowned let deviceController: DeviceController
 
     /// Flight camera record storage utility.
     private let storage: FlightCameraRecordStorageCore
@@ -174,17 +174,17 @@ class HttpFCRDownloaderDelegate: ArsdkFlightCameraRecordDownloaderDelegate {
         if let flightCameraRecord = pendingDownloads.first {
             currentRequest = flightCameraRecordApi?.downloadFlightCameraRecord(
                 flightCameraRecord, toDirectory: storage.workDir, deviceUid: deviceUid) { fileUrl in
-                if let fileUrl = fileUrl {
-                    self.deleteFlightCameraRecordAndDownloadNext(flightCameraRecord: flightCameraRecord,
-                                                                 fileUrl: fileUrl)
-                } else {
-                    // even if the download failed, process next report
-                    if !self.pendingDownloads.isEmpty {
-                        self.pendingDownloads.removeFirst()
+                    if let fileUrl = fileUrl {
+                        self.deleteFlightCameraRecordAndDownloadNext(flightCameraRecord: flightCameraRecord,
+                                                                     fileUrl: fileUrl)
+                    } else {
+                        // even if the download failed, process next report
+                        if !self.pendingDownloads.isEmpty {
+                            self.pendingDownloads.removeFirst()
+                        }
+                        self.downloadNextCameraRecord()
                     }
-                    self.downloadNextCameraRecord()
                 }
-            }
         } else {
             if isCanceled {
                 self.downloader?.update(completionStatus: .interrupted)
@@ -204,21 +204,21 @@ class HttpFCRDownloaderDelegate: ArsdkFlightCameraRecordDownloaderDelegate {
     ///   - fileUrl: file url
     private func deleteFlightCameraRecordAndDownloadNext(
         flightCameraRecord: FlightCameraRecordRestApi.FlightCameraRecord, fileUrl: URL) {
-        // delete the distant report
-        currentRequest = flightCameraRecordApi?.deleteFlightCameraRecord(flightCameraRecord) { _ in
-            self.downloadCount += 1
-            self.downloader?.update(downloadedCount: self.downloadCount).notifyUpdated()
-            self.storage.notifyFlightCameraRecordReady(flightCameraRecordUrl: URL(fileURLWithPath: fileUrl.path))
-            GroundSdkCore.logEvent(message: "EVT:LOGS;event='download';source='drone';" +
-                "file='\(fileUrl.lastPathComponent)'")
-            // even if the deletion failed, process next report
-            if !self.pendingDownloads.isEmpty {
-                self.pendingDownloads.removeFirst()
+            // delete the distant report
+            currentRequest = flightCameraRecordApi?.deleteFlightCameraRecord(flightCameraRecord) { _ in
+                self.downloadCount += 1
+                self.downloader?.update(downloadedCount: self.downloadCount).notifyUpdated()
+                self.storage.notifyFlightCameraRecordReady(flightCameraRecordUrl: URL(fileURLWithPath: fileUrl.path))
+                GroundSdkCore.logEvent(message: "EVT:LOGS;event='download';source='drone';" +
+                                       "file='\(fileUrl.lastPathComponent)'")
+                // even if the deletion failed, process next report
+                if !self.pendingDownloads.isEmpty {
+                    self.pendingDownloads.removeFirst()
+                }
+                // download next camera record
+                self.downloadNextCameraRecord()
             }
-            // download next camera record
-            self.downloadNextCameraRecord()
         }
-    }
 
     /// Queries available FCR files from the drone.
     /// In case some files are available, starts deleting them.

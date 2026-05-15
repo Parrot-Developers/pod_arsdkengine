@@ -20,8 +20,57 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-/// This is the entry point to send messages to SkyController
-/// or drones in the futur
+enum Arsdk_Led_LedType: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+
+  /// Standard led
+  case standard // = 0
+
+  /// Infrared led
+  case infrared // = 1
+
+  /// Led onboard the time of flight sensor
+  case tof // = 2
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .standard
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .standard
+    case 1: self = .infrared
+    case 2: self = .tof
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .standard: return 0
+    case .infrared: return 1
+    case .tof: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Led_LedType: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Led_LedType] = [
+    .standard,
+    .infrared,
+    .tof,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+/// This is the entry point to send messages to the device
 struct Arsdk_Led_Command {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -45,11 +94,29 @@ struct Arsdk_Led_Command {
     set {id = .setLuminosity(newValue)}
   }
 
+  var getState: Arsdk_Led_Command.GetState {
+    get {
+      if case .getState(let v)? = id {return v}
+      return Arsdk_Led_Command.GetState()
+    }
+    set {id = .getState(newValue)}
+  }
+
+  var activate: Arsdk_Led_Command.Activate {
+    get {
+      if case .activate(let v)? = id {return v}
+      return Arsdk_Led_Command.Activate()
+    }
+    set {id = .activate(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
     case getLuminosity(SwiftProtobuf.Google_Protobuf_Empty)
     case setLuminosity(Arsdk_Led_Command.SetLuminosity)
+    case getState(Arsdk_Led_Command.GetState)
+    case activate(Arsdk_Led_Command.Activate)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Led_Command.OneOf_ID, rhs: Arsdk_Led_Command.OneOf_ID) -> Bool {
@@ -63,6 +130,14 @@ struct Arsdk_Led_Command {
       }()
       case (.setLuminosity, .setLuminosity): return {
         guard case .setLuminosity(let l) = lhs, case .setLuminosity(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.getState, .getState): return {
+        guard case .getState(let l) = lhs, case .getState(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.activate, .activate): return {
+        guard case .activate(let l) = lhs, case .activate(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -84,11 +159,36 @@ struct Arsdk_Led_Command {
     init() {}
   }
 
+  struct GetState {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var includeDefaultCapabilities: Bool = false
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct Activate {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var ledType: Arsdk_Led_LedType = .standard
+
+    var enabled: Bool = false
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
   init() {}
 }
 
-/// This is the entry point to receive messages from SkyController
-/// and could be extended to drones in the future
+/// This is the entry point to receive messages from the device
 struct Arsdk_Led_Event {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -104,10 +204,19 @@ struct Arsdk_Led_Event {
     set {id = .luminosity(newValue)}
   }
 
+  var state: Arsdk_Led_Event.State {
+    get {
+      if case .state(let v)? = id {return v}
+      return Arsdk_Led_Event.State()
+    }
+    set {id = .state(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
     case luminosity(Arsdk_Led_Event.Luminosity)
+    case state(Arsdk_Led_Event.State)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Led_Event.OneOf_ID, rhs: Arsdk_Led_Event.OneOf_ID) -> Bool {
@@ -119,6 +228,11 @@ struct Arsdk_Led_Event {
         guard case .luminosity(let l) = lhs, case .luminosity(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.state, .state): return {
+        guard case .state(let l) = lhs, case .state(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
       }
     }
   #endif
@@ -137,27 +251,77 @@ struct Arsdk_Led_Event {
     init() {}
   }
 
+  struct State {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var defaultCapabilities: Arsdk_Led_Capabilities {
+      get {return _defaultCapabilities ?? Arsdk_Led_Capabilities()}
+      set {_defaultCapabilities = newValue}
+    }
+    /// Returns true if `defaultCapabilities` has been explicitly set.
+    var hasDefaultCapabilities: Bool {return self._defaultCapabilities != nil}
+    /// Clears the value of `defaultCapabilities`. Subsequent reads from it will return its default value.
+    mutating func clearDefaultCapabilities() {self._defaultCapabilities = nil}
+
+    var activationState: [Arsdk_Led_ActivationState] = []
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _defaultCapabilities: Arsdk_Led_Capabilities? = nil
+  }
+
   init() {}
 }
 
-#if swift(>=5.5) && canImport(_Concurrency)
-extension Arsdk_Led_Command: @unchecked Sendable {}
-extension Arsdk_Led_Command.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Led_Command.SetLuminosity: @unchecked Sendable {}
-extension Arsdk_Led_Event: @unchecked Sendable {}
-extension Arsdk_Led_Event.OneOf_ID: @unchecked Sendable {}
-extension Arsdk_Led_Event.Luminosity: @unchecked Sendable {}
-#endif  // swift(>=5.5) && canImport(_Concurrency)
+struct Arsdk_Led_Capabilities {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var supportedLedTypes: [Arsdk_Led_LedType] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Arsdk_Led_ActivationState {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var ledType: Arsdk_Led_LedType = .standard
+
+  var enabled: Bool = false
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.led"
+
+extension Arsdk_Led_LedType: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "LED_TYPE_STANDARD"),
+    1: .same(proto: "LED_TYPE_INFRARED"),
+    2: .same(proto: "LED_TYPE_TOF"),
+  ]
+}
 
 extension Arsdk_Led_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Command"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .standard(proto: "get_luminosity"),
     17: .standard(proto: "set_luminosity"),
+    18: .standard(proto: "get_state"),
+    19: .same(proto: "activate"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -192,6 +356,32 @@ extension Arsdk_Led_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
           self.id = .setLuminosity(v)
         }
       }()
+      case 18: try {
+        var v: Arsdk_Led_Command.GetState?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .getState(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .getState(v)
+        }
+      }()
+      case 19: try {
+        var v: Arsdk_Led_Command.Activate?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .activate(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .activate(v)
+        }
+      }()
       default: break
       }
     }
@@ -210,6 +400,14 @@ extension Arsdk_Led_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
     case .setLuminosity?: try {
       guard case .setLuminosity(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case .getState?: try {
+      guard case .getState(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+    }()
+    case .activate?: try {
+      guard case .activate(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
     }()
     case nil: break
     }
@@ -255,10 +453,81 @@ extension Arsdk_Led_Command.SetLuminosity: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
+extension Arsdk_Led_Command.GetState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Led_Command.protoMessageName + ".GetState"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "include_default_capabilities"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.includeDefaultCapabilities) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.includeDefaultCapabilities != false {
+      try visitor.visitSingularBoolField(value: self.includeDefaultCapabilities, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Led_Command.GetState, rhs: Arsdk_Led_Command.GetState) -> Bool {
+    if lhs.includeDefaultCapabilities != rhs.includeDefaultCapabilities {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Led_Command.Activate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Led_Command.protoMessageName + ".Activate"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "led_type"),
+    2: .same(proto: "enabled"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.ledType) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.ledType != .standard {
+      try visitor.visitSingularEnumField(value: self.ledType, fieldNumber: 1)
+    }
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Led_Command.Activate, rhs: Arsdk_Led_Command.Activate) -> Bool {
+    if lhs.ledType != rhs.ledType {return false}
+    if lhs.enabled != rhs.enabled {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Led_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Event"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .same(proto: "luminosity"),
+    17: .same(proto: "state"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -280,6 +549,19 @@ extension Arsdk_Led_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplemen
           self.id = .luminosity(v)
         }
       }()
+      case 17: try {
+        var v: Arsdk_Led_Event.State?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .state(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .state(v)
+        }
+      }()
       default: break
       }
     }
@@ -290,9 +572,17 @@ extension Arsdk_Led_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplemen
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if case .luminosity(let v)? = self.id {
+    switch self.id {
+    case .luminosity?: try {
+      guard case .luminosity(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
-    } }()
+    }()
+    case .state?: try {
+      guard case .state(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -330,6 +620,118 @@ extension Arsdk_Led_Event.Luminosity: SwiftProtobuf.Message, SwiftProtobuf._Mess
 
   static func ==(lhs: Arsdk_Led_Event.Luminosity, rhs: Arsdk_Led_Event.Luminosity) -> Bool {
     if lhs.value != rhs.value {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Led_Event.State: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Led_Event.protoMessageName + ".State"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "default_capabilities"),
+    2: .standard(proto: "activation_state"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._defaultCapabilities) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.activationState) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._defaultCapabilities {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    if !self.activationState.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.activationState, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Led_Event.State, rhs: Arsdk_Led_Event.State) -> Bool {
+    if lhs._defaultCapabilities != rhs._defaultCapabilities {return false}
+    if lhs.activationState != rhs.activationState {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Led_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".Capabilities"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "supported_led_types"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedEnumField(value: &self.supportedLedTypes) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.supportedLedTypes.isEmpty {
+      try visitor.visitPackedEnumField(value: self.supportedLedTypes, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Led_Capabilities, rhs: Arsdk_Led_Capabilities) -> Bool {
+    if lhs.supportedLedTypes != rhs.supportedLedTypes {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Led_ActivationState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ActivationState"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "led_type"),
+    2: .same(proto: "enabled"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.ledType) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.ledType != .standard {
+      try visitor.visitSingularEnumField(value: self.ledType, fieldNumber: 1)
+    }
+    if self.enabled != false {
+      try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Led_ActivationState, rhs: Arsdk_Led_ActivationState) -> Bool {
+    if lhs.ledType != rhs.ledType {return false}
+    if lhs.enabled != rhs.enabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -256,6 +256,8 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
     private let deviceStore: SettingsStore?
     /// Preset store for this piloting interface
     private var presetStore: SettingsStore?
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { deviceStore?.new == false }
 
     /// True when gimbal capabilities have been received
     private var capabilitiesReceived = false
@@ -324,7 +326,7 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
     private var controlEncoderRegistration: RegisteredNoAckCmdEncoder?
 
     // cache vars
-    private var expectedStabilization = [GimbalAxis: Bool]()// always contains info about supported axes
+    private var expectedStabilization = [GimbalAxis: Bool]() // always contains info about supported axes
     private var pendingStabilizationChange = Set<GimbalAxis>()
     private var absoluteAttitude = [GimbalAxis: Double]()
     private var relativeAttitude = [GimbalAxis: Double]()
@@ -345,15 +347,18 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
         super.init(deviceController: deviceController, model: .main)
         gimbal = GimbalCore(store: deviceController.device.peripheralStore, backend: self)
 
-        // load settings
-        if let deviceStore = deviceStore, let presetStore = presetStore, !deviceStore.new && !presetStore.new {
-            loadCapabilities()
-            loadPresets()
+        loadCapabilities()
+        loadPresets()
+        if isPersisted {
             gimbalMain.publish()
         }
     }
 
-    /// Drone is connected
+    override func willConnect() {
+        // remove settings stored while connecting; we will get new one on next connection
+        droneSettings.removeAll()
+    }
+
     override func didConnect() {
         storeNewPresets()
         applyPresets()
@@ -364,10 +369,10 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
         super.didConnect()
     }
 
-    /// Drone is disconnected
     override func didDisconnect() {
         // clear all non saved settings
         gimbalMain.update(lockedAxes: GimbalAxis.allCases)
+            .update(isStabilizationDegraded: false)
             .cancelSettingsRollback()
         GimbalAxis.allCases.forEach {
             gimbalMain.update(absoluteAttitude: nil, onAxis: $0)
@@ -392,16 +397,24 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
         gimbalMain.update(calibratableAxes: [])
 
         super.didDisconnect()
-        gimbalMain.notifyUpdated()
+
+        if isPersisted {
+            gimbal.publish()
+        } else {
+            gimbal.unpublish()
+        }
     }
 
-    /// Drone is about to be forgotten
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        gimbalMain.unpublish()
+    }
+
     override func willForget() {
         deviceStore?.clear()
         super.willForget()
     }
 
-    /// Preset has been changed
     override func presetDidChange() {
         super.presetDidChange()
         // reload preset store
@@ -436,7 +449,7 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
                 switch setting {
                 case .maxSpeeds:
                     if let currentMaxSpeeds: StorableDict<GimbalAxis, Double> = presetStore.read(key: setting.key),
-                        let maxSpeedRanges: [GimbalAxis: (min: Double, max: Double)] =
+                       let maxSpeedRanges: [GimbalAxis: (min: Double, max: Double)] =
                         deviceStore.readMultiRange(key: setting.key) {
 
                         maxSpeedRanges.forEach { axis, range in
@@ -505,7 +518,7 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
 
                     // send all values to override (if there is at least one value to override)
                     if !speedToOverride.isEmpty {
-                        sendCommand(ArsdkFeatureGimbal.setMaxSpeedEncoder(
+                        _ = sendCommand(ArsdkFeatureGimbal.setMaxSpeedEncoder(
                             gimbalId: 0,
                             yaw: Float(speedToOverride[.yaw] ?? maxSpeeds[.yaw]!.current),
                             pitch: Float(speedToOverride[.pitch] ?? maxSpeeds[.pitch]!.current),
@@ -521,23 +534,26 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
                     gimbalMain.supportedAxes.forEach { axis in
                         let storedStab = storedStabilizedAxes.storableValue.contains(axis)
                         let targetAttitude: Double
-                        if let bounds = storedStab ? absoluteAttitudeBounds[axis] : relativeAttitudeBounds[axis] {
-                            if let currentAttitude = storedStab ? absoluteAttitude[axis] : relativeAttitude[axis] {
-                                // if range and current attitude is known, the target attitude is the current
-                                // attitude clamped into the range
-                                targetAttitude = bounds.clamp(currentAttitude)
+
+                        if storedStab != expectedStabilization[axis] {
+                            if let bounds = storedStab ? absoluteAttitudeBounds[axis] : relativeAttitudeBounds[axis] {
+                                if let currentAttitude = storedStab ? absoluteAttitude[axis] : relativeAttitude[axis] {
+                                    // if range and current attitude is known, the target attitude is the current
+                                    // attitude clamped into the range
+                                    targetAttitude = bounds.clamp(currentAttitude)
+                                } else {
+                                    // if no current attitude, take the mid-range
+                                    targetAttitude = (bounds.upperBound + bounds.lowerBound) / 2.0
+                                }
                             } else {
-                                // if no current attitude, take the mid-range
-                                targetAttitude = (bounds.upperBound + bounds.lowerBound) / 2.0
+                                targetAttitude = 0
                             }
-                        } else {
-                            targetAttitude = 0
+
+                            pendingStabilizationChange.insert(axis)
+                            controlEncoder.set(stabilization: storedStab, targetAttitude: targetAttitude, onAxis: axis)
+                            expectedStabilization[axis] = storedStab
                         }
 
-                        controlEncoder.set(
-                            stabilization: storedStab,
-                            targetAttitude: targetAttitude,
-                            onAxis: axis)
                         gimbalMain.update(stabilization: storedStab, onAxis: axis)
                     }
                 } else {
@@ -613,7 +629,7 @@ extension GimbalFeatureGimbal: GimbalBackend {
     func resetAttitude() {
         if let gimbalId = gimbalId {
             controlEncoder.cancelControl()
-            sendCommand(ArsdkFeatureGimbal.resetOrientationEncoder(gimbalId: gimbalId))
+            _ = sendCommand(ArsdkFeatureGimbal.resetOrientationEncoder(gimbalId: gimbalId))
         }
     }
 
@@ -628,7 +644,6 @@ extension GimbalFeatureGimbal: GimbalBackend {
         presetStore?.write(key: SettingKey.stabilizedAxesKey, value: StorableArray(Array(stabilizedAxes))).commit()
 
         expectedStabilization[axis] = stabilization
-        pendingStabilizationChange.insert(axis)
 
         // Update the attitude bounds to take the correct frame of reference according to the new stab
         gimbalMain.update(axisBounds: stabilization ? absoluteAttitudeBounds[axis] : relativeAttitudeBounds[axis],
@@ -649,10 +664,8 @@ extension GimbalFeatureGimbal: GimbalBackend {
                 targetAttitude = 0
             }
 
-            controlEncoder.set(
-                stabilization: stabilization,
-                targetAttitude: targetAttitude,
-                onAxis: axis)
+            pendingStabilizationChange.insert(axis)
+            controlEncoder.set(stabilization: stabilization, targetAttitude: targetAttitude, onAxis: axis)
             return true
         } else {
             gimbalMain.update(stabilization: stabilization, onAxis: axis).notifyUpdated()
@@ -678,9 +691,8 @@ extension GimbalFeatureGimbal: GimbalBackend {
            let yaw = maxSpeeds[.yaw],
            let pitch = maxSpeeds[.pitch],
            let roll = maxSpeeds[.roll] {
-            sendCommand(ArsdkFeatureGimbal.setMaxSpeedEncoder(
+            return sendCommand(ArsdkFeatureGimbal.setMaxSpeedEncoder(
                 gimbalId: gimbalId, yaw: Float(yaw), pitch: Float(pitch), roll: Float(roll)))
-            return true
         } else {
             gimbalMain.update(maxSpeedSetting: (min: nil, value: maxSpeed, max: nil), onAxis: axis).notifyUpdated()
         }
@@ -692,7 +704,7 @@ extension GimbalFeatureGimbal: GimbalBackend {
             ULog.e(.gimbalTag, "Can't start offsets correction: gimbal ID undefined")
             return
         }
-        sendCommand(ArsdkFeatureGimbal.startOffsetsUpdateEncoder(gimbalId: gimbalId))
+        _ = sendCommand(ArsdkFeatureGimbal.startOffsetsUpdateEncoder(gimbalId: gimbalId))
     }
 
     func stopOffsetsCorrectionProcess() {
@@ -700,7 +712,7 @@ extension GimbalFeatureGimbal: GimbalBackend {
             ULog.e(.gimbalTag, "Can't stop offsets correction: gimbal ID undefined")
             return
         }
-        sendCommand(ArsdkFeatureGimbal.stopOffsetsUpdateEncoder(gimbalId: gimbalId))
+        _ = sendCommand(ArsdkFeatureGimbal.stopOffsetsUpdateEncoder(gimbalId: gimbalId))
     }
 
     func set(offsetCorrection: Double, onAxis axis: GimbalAxis) -> Bool {
@@ -719,9 +731,8 @@ extension GimbalFeatureGimbal: GimbalBackend {
            let yaw = offsetCorrections[.yaw],
            let pitch = offsetCorrections[.pitch],
            let roll = offsetCorrections[.roll] {
-            sendCommand(ArsdkFeatureGimbal.setOffsetsEncoder(
+            return sendCommand(ArsdkFeatureGimbal.setOffsetsEncoder(
                 gimbalId: gimbalId, yaw: Float(yaw), pitch: Float(pitch), roll: Float(roll)))
-            return true
         }
         return false
     }
@@ -745,77 +756,77 @@ extension GimbalFeatureGimbal {
         gimbalId: UInt, minYaw: Float, maxYaw: Float, minPitch: Float, maxPitch: Float, minRoll: Float,
         maxRoll: Float) {
 
-        guard minYaw <= maxYaw, minPitch <= maxPitch, minRoll <= maxRoll else {
-            ULog.w(.gimbalTag, "Relative attitude bounds are not correct, skipping this event.")
-            return
-        }
-
-        if gimbalId == self.gimbalId {
-            // store the values as they might be used later (when axis stabilization changes)
-            relativeAttitudeBounds[.yaw] = Double(minYaw)..<Double(maxYaw)
-            relativeAttitudeBounds[.pitch] = Double(minPitch)..<Double(maxPitch)
-            relativeAttitudeBounds[.roll] = Double(minRoll)..<Double(maxRoll)
-
-            // update the bounds on the axes that are not stabilized (i.e.: frame of reference is relative)
-            gimbalMain.stabilizationSettings.forEach { axis, stabSetting in
-                if !stabSetting.value {
-                    _ = gimbalMain.update(axisBounds: relativeAttitudeBounds[axis], onAxis: axis)
-                }
+            guard minYaw <= maxYaw, minPitch <= maxPitch, minRoll <= maxRoll else {
+                ULog.w(.gimbalTag, "Relative attitude bounds are not correct, skipping this event.")
+                return
             }
 
-            gimbalMain.notifyUpdated()
-        } else {
-            ULog.w(.gimbalTag, "Relative attitude bounds received for an unknown gimbal id=\(gimbalId)")
+            if gimbalId == self.gimbalId {
+                // store the values as they might be used later (when axis stabilization changes)
+                relativeAttitudeBounds[.yaw] = Double(minYaw)..<Double(maxYaw)
+                relativeAttitudeBounds[.pitch] = Double(minPitch)..<Double(maxPitch)
+                relativeAttitudeBounds[.roll] = Double(minRoll)..<Double(maxRoll)
+
+                // update the bounds on the axes that are not stabilized (i.e.: frame of reference is relative)
+                gimbalMain.stabilizationSettings.forEach { axis, stabSetting in
+                    if !stabSetting.value {
+                        _ = gimbalMain.update(axisBounds: relativeAttitudeBounds[axis], onAxis: axis)
+                    }
+                }
+
+                gimbalMain.notifyUpdated()
+            } else {
+                ULog.w(.gimbalTag, "Relative attitude bounds received for an unknown gimbal id=\(gimbalId)")
+            }
         }
-    }
 
     func onAbsoluteAttitudeBounds(
         gimbalId: UInt, minYaw: Float, maxYaw: Float, minPitch: Float, maxPitch: Float, minRoll: Float,
         maxRoll: Float) {
 
-        guard minYaw <= maxYaw, minPitch <= maxPitch, minRoll <= maxRoll else {
-            ULog.w(.gimbalTag, "Absolute attitude bounds are not correct, skipping this event.")
-            return
-        }
-
-        if gimbalId == self.gimbalId {
-            // store the values as they might be used later (when axis stabilization changes)
-            absoluteAttitudeBounds[.yaw] = Double(minYaw)..<Double(maxYaw)
-            absoluteAttitudeBounds[.pitch] = Double(minPitch)..<Double(maxPitch)
-            absoluteAttitudeBounds[.roll] = Double(minRoll)..<Double(maxRoll)
-
-            // update the bounds on the axes that are stabilized (i.e.: frame of reference is absolute)
-            gimbalMain.stabilizationSettings.forEach { axis, stabSetting in
-                if stabSetting.value {
-                    _ = gimbalMain.update(axisBounds: absoluteAttitudeBounds[axis], onAxis: axis)
-                }
+            guard minYaw <= maxYaw, minPitch <= maxPitch, minRoll <= maxRoll else {
+                ULog.w(.gimbalTag, "Absolute attitude bounds are not correct, skipping this event.")
+                return
             }
 
-            gimbalMain.notifyUpdated()
-        } else {
-            ULog.w(.gimbalTag, "Absolute attitude bounds received for an unknown gimbal id=\(gimbalId)")
+            if gimbalId == self.gimbalId {
+                // store the values as they might be used later (when axis stabilization changes)
+                absoluteAttitudeBounds[.yaw] = Double(minYaw)..<Double(maxYaw)
+                absoluteAttitudeBounds[.pitch] = Double(minPitch)..<Double(maxPitch)
+                absoluteAttitudeBounds[.roll] = Double(minRoll)..<Double(maxRoll)
+
+                // update the bounds on the axes that are stabilized (i.e.: frame of reference is absolute)
+                gimbalMain.stabilizationSettings.forEach { axis, stabSetting in
+                    if stabSetting.value {
+                        _ = gimbalMain.update(axisBounds: absoluteAttitudeBounds[axis], onAxis: axis)
+                    }
+                }
+
+                gimbalMain.notifyUpdated()
+            } else {
+                ULog.w(.gimbalTag, "Absolute attitude bounds received for an unknown gimbal id=\(gimbalId)")
+            }
         }
-    }
 
     func onMaxSpeed(
         gimbalId: UInt, minBoundYaw: Float, maxBoundYaw: Float, currentYaw: Float, minBoundPitch: Float,
         maxBoundPitch: Float, currentPitch: Float, minBoundRoll: Float, maxBoundRoll: Float, currentRoll: Float) {
 
-        guard minBoundYaw <= maxBoundYaw, minBoundPitch <= maxBoundPitch, minBoundRoll <= maxBoundRoll else {
-            ULog.w(.gimbalTag, "Max speed bounds are not correct, skipping this event.")
-            return
-        }
+            guard minBoundYaw <= maxBoundYaw, minBoundPitch <= maxBoundPitch, minBoundRoll <= maxBoundRoll else {
+                ULog.w(.gimbalTag, "Max speed bounds are not correct, skipping this event.")
+                return
+            }
 
-        if gimbalId == self.gimbalId {
-            settingDidChange(.maxSpeeds([
-                .yaw: (Double(minBoundYaw), Double(currentYaw), Double(maxBoundYaw)),
-                .pitch: (Double(minBoundPitch), Double(currentPitch), Double(maxBoundPitch)),
-                .roll: (Double(minBoundRoll), Double(currentRoll), Double(maxBoundRoll))
-            ]))
-        } else {
-            ULog.w(.gimbalTag, "Max speed received for an unknown gimbal id=\(gimbalId)")
+            if gimbalId == self.gimbalId {
+                settingDidChange(.maxSpeeds([
+                    .yaw: (Double(minBoundYaw), Double(currentYaw), Double(maxBoundYaw)),
+                    .pitch: (Double(minBoundPitch), Double(currentPitch), Double(maxBoundPitch)),
+                    .roll: (Double(minBoundRoll), Double(currentRoll), Double(maxBoundRoll))
+                ]))
+            } else {
+                ULog.w(.gimbalTag, "Max speed received for an unknown gimbal id=\(gimbalId)")
+            }
         }
-    }
 
     func onAttitude(
         gimbalId: UInt, yawFrameOfReference: ArsdkFeatureGimbalFrameOfReference,
@@ -824,89 +835,85 @@ extension GimbalFeatureGimbal {
         yawRelative: Float, pitchRelative: Float, rollRelative: Float,
         yawAbsolute: Float, pitchAbsolute: Float, rollAbsolute: Float) {
 
-        // This non-ack event may be received before the capabilities one. In this case just ignore it.
-        guard capabilitiesReceived else {
-            return
-        }
+            // This non-ack event may be received before the capabilities one. In this case just ignore it.
+            guard capabilitiesReceived else {
+                return
+            }
 
-        guard yawFrameOfReference != .sdkCoreUnknown && pitchFrameOfReference != .sdkCoreUnknown &&
-            rollFrameOfReference != .sdkCoreUnknown else {
+            guard yawFrameOfReference != .sdkCoreUnknown && pitchFrameOfReference != .sdkCoreUnknown &&
+                    rollFrameOfReference != .sdkCoreUnknown else {
                 ULog.w(.gimbalTag, "Unknown frame of reference, skipping this event.")
                 return
-        }
-        guard !yawRelative.isNaN, !pitchRelative.isNaN, !rollRelative.isNaN,
-            !yawAbsolute.isNaN, !pitchAbsolute.isNaN, !rollAbsolute.isNaN else {
+            }
+            guard !yawRelative.isNaN, !pitchRelative.isNaN, !rollRelative.isNaN,
+                  !yawAbsolute.isNaN, !pitchAbsolute.isNaN, !rollAbsolute.isNaN else {
                 ULog.w(.gimbalTag, "Invalid attitude values, skipping this event.")
                 return
-        }
-
-        if gimbalId == self.gimbalId {
-            // store internally the current attitude on each frame of reference
-            let decimal = 3
-            relativeAttitude[.yaw] = Double(yawRelative).roundedToDecimal(decimal)
-            relativeAttitude[.pitch] = Double(pitchRelative).roundedToDecimal(decimal)
-            relativeAttitude[.roll] = Double(rollRelative).roundedToDecimal( decimal)
-            absoluteAttitude[.yaw] = Double(yawAbsolute).roundedToDecimal(decimal)
-            absoluteAttitude[.pitch] = Double(pitchAbsolute).roundedToDecimal(decimal)
-            absoluteAttitude[.roll] = Double(rollAbsolute).roundedToDecimal(decimal)
-            let stabilizedAxes: [GimbalAxis: Bool] = [
-                .yaw: (yawFrameOfReference == .absolute),
-                .pitch: (pitchFrameOfReference == .absolute),
-                .roll: (rollFrameOfReference == .absolute)
-            ]
-
-            var settingHasChanged = false
-
-            if expectedStabilization.isEmpty {
-                expectedStabilization = stabilizedAxes.filter { gimbalMain.supportedAxes.contains($0.key) }
-
-                settingHasChanged = true
             }
 
-            // if it is the first attitude received, set the initial stabilization in the encoder
-            if !attitudeReceived {
-                controlEncoder.setInitialStabilizations(stabilizedAxes)
-                attitudeReceived = true
-            }
+            if gimbalId == self.gimbalId {
+                // store internally the current attitude on each frame of reference
+                let decimal = 3
+                relativeAttitude[.yaw] = Double(yawRelative).roundedToDecimal(decimal)
+                relativeAttitude[.pitch] = Double(pitchRelative).roundedToDecimal(decimal)
+                relativeAttitude[.roll] = Double(rollRelative).roundedToDecimal( decimal)
+                absoluteAttitude[.yaw] = Double(yawAbsolute).roundedToDecimal(decimal)
+                absoluteAttitude[.pitch] = Double(pitchAbsolute).roundedToDecimal(decimal)
+                absoluteAttitude[.roll] = Double(rollAbsolute).roundedToDecimal(decimal)
+                let stabilizedAxes: [GimbalAxis: Bool] = [
+                    .yaw: (yawFrameOfReference == .absolute),
+                    .pitch: (pitchFrameOfReference == .absolute),
+                    .roll: (rollFrameOfReference == .absolute)
+                ]
 
-            GimbalAxis.allCases.forEach { axis in
-                if gimbalMain.supportedAxes.contains(axis) {
-                    // update the stabilization information according to the frame of reference on each axis
-                    // if a change has been previously asked and it matches the desired stabilization
-                    // or if it has changed without being asked
-                    if pendingStabilizationChange.contains(axis) ==
-                        (expectedStabilization[axis] == stabilizedAxes[axis]) {
-                        // can force unwrap because we know that the axis is supported
-                        let isStabilized = stabilizedAxes[axis]!
-                        expectedStabilization[axis] = isStabilized
-                        pendingStabilizationChange.remove(axis)
-                        settingHasChanged = true
-                    }
+                var settingHasChanged = false
 
-                    // update the attitude bounds according to the frame reference that has been asked
-                    gimbalMain.update(
-                        axisBounds: expectedStabilization[axis]! ?
+                if !attitudeReceived {
+                    attitudeReceived = true
+                    // if it is the first attitude received, set the initial stabilization in the encoder
+                    controlEncoder.setInitialStabilizations(stabilizedAxes)
+                    expectedStabilization = stabilizedAxes.filter { gimbalMain.supportedAxes.contains($0.key) }
+                    settingHasChanged = true
+                }
+
+                GimbalAxis.allCases.forEach { axis in
+                    if gimbalMain.supportedAxes.contains(axis) {
+                        // update the stabilization information according to the frame of reference on each axis
+                        // if a change has been previously asked and it matches the desired stabilization
+                        // or if it has changed without being asked
+                        if pendingStabilizationChange.contains(axis) ==
+                            (expectedStabilization[axis] == stabilizedAxes[axis]) {
+                            // can force unwrap because we know that the axis is supported
+                            let isStabilized = stabilizedAxes[axis]!
+                            expectedStabilization[axis] = isStabilized
+                            pendingStabilizationChange.remove(axis)
+                            settingHasChanged = true
+                        }
+
+                        // update the attitude bounds according to the frame reference that has been asked
+                        gimbalMain.update(
+                            axisBounds: expectedStabilization[axis]! ?
                             absoluteAttitudeBounds[axis] : relativeAttitudeBounds[axis],
-                        onAxis: axis)
+                            onAxis: axis)
                         .update(
                             absoluteAttitude: absoluteAttitude[axis]!,
                             onAxis: axis)
                         .update(
                             relativeAttitude: relativeAttitude[axis]!,
                             onAxis: axis)
+                    }
                 }
-            }
 
-            if settingHasChanged {
-                settingDidChange(.stabilizedAxes(
-                    Set(expectedStabilization.filter { $1 && gimbalMain.supportedAxes.contains($0) }.keys)))
-            }
+                if settingHasChanged {
+                    settingDidChange(.stabilizedAxes(
+                        Set(expectedStabilization.filter { $1 && gimbalMain.supportedAxes.contains($0) }.keys)))
+                }
 
-            gimbalMain.notifyUpdated()
-        } else {
-            ULog.w(.gimbalTag, "Attitude received for an unknown gimbal id=\(gimbalId)")
+                gimbalMain.notifyUpdated()
+            } else {
+                ULog.w(.gimbalTag, "Attitude received for an unknown gimbal id=\(gimbalId)")
+            }
         }
-    }
 
     func onAxisLockState(gimbalId: UInt, lockedBitField: UInt) {
         if gimbalId == self.gimbalId {
@@ -920,49 +927,55 @@ extension GimbalFeatureGimbal {
         gimbalId: UInt, updateState: ArsdkFeatureGimbalState, minBoundYaw: Float, maxBoundYaw: Float, currentYaw: Float,
         minBoundPitch: Float, maxBoundPitch: Float, currentPitch: Float, minBoundRoll: Float, maxBoundRoll: Float,
         currentRoll: Float) {
-        guard minBoundYaw <= maxBoundYaw, minBoundPitch <= maxBoundPitch, minBoundRoll <= maxBoundRoll else {
-            ULog.w(.gimbalTag, "Offset bounds are not correct, skipping this event.")
-            return
-        }
-        if gimbalId == self.gimbalId {
-            if updateState == .active {
-                gimbalMain.update(offsetsCorrectionProcessStarted: true)
-                var calibratableAxes = Set<GimbalAxis>()
-                if minBoundYaw < maxBoundYaw {
-                    calibratableAxes.insert(.yaw)
-                }
-                if minBoundPitch < maxBoundPitch {
-                    calibratableAxes.insert(.pitch)
-                }
-                if  minBoundRoll < maxBoundRoll {
-                    calibratableAxes.insert(.roll)
-                }
-                gimbalMain.update(calibratableAxes: calibratableAxes)
-                // now that the calibratable axes have been set, the offsets can be set on the component
-                if calibratableAxes.contains(.yaw) {
-                    gimbalMain.update(
-                        calibrationOffset: (min: Double(minBoundYaw), value: Double(currentYaw),
-                                            max: Double(maxBoundYaw)),
-                        onAxis: .yaw)
-                }
-                if calibratableAxes.contains(.pitch) {
-                    gimbalMain.update(
-                        calibrationOffset: (min: Double(minBoundPitch), value: Double(currentPitch),
-                                            max: Double(maxBoundPitch)),
-                        onAxis: .pitch)
-                }
-                if  calibratableAxes.contains(.roll) {
-                    gimbalMain.update(
-                        calibrationOffset: (min: Double(minBoundRoll), value: Double(currentRoll),
-                                            max: Double(maxBoundRoll)),
-                        onAxis: .roll)
-                }
-            } else {
-                gimbalMain.update(offsetsCorrectionProcessStarted: false)
+            guard minBoundYaw <= maxBoundYaw, minBoundPitch <= maxBoundPitch, minBoundRoll <= maxBoundRoll else {
+                ULog.w(.gimbalTag, "Offset bounds are not correct, skipping this event.")
+                return
             }
-            gimbalMain.notifyUpdated()
-        } else {
-            ULog.w(.gimbalTag, "Offsets received for an unknown gimbal id=\(gimbalId)")
+            if gimbalId == self.gimbalId {
+                if updateState == .active {
+                    gimbalMain.update(offsetsCorrectionProcessStarted: true)
+                    var calibratableAxes = Set<GimbalAxis>()
+                    if minBoundYaw < maxBoundYaw {
+                        calibratableAxes.insert(.yaw)
+                    }
+                    if minBoundPitch < maxBoundPitch {
+                        calibratableAxes.insert(.pitch)
+                    }
+                    if  minBoundRoll < maxBoundRoll {
+                        calibratableAxes.insert(.roll)
+                    }
+                    gimbalMain.update(calibratableAxes: calibratableAxes)
+                    // now that the calibratable axes have been set, the offsets can be set on the component
+                    if calibratableAxes.contains(.yaw) {
+                        gimbalMain.update(
+                            calibrationOffset: (min: Double(minBoundYaw), value: Double(currentYaw),
+                                                max: Double(maxBoundYaw)),
+                            onAxis: .yaw)
+                    }
+                    if calibratableAxes.contains(.pitch) {
+                        gimbalMain.update(
+                            calibrationOffset: (min: Double(minBoundPitch), value: Double(currentPitch),
+                                                max: Double(maxBoundPitch)),
+                            onAxis: .pitch)
+                    }
+                    if  calibratableAxes.contains(.roll) {
+                        gimbalMain.update(
+                            calibrationOffset: (min: Double(minBoundRoll), value: Double(currentRoll),
+                                                max: Double(maxBoundRoll)),
+                            onAxis: .roll)
+                    }
+                } else {
+                    gimbalMain.update(offsetsCorrectionProcessStarted: false)
+                }
+                gimbalMain.notifyUpdated()
+            } else {
+                ULog.w(.gimbalTag, "Offsets received for an unknown gimbal id=\(gimbalId)")
+            }
+        }
+
+    func onStabilizationState(gimbalId: UInt, state: ArsdkFeatureGimbalState) {
+        if self.gimbalId == gimbalId {
+            gimbalMain.update(isStabilizationDegraded: state == .partial).notifyUpdated()
         }
     }
 }

@@ -22,6 +22,11 @@ protocol ArsdkCameraEventDecoderListener: AnyObject {
     /// - Parameter nextPhotoInterval: event to process
     func onNextPhotoInterval(_ nextPhotoInterval: Arsdk_Camera_Event.NextPhotoInterval)
 
+    /// Processes a `Arsdk_Camera_Event.WhiteBalance` event.
+    ///
+    /// - Parameter cameraWhiteBalance: event to process
+    func onCameraWhiteBalance(_ cameraWhiteBalance: Arsdk_Camera_Event.WhiteBalance)
+
     /// Processes a `Arsdk_Camera_Event.CameraList` event.
     ///
     /// - Parameter cameraList: event to process
@@ -41,6 +46,11 @@ protocol ArsdkCameraEventDecoderListener: AnyObject {
     ///
     /// - Parameter recording: event to process
     func onRecording(_ recording: Arsdk_Camera_Event.Recording)
+
+    /// Processes a `Arsdk_Camera_StreamCamera` event.
+    ///
+    /// - Parameter requestStreamCamera: event to process
+    func onRequestStreamCamera(_ requestStreamCamera: Arsdk_Camera_StreamCamera)
 }
 
 /// Decoder for arsdk.camera.Event events.
@@ -72,7 +82,7 @@ class ArsdkCameraEventDecoder: NSObject, ArsdkFeatureGenericCallback {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: true)
     }
 
-    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data!) {
+    func onCustomEvt(serviceId: UInt, msgNum: UInt, payload: Data) {
         processEvent(serviceId: serviceId, payload: payload, isNonAck: false)
     }
 
@@ -96,6 +106,8 @@ class ArsdkCameraEventDecoder: NSObject, ArsdkFeatureGenericCallback {
                 listener?.onZoomLevel(event)
             case .nextPhotoInterval(let event):
                 listener?.onNextPhotoInterval(event)
+            case .cameraWhiteBalance(let event):
+                listener?.onCameraWhiteBalance(event)
             case .cameraList(let event):
                 listener?.onCameraList(event)
             case .state(let event):
@@ -104,6 +116,8 @@ class ArsdkCameraEventDecoder: NSObject, ArsdkFeatureGenericCallback {
                 listener?.onPhoto(event)
             case .recording(let event):
                 listener?.onRecording(event)
+            case .requestStreamCamera(let event):
+                listener?.onRequestStreamCamera(event)
             case .none:
                 ULog.w(.tag, "Unknown Arsdk_Camera_Event, skipping this event")
             }
@@ -118,10 +132,12 @@ extension Arsdk_Camera_Event.OneOf_ID {
         case .cameraExposure: return 1
         case .zoomLevel: return 2
         case .nextPhotoInterval: return 3
+        case .cameraWhiteBalance: return 4
         case .cameraList: return 16
         case .state: return 17
         case .photo: return 18
         case .recording: return 19
+        case .requestStreamCamera: return 20
         }
     }
 }
@@ -165,6 +181,12 @@ extension Arsdk_Camera_Command.OneOf_ID {
         case .lockWhiteBalance: return 24
         case .setMediaMetadata: return 25
         case .resetZoom: return 26
+        case .zoomGotoPreset: return 27
+        case .setUserLfic: return 28
+        case .notifyStreamCamera: return 29
+        case .setThermalAlignmentOffsets: return 30
+        case .setThermalPalette: return 31
+        case .setThermalRendering: return 32
         }
     }
 }
@@ -186,6 +208,14 @@ extension Arsdk_Camera_Command.SetZoomTarget {
 }
 extension Arsdk_Camera_Command.ResetZoom {
     static var cameraIdFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Camera_Command.ZoomGotoPreset {
+    static var cameraIdFieldNumber: Int32 { 1 }
+    static var gotoPresetFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Camera_Command.SetUserLfic {
+    static var cameraIdFieldNumber: Int32 { 1 }
+    static var coordsFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Camera_Command.StartPhoto {
     static var cameraIdFieldNumber: Int32 { 1 }
@@ -212,6 +242,18 @@ extension Arsdk_Camera_Command.SetMediaMetadata {
     static var cameraIdFieldNumber: Int32 { 1 }
     static var metadataFieldNumber: Int32 { 2 }
 }
+extension Arsdk_Camera_Command.SetAlignmentOffsets {
+    static var cameraIdFieldNumber: Int32 { 1 }
+    static var alignmentOffsetsFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Camera_Command.SetThermalPalette {
+    static var cameraIdFieldNumber: Int32 { 1 }
+    static var paletteFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Camera_Command.SetThermalRendering {
+    static var cameraIdFieldNumber: Int32 { 1 }
+    static var renderingFieldNumber: Int32 { 2 }
+}
 extension Arsdk_Camera_Command {
     static var setZoomTargetFieldNumber: Int32 { 1 }
     static var listCamerasFieldNumber: Int32 { 16 }
@@ -225,6 +267,12 @@ extension Arsdk_Camera_Command {
     static var lockWhiteBalanceFieldNumber: Int32 { 24 }
     static var setMediaMetadataFieldNumber: Int32 { 25 }
     static var resetZoomFieldNumber: Int32 { 26 }
+    static var zoomGotoPresetFieldNumber: Int32 { 27 }
+    static var setUserLficFieldNumber: Int32 { 28 }
+    static var notifyStreamCameraFieldNumber: Int32 { 29 }
+    static var setThermalAlignmentOffsetsFieldNumber: Int32 { 30 }
+    static var setThermalPaletteFieldNumber: Int32 { 31 }
+    static var setThermalRenderingFieldNumber: Int32 { 32 }
 }
 extension Arsdk_Camera_Event.CameraList {
     static var camerasFieldNumber: Int32 { 1 }
@@ -249,9 +297,29 @@ extension Arsdk_Camera_Event.State.ExposureLock {
     static var supportedModesFieldNumber: Int32 { 1 }
     static var modeFieldNumber: Int32 { 2 }
 }
+extension Arsdk_Camera_Event.State.Zoom.Preset {
+    static var presetFieldNumber: Int32 { 1 }
+    static var valueFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Camera_Event.State.Zoom.CameraRange {
+    static var physCamFieldNumber: Int32 { 1 }
+    static var levelMinFieldNumber: Int32 { 2 }
+    static var levelMaxFieldNumber: Int32 { 3 }
+    static var highQualityLevelMaxFieldNumber: Int32 { 4 }
+    static var hfovMinFieldNumber: Int32 { 5 }
+    static var hfovMaxFieldNumber: Int32 { 6 }
+}
 extension Arsdk_Camera_Event.State.Zoom {
     static var zoomLevelMaxFieldNumber: Int32 { 1 }
     static var zoomHighQualityLevelMaxFieldNumber: Int32 { 2 }
+    static var presetsFieldNumber: Int32 { 3 }
+    static var camRangesFieldNumber: Int32 { 4 }
+}
+extension Arsdk_Camera_Event.State.EffectiveFramerate {
+    static var effectiveFramerateFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Camera_Event.State.UserLfic {
+    static var coordsFieldNumber: Int32 { 1 }
 }
 extension Arsdk_Camera_Event.State {
     static var cameraIdFieldNumber: Int32 { 1 }
@@ -266,6 +334,12 @@ extension Arsdk_Camera_Event.State {
     static var exposureLockFieldNumber: Int32 { 10 }
     static var zoomFieldNumber: Int32 { 11 }
     static var mediaMetadataFieldNumber: Int32 { 12 }
+    static var effectiveFramerateFieldNumber: Int32 { 13 }
+    static var userLficFieldNumber: Int32 { 14 }
+    static var thermalAlignmentOffsetsFieldNumber: Int32 { 15 }
+    static var thermalPaletteFieldNumber: Int32 { 16 }
+    static var thermalRenderingFieldNumber: Int32 { 17 }
+    static var zoomIsLockedFieldNumber: Int32 { 18 }
     var cameraIdSelected: Bool {
         get {
             return selectedFields[1] != nil
@@ -410,6 +484,78 @@ extension Arsdk_Camera_Event.State {
             }
         }
     }
+    var effectiveFramerateSelected: Bool {
+        get {
+            return selectedFields[13] != nil
+        }
+        set {
+            if newValue && selectedFields[13] == nil {
+                selectedFields[13] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[13] != nil {
+                selectedFields.removeValue(forKey: 13)
+            }
+        }
+    }
+    var userLficSelected: Bool {
+        get {
+            return selectedFields[14] != nil
+        }
+        set {
+            if newValue && selectedFields[14] == nil {
+                selectedFields[14] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[14] != nil {
+                selectedFields.removeValue(forKey: 14)
+            }
+        }
+    }
+    var thermalAlignmentOffsetsSelected: Bool {
+        get {
+            return selectedFields[15] != nil
+        }
+        set {
+            if newValue && selectedFields[15] == nil {
+                selectedFields[15] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[15] != nil {
+                selectedFields.removeValue(forKey: 15)
+            }
+        }
+    }
+    var thermalPaletteSelected: Bool {
+        get {
+            return selectedFields[16] != nil
+        }
+        set {
+            if newValue && selectedFields[16] == nil {
+                selectedFields[16] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[16] != nil {
+                selectedFields.removeValue(forKey: 16)
+            }
+        }
+    }
+    var thermalRenderingSelected: Bool {
+        get {
+            return selectedFields[17] != nil
+        }
+        set {
+            if newValue && selectedFields[17] == nil {
+                selectedFields[17] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[17] != nil {
+                selectedFields.removeValue(forKey: 17)
+            }
+        }
+    }
+    var zoomIsLockedSelected: Bool {
+        get {
+            return selectedFields[18] != nil
+        }
+        set {
+            if newValue && selectedFields[18] == nil {
+                selectedFields[18] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[18] != nil {
+                selectedFields.removeValue(forKey: 18)
+            }
+        }
+    }
 }
 extension Arsdk_Camera_Event.Exposure {
     static var cameraIdFieldNumber: Int32 { 1 }
@@ -420,11 +566,16 @@ extension Arsdk_Camera_Event.Exposure {
 extension Arsdk_Camera_Event.ZoomLevel {
     static var cameraIdFieldNumber: Int32 { 1 }
     static var levelFieldNumber: Int32 { 2 }
+    static var hfovFieldNumber: Int32 { 3 }
 }
 extension Arsdk_Camera_Event.NextPhotoInterval {
     static var cameraIdFieldNumber: Int32 { 1 }
     static var modeFieldNumber: Int32 { 2 }
     static var intervalFieldNumber: Int32 { 3 }
+}
+extension Arsdk_Camera_Event.WhiteBalance {
+    static var cameraIdFieldNumber: Int32 { 1 }
+    static var temperatureFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Camera_Event.Photo {
     static var cameraIdFieldNumber: Int32 { 1 }
@@ -443,10 +594,12 @@ extension Arsdk_Camera_Event {
     static var cameraExposureFieldNumber: Int32 { 1 }
     static var zoomLevelFieldNumber: Int32 { 2 }
     static var nextPhotoIntervalFieldNumber: Int32 { 3 }
+    static var cameraWhiteBalanceFieldNumber: Int32 { 4 }
     static var cameraListFieldNumber: Int32 { 16 }
     static var stateFieldNumber: Int32 { 17 }
     static var photoFieldNumber: Int32 { 18 }
     static var recordingFieldNumber: Int32 { 19 }
+    static var requestStreamCameraFieldNumber: Int32 { 20 }
 }
 extension Arsdk_Camera_Capabilities.Rule {
     static var indexFieldNumber: Int32 { 1 }
@@ -482,13 +635,13 @@ extension Arsdk_Camera_Capabilities.Rule {
     static var zoomMaxSpeedRangeFieldNumber: Int32 { 34 }
     static var zoomVelocityControlQualityModesFieldNumber: Int32 { 35 }
     static var autoRecordModesFieldNumber: Int32 { 36 }
-    static var alignmentOffsetPitchRangeFieldNumber: Int32 { 37 }
-    static var alignmentOffsetRollRangeFieldNumber: Int32 { 38 }
-    static var alignmentOffsetYawRangeFieldNumber: Int32 { 39 }
     static var photoSignaturesFieldNumber: Int32 { 40 }
     static var exposureMeteringsFieldNumber: Int32 { 41 }
     static var storagePoliciesFieldNumber: Int32 { 42 }
     static var videoRecordingBitratesFieldNumber: Int32 { 43 }
+    static var spectrumsFieldNumber: Int32 { 44 }
+    static var lowLightModeSelectionsFieldNumber: Int32 { 45 }
+    static var lowLightModesFieldNumber: Int32 { 46 }
     var indexSelected: Bool {
         get {
             return selectedFields[1] != nil
@@ -885,42 +1038,6 @@ extension Arsdk_Camera_Capabilities.Rule {
             }
         }
     }
-    var alignmentOffsetPitchRangeSelected: Bool {
-        get {
-            return selectedFields[37] != nil
-        }
-        set {
-            if newValue && selectedFields[37] == nil {
-                selectedFields[37] = SwiftProtobuf.Google_Protobuf_Empty()
-            } else if !newValue && selectedFields[37] != nil {
-                selectedFields.removeValue(forKey: 37)
-            }
-        }
-    }
-    var alignmentOffsetRollRangeSelected: Bool {
-        get {
-            return selectedFields[38] != nil
-        }
-        set {
-            if newValue && selectedFields[38] == nil {
-                selectedFields[38] = SwiftProtobuf.Google_Protobuf_Empty()
-            } else if !newValue && selectedFields[38] != nil {
-                selectedFields.removeValue(forKey: 38)
-            }
-        }
-    }
-    var alignmentOffsetYawRangeSelected: Bool {
-        get {
-            return selectedFields[39] != nil
-        }
-        set {
-            if newValue && selectedFields[39] == nil {
-                selectedFields[39] = SwiftProtobuf.Google_Protobuf_Empty()
-            } else if !newValue && selectedFields[39] != nil {
-                selectedFields.removeValue(forKey: 39)
-            }
-        }
-    }
     var photoSignaturesSelected: Bool {
         get {
             return selectedFields[40] != nil
@@ -969,9 +1086,57 @@ extension Arsdk_Camera_Capabilities.Rule {
             }
         }
     }
+    var spectrumsSelected: Bool {
+        get {
+            return selectedFields[44] != nil
+        }
+        set {
+            if newValue && selectedFields[44] == nil {
+                selectedFields[44] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[44] != nil {
+                selectedFields.removeValue(forKey: 44)
+            }
+        }
+    }
+    var lowLightModeSelectionsSelected: Bool {
+        get {
+            return selectedFields[45] != nil
+        }
+        set {
+            if newValue && selectedFields[45] == nil {
+                selectedFields[45] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[45] != nil {
+                selectedFields.removeValue(forKey: 45)
+            }
+        }
+    }
+    var lowLightModesSelected: Bool {
+        get {
+            return selectedFields[46] != nil
+        }
+        set {
+            if newValue && selectedFields[46] == nil {
+                selectedFields[46] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[46] != nil {
+                selectedFields.removeValue(forKey: 46)
+            }
+        }
+    }
+}
+extension Arsdk_Camera_Capabilities.AlignmentOffsetRanges {
+    static var pitchFieldNumber: Int32 { 1 }
+    static var rollFieldNumber: Int32 { 2 }
+    static var yawFieldNumber: Int32 { 3 }
 }
 extension Arsdk_Camera_Capabilities {
     static var rulesFieldNumber: Int32 { 1 }
+    static var thermalAlignmentOffsetRangesFieldNumber: Int32 { 2 }
+    static var thermalMixingModesFieldNumber: Int32 { 3 }
+}
+extension Arsdk_Camera_AlignmentOffsets {
+    static var pitchFieldNumber: Int32 { 1 }
+    static var rollFieldNumber: Int32 { 2 }
+    static var yawFieldNumber: Int32 { 3 }
 }
 extension Arsdk_Camera_Config {
     static var selectedFieldsFieldNumber: Int32 { 1 }
@@ -1006,13 +1171,13 @@ extension Arsdk_Camera_Config {
     static var zoomMaxSpeedFieldNumber: Int32 { 33 }
     static var zoomVelocityControlQualityModeFieldNumber: Int32 { 34 }
     static var autoRecordModeFieldNumber: Int32 { 35 }
-    static var alignmentOffsetPitchFieldNumber: Int32 { 36 }
-    static var alignmentOffsetRollFieldNumber: Int32 { 37 }
-    static var alignmentOffsetYawFieldNumber: Int32 { 38 }
     static var photoSignatureFieldNumber: Int32 { 39 }
     static var exposureMeteringFieldNumber: Int32 { 40 }
     static var storagePolicyFieldNumber: Int32 { 41 }
     static var videoRecordingBitrateFieldNumber: Int32 { 42 }
+    static var spectrumFieldNumber: Int32 { 43 }
+    static var lowLightModeSelectionFieldNumber: Int32 { 44 }
+    static var lowLightModeFieldNumber: Int32 { 45 }
     var selectedFieldsSelected: Bool {
         get {
             return selectedFields[1] != nil
@@ -1397,42 +1562,6 @@ extension Arsdk_Camera_Config {
             }
         }
     }
-    var alignmentOffsetPitchSelected: Bool {
-        get {
-            return selectedFields[36] != nil
-        }
-        set {
-            if newValue && selectedFields[36] == nil {
-                selectedFields[36] = SwiftProtobuf.Google_Protobuf_Empty()
-            } else if !newValue && selectedFields[36] != nil {
-                selectedFields.removeValue(forKey: 36)
-            }
-        }
-    }
-    var alignmentOffsetRollSelected: Bool {
-        get {
-            return selectedFields[37] != nil
-        }
-        set {
-            if newValue && selectedFields[37] == nil {
-                selectedFields[37] = SwiftProtobuf.Google_Protobuf_Empty()
-            } else if !newValue && selectedFields[37] != nil {
-                selectedFields.removeValue(forKey: 37)
-            }
-        }
-    }
-    var alignmentOffsetYawSelected: Bool {
-        get {
-            return selectedFields[38] != nil
-        }
-        set {
-            if newValue && selectedFields[38] == nil {
-                selectedFields[38] = SwiftProtobuf.Google_Protobuf_Empty()
-            } else if !newValue && selectedFields[38] != nil {
-                selectedFields.removeValue(forKey: 38)
-            }
-        }
-    }
     var photoSignatureSelected: Bool {
         get {
             return selectedFields[39] != nil
@@ -1481,10 +1610,50 @@ extension Arsdk_Camera_Config {
             }
         }
     }
+    var spectrumSelected: Bool {
+        get {
+            return selectedFields[43] != nil
+        }
+        set {
+            if newValue && selectedFields[43] == nil {
+                selectedFields[43] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[43] != nil {
+                selectedFields.removeValue(forKey: 43)
+            }
+        }
+    }
+    var lowLightModeSelectionSelected: Bool {
+        get {
+            return selectedFields[44] != nil
+        }
+        set {
+            if newValue && selectedFields[44] == nil {
+                selectedFields[44] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[44] != nil {
+                selectedFields.removeValue(forKey: 44)
+            }
+        }
+    }
+    var lowLightModeSelected: Bool {
+        get {
+            return selectedFields[45] != nil
+        }
+        set {
+            if newValue && selectedFields[45] == nil {
+                selectedFields[45] = SwiftProtobuf.Google_Protobuf_Empty()
+            } else if !newValue && selectedFields[45] != nil {
+                selectedFields.removeValue(forKey: 45)
+            }
+        }
+    }
 }
 extension Arsdk_Camera_DoubleRange {
     static var minFieldNumber: Int32 { 1 }
     static var maxFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Camera_Vec2 {
+    static var xFieldNumber: Int32 { 1 }
+    static var yFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Camera_ExposureRoi.Center {
     static var xFieldNumber: Int32 { 1 }
@@ -1548,4 +1717,9 @@ extension Arsdk_Camera_MediaMetadata {
             }
         }
     }
+}
+extension Arsdk_Camera_StreamCamera {
+    static var receiverFieldNumber: Int32 { 1 }
+    static var typeFieldNumber: Int32 { 2 }
+    static var requesterFieldNumber: Int32 { 3 }
 }

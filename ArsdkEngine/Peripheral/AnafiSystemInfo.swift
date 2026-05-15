@@ -33,6 +33,9 @@ import GroundSdk
 /// Drone system info component controller for Anafi message based drones
 class AnafiSystemInfo: ArsdkSystemInfo {
 
+    /// Decoder for system events.
+    private var arsdkDecoder: ArsdkSystemEventDecoder!
+
     /// First part of the serial. Need to be stored in a variable because the serial is not received atomically
     var serialHigh: String? {
         didSet(newVal) {
@@ -52,6 +55,7 @@ class AnafiSystemInfo: ArsdkSystemInfo {
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
         backend = self
+        arsdkDecoder = ArsdkSystemEventDecoder(listener: self)
     }
 
     /// A command has been received
@@ -60,6 +64,8 @@ class AnafiSystemInfo: ArsdkSystemInfo {
     override func didReceiveCommand(_ command: OpaquePointer) {
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureCommonSettingsstateUid {
             ArsdkFeatureCommonSettingsstate.decode(command, callback: self)
+        } else if ArsdkCommand.getFeatureId(command) == kArsdkFeatureGenericUid {
+            arsdkDecoder.decode(command)
         }
     }
 
@@ -72,18 +78,76 @@ class AnafiSystemInfo: ArsdkSystemInfo {
             self.serialHigh = nil
         }
     }
+
+    override func createSystemInfo() {
+        systemInfo = SystemInfoCore(store: deviceController.device.peripheralStore, backend: self)
+    }
+}
+
+extension AnafiSystemInfo {
+    /// Sends system info set product name command.
+    ///
+    /// - Returns: `true` if the command has been sent
+    func sendProductNameCommand(value: String) -> Bool {
+        var command = Arsdk_System_Command.SetProductName()
+        command.value = value
+        return sendSystemCommand(.setProductName(command))
+    }
+
+    /// Sends system info get state command.
+    ///
+    /// - Returns: `true` if the command has been sent
+    func sendGetStateCommand() -> Bool {
+        var command = Arsdk_System_Command.GetState()
+        command.includeDefaultCapabilities = true
+        return sendSystemCommand(.getState(command))
+    }
+
+    /// Sends to the device a system command.
+    ///
+    /// - Parameter command: command to send
+    /// - Returns: `true` if the command has been sent
+    private func sendSystemCommand(_ command: Arsdk_System_Command.OneOf_ID) -> Bool {
+        if let encoder = ArsdkSystemCommandEncoder.encoder(command) {
+            return sendCommand(encoder)
+        }
+        return false
+    }
+}
+
+/// Extension for state processing.
+extension AnafiSystemInfo: ArsdkSystemEventDecoderListener {
+    func onState(_ state: Arsdk_System_Event.State) {
+        if state.hasProductName {
+            systemInfo.update(productName: state.productName.value).publish()
+        }
+    }
 }
 
 /// ArsdkSystemInfo backend implementation
 extension AnafiSystemInfo: ArsdkSystemInfoBackend {
+    func doSendGetState() -> Bool {
+        return sendGetStateCommand()
+    }
+
+    func doSet(productName: String) -> Bool {
+        return sendProductNameCommand(value: productName)
+    }
+
     func doResetSettings() -> Bool {
-        sendCommand(ArsdkFeatureCommonSettings.resetEncoder())
-        return true
+        return sendCommand(ArsdkFeatureCommonSettings.resetEncoder())
     }
 
     func doFactoryReset() -> Bool {
-        sendCommand(ArsdkFeatureCommonFactory.resetEncoder())
-        return true
+        return sendCommand(ArsdkFeatureCommonFactory.resetEncoder())
+    }
+
+    func doPowerOff() -> Bool {
+        return sendCommand(ArsdkFeatureCommonCommon.powerOffEncoder())
+    }
+
+    func doReboot() -> Bool {
+        return sendCommand(ArsdkFeatureCommonCommon.rebootEncoder())
     }
 }
 

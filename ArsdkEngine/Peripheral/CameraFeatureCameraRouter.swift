@@ -59,7 +59,7 @@ class CameraFeatureCameraRouter: DeviceComponentController {
                                                                     key: "\(CameraControllerBase.settingKey)\(value)")
                     } else {
                         cameraControllers[CAMERA_ID_MAIN] = CameraController(camId: CAMERA_ID_MAIN, router: self,
-                                                                    key: CameraControllerBase.settingKey)
+                                                                             key: CameraControllerBase.settingKey)
                     }
                 }
             }
@@ -110,9 +110,9 @@ class CameraFeatureCameraRouter: DeviceComponentController {
 
             super.init(peripheralStore: router.deviceController.device.peripheralStore,
                        deviceStore: router.deviceController.deviceStore
-                        .getSettingsStore(key: key),
+                .getSettingsStore(key: key),
                        presetStore: router.deviceController.presetStore
-                        .getSettingsStore(key: key), model: model)
+                .getSettingsStore(key: key), model: model)
         }
 
         /// Camera zoom control command encoder.
@@ -244,141 +244,123 @@ class CameraFeatureCameraRouter: DeviceComponentController {
         /// Preset has been changed
         func presetDidChange() {
             presetDidChange(presetStore: router.deviceController.presetStore
-                                            .getSettingsStore(key: "\(CameraControllerBase.settingKey)\(cameraId)"))
+                .getSettingsStore(key: "\(CameraControllerBase.settingKey)\(cameraId)"))
         }
 
         override func sendCameraModeCommand(_ mode: CameraMode) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setCameraModeEncoder(camId: cameraId, value: mode.arsdkValue!))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.setCameraModeEncoder(camId: cameraId, value: mode.arsdkValue!))
         }
 
         override func sendExposureCommand(
             exposureMode: CameraExposureMode, manualShutterSpeed: CameraShutterSpeed, manualIsoSensitivity: CameraIso,
             maximumIsoSensitivity: CameraIso, autoExposureMeteringMode: CameraAutoExposureMeteringMode) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setExposureSettingsEncoder(
-                camId: cameraId, mode: exposureMode.arsdkValue!,
-                shutterSpeed: manualShutterSpeed.arsdkValue!, isoSensitivity: manualIsoSensitivity.arsdkValue!,
-                maxIsoSensitivity: maximumIsoSensitivity.arsdkValue!,
-                meteringMode: autoExposureMeteringMode.arsdkValue!))
-            return true
-        }
+                return router.sendCommand(ArsdkFeatureCamera.setExposureSettingsEncoder(
+                    camId: cameraId, mode: exposureMode.arsdkValue!,
+                    shutterSpeed: manualShutterSpeed.arsdkValue!, isoSensitivity: manualIsoSensitivity.arsdkValue!,
+                    maxIsoSensitivity: maximumIsoSensitivity.arsdkValue!,
+                    meteringMode: autoExposureMeteringMode.arsdkValue!))
+            }
 
         override func sendExposureLockCommand(mode: CameraExposureLockMode) -> Bool {
             switch mode {
             case .none:
                 requestedExposureLockMode = mode
-                router.sendCommand(ArsdkFeatureCamera.unlockExposureEncoder(camId: 0))
+                return router.sendCommand(ArsdkFeatureCamera.unlockExposureEncoder(camId: 0))
             case .currentValues:
                 requestedExposureLockMode = mode
-                router.sendCommand(ArsdkFeatureCamera.lockExposureEncoder(camId: 0))
+                return router.sendCommand(ArsdkFeatureCamera.lockExposureEncoder(camId: 0))
             case .region(let centerX, let centerY, _, _):
                 // save the requested mode in float, in order to avoid precision errors when we test the drone response
                 let centerXFromFloat = Double(Float(centerX))
                 let centerYFromFloat = Double(Float(centerY))
                 requestedExposureLockMode = CameraExposureLockMode.region(
                     centerX: centerXFromFloat, centerY: centerYFromFloat, width: 0.0, height: 0.0)
-                router.sendCommand(ArsdkFeatureCamera.lockExposureOnRoiEncoder(
+                return router.sendCommand(ArsdkFeatureCamera.lockExposureOnRoiEncoder(
                     camId: 0, roiCenterX: Float(centerX), roiCenterY: Float(centerY)))
             }
-            return true
         }
 
         override func sendExposureCompensationCommand(value: CameraEvCompensation) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setEvCompensationEncoder(
+            return router.sendCommand(ArsdkFeatureCamera.setEvCompensationEncoder(
                 camId: cameraId, value: value.arsdkValue!))
-            return true
         }
 
         override func sendWhiteBalanceCommand(
             mode: CameraWhiteBalanceMode, customTemperature: CameraWhiteBalanceTemperature) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setWhiteBalanceEncoder(
-                camId: cameraId, mode: mode.arsdkValue!, temperature: customTemperature.arsdkValue!))
-            return true
-        }
+                return router.sendCommand(ArsdkFeatureCamera.setWhiteBalanceEncoder(
+                    camId: cameraId, mode: mode.arsdkValue!, temperature: customTemperature.arsdkValue!))
+            }
 
         override func sendWhiteBalanceLockedCommand(lock: Bool) -> Bool {
             if let isLockable = camera.whiteBalanceLock?.isLockable, isLockable {
-                router.sendCommand(ArsdkFeatureCamera.setWhiteBalanceLockEncoder(camId: cameraId,
-                                                                          state: lock ? .active : .inactive))
-                return true
+                return router.sendCommand(ArsdkFeatureCamera.setWhiteBalanceLockEncoder(camId: cameraId,
+                                                                                 state: lock ? .active : .inactive))
             }
             return false
         }
 
         override func sendActiveStyleCommand(style: CameraStyle) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setStyleEncoder(camId: cameraId, style: style.arsdkValue!))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.setStyleEncoder(camId: cameraId, style: style.arsdkValue!))
         }
 
         override func sendStyleParameterCommand(saturation: Int, contrast: Int, sharpness: Int) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setStyleParamsEncoder(
+            return router.sendCommand(ArsdkFeatureCamera.setStyleParamsEncoder(
                 camId: cameraId, saturation: saturation, contrast: contrast, sharpness: sharpness))
-            return true
         }
 
         override func sendHdrSettingCommand(_ hdr: Bool) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setHdrSettingEncoder(
+            return router.sendCommand(ArsdkFeatureCamera.setHdrSettingEncoder(
                 camId: cameraId, value: hdr ? .active : .inactive))
-            return true
         }
 
         override func sendRecordingCommand(
             recordingMode: CameraRecordingMode, resolution: CameraRecordingResolution,
             framerate: CameraRecordingFramerate, hyperlapse: CameraHyperlapseValue) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setRecordingModeEncoder(
-                camId: cameraId, mode: recordingMode.arsdkValue!, resolution: resolution.arsdkValue!,
-                framerate: framerate.arsdkValue!,
-                hyperlapse: recordingMode == .hyperlapse ? hyperlapse.arsdkValue! : .ratio15))
-            return true
-        }
+                return router.sendCommand(ArsdkFeatureCamera.setRecordingModeEncoder(
+                    camId: cameraId, mode: recordingMode.arsdkValue!, resolution: resolution.arsdkValue!,
+                    framerate: framerate.arsdkValue!,
+                    hyperlapse: recordingMode == .hyperlapse ? hyperlapse.arsdkValue! : .ratio15))
+            }
 
         override func sendAutoRecordCommand(_ value: Bool) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setAutorecordEncoder(
+            return router.sendCommand(ArsdkFeatureCamera.setAutorecordEncoder(
                 camId: cameraId, state: value ? .active : .inactive))
-            return true
         }
 
         override func sendPhotoCommand(
             photoMode: CameraPhotoMode, photoFormat: CameraPhotoFormat, photoFileFormat: CameraPhotoFileFormat,
             bustValue: CameraBurstValue, bracketingValue: CameraBracketingValue, captureInterval: Double) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setPhotoModeEncoder(
-                camId: cameraId, mode: photoMode.arsdkValue!, format: photoFormat.arsdkValue!,
-                fileFormat: photoFileFormat.arsdkValue!,
-                burst: photoMode == .burst ? bustValue.arsdkValue! : .burst14Over4s,
-                bracketing: photoMode == .bracketing ? bracketingValue.arsdkValue! : .preset1ev,
-                captureInterval: Float(captureInterval)))
-            return true
-        }
+                return router.sendCommand(ArsdkFeatureCamera.setPhotoModeEncoder(
+                    camId: cameraId, mode: photoMode.arsdkValue!, format: photoFormat.arsdkValue!,
+                    fileFormat: photoFileFormat.arsdkValue!,
+                    burst: photoMode == .burst ? bustValue.arsdkValue! : .burst14Over4s,
+                    bracketing: photoMode == .bracketing ? bracketingValue.arsdkValue! : .preset1ev,
+                    captureInterval: Float(captureInterval)))
+            }
 
         override func sendStartPhotoCommand() -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.takePhotoEncoder(camId: cameraId))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.takePhotoEncoder(camId: cameraId))
         }
 
         override func sendStopPhotoCommand() -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.stopPhotoEncoder(camId: cameraId))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.stopPhotoEncoder(camId: cameraId))
         }
 
         override func sendStartRecordingCommand() -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.startRecordingEncoder(camId: cameraId))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.startRecordingEncoder(camId: cameraId))
         }
 
         override func sendStopRecordingCommand() -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.stopRecordingEncoder(camId: cameraId))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.stopRecordingEncoder(camId: cameraId))
         }
 
         override func sendMaxZoomSpeedCommand(value: Double) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setMaxZoomSpeedEncoder(camId: cameraId, max: Float(value)))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.setMaxZoomSpeedEncoder(camId: cameraId, max: Float(value)))
         }
 
         override func sendZoomVelocityQualityDegradationAllowanceCommand(value: Bool) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setZoomVelocityQualityDegradationEncoder(
+            return router.sendCommand(ArsdkFeatureCamera.setZoomVelocityQualityDegradationEncoder(
                 camId: cameraId, allow: value ? 1 : 0))
-            return true
         }
 
         override func control(mode: CameraZoomControlMode, target: Double) {
@@ -386,19 +368,17 @@ class CameraFeatureCameraRouter: DeviceComponentController {
         }
 
         override func resetLevel() {
-            router.sendCommand(ArsdkFeatureCamera.resetZoomEncoder(camId: cameraId))
+            _ = router.sendCommand(ArsdkFeatureCamera.resetZoomEncoder(camId: cameraId))
             zoomControlEncoder.reset()
         }
 
-        override func sendAlignementCommand(yaw: Double, pitch: Double, roll: Double) -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.setAlignmentOffsetsEncoder(camId: cameraId, yaw: Float(yaw),
+        override func sendAlignmentCommand(yaw: Double, pitch: Double, roll: Double) -> Bool {
+            return router.sendCommand(ArsdkFeatureCamera.setAlignmentOffsetsEncoder(camId: cameraId, yaw: Float(yaw),
                                                                              pitch: Float(pitch), roll: Float(roll)))
-            return true
         }
 
         override func sendResetAlignmentCommand() -> Bool {
-            router.sendCommand(ArsdkFeatureCamera.resetAlignmentOffsetsEncoder(camId: cameraId))
-            return true
+            return router.sendCommand(ArsdkFeatureCamera.resetAlignmentOffsetsEncoder(camId: cameraId))
         }
     }
 
@@ -476,13 +456,22 @@ class CameraFeatureCameraRouter: DeviceComponentController {
 extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
 
     func onCameraCapabilities(camId: UInt, model: ArsdkFeatureCameraModel,
-        exposureModesBitField: UInt, exposureLockSupported: ArsdkFeatureCameraSupported,
-        exposureRoiLockSupported: ArsdkFeatureCameraSupported, evCompensationsBitField: UInt64,
-        whiteBalanceModesBitField: UInt, customWhiteBalanceTemperaturesBitField: UInt64,
-        whiteBalanceLockSupported: ArsdkFeatureCameraSupported, stylesBitField: UInt, cameraModesBitField: UInt,
-        hyperlapseValuesBitField: UInt, bracketingPresetsBitField: UInt, burstValuesBitField: UInt,
-        streamingModesBitField: UInt, timelapseIntervalMin: Float, gpslapseIntervalMin: Float,
-        autoExposureMeteringModesBitField: UInt) {
+                              exposureModesBitField: UInt,
+                              exposureLockSupported: ArsdkFeatureCameraSupported,
+                              exposureRoiLockSupported: ArsdkFeatureCameraSupported,
+                              evCompensationsBitField: UInt64,
+                              whiteBalanceModesBitField: UInt,
+                              customWhiteBalanceTemperaturesBitField: UInt64,
+                              whiteBalanceLockSupported: ArsdkFeatureCameraSupported,
+                              stylesBitField: UInt,
+                              cameraModesBitField: UInt,
+                              hyperlapseValuesBitField: UInt,
+                              bracketingPresetsBitField: UInt,
+                              burstValuesBitField: UInt,
+                              streamingModesBitField: UInt,
+                              timelapseIntervalMin: Float,
+                              gpslapseIntervalMin: Float,
+                              autoExposureMeteringModesBitField: UInt) {
         var cameraController = self.cameraControllers[camId]
         if cameraController == nil {
             if let model: Model = Model.from(model: model) {
@@ -534,53 +523,53 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
         id: UInt, recordingModesBitField: UInt, resolutionsBitField: UInt, frameratesBitField: UInt,
         hdr: ArsdkFeatureCameraSupported, listFlagsBitField: UInt) {
 
-        if let cameraController = self.cameraControllers[id>>8] {
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
-                cameraController.recordingCapabilitiesList = [:]
+            if let cameraController = self.cameraControllers[id>>8] {
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                    cameraController.recordingCapabilitiesList = [:]
+                }
+                if !ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
+                    cameraController.recordingCapabilitiesList?[id & 0x00FF] = CameraCore.RecordingCapabilitiesEntry(
+                        modes: CameraRecordingMode.createSetFrom(bitField: recordingModesBitField),
+                        resolutions: CameraRecordingResolution.createSetFrom(bitField: resolutionsBitField),
+                        framerates: CameraRecordingFramerate.createSetFrom(bitField: frameratesBitField),
+                        hdrAvailable: hdr == .supported)
+                }
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField),
+                   let capabilities = cameraController.recordingCapabilitiesList {
+                    cameraController.capabilitiesDidChange(.recording(Array(capabilities.values)))
+                    cameraController.recordingCapabilitiesList = nil
+                }
+                self.cameraControllers[id>>8] = cameraController
+            } else {
+                ULog.w(.cameraTag, "Recording capabilities received for an unknown camera id=\(id>>8)")
             }
-            if !ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
-                cameraController.recordingCapabilitiesList?[id & 0x00FF] = CameraCore.RecordingCapabilitiesEntry(
-                    modes: CameraRecordingMode.createSetFrom(bitField: recordingModesBitField),
-                    resolutions: CameraRecordingResolution.createSetFrom(bitField: resolutionsBitField),
-                    framerates: CameraRecordingFramerate.createSetFrom(bitField: frameratesBitField),
-                    hdrAvailable: hdr == .supported)
-            }
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField),
-               let capabilities = cameraController.recordingCapabilitiesList {
-                cameraController.capabilitiesDidChange(.recording(Array(capabilities.values)))
-                cameraController.recordingCapabilitiesList = nil
-            }
-            self.cameraControllers[id>>8] = cameraController
-        } else {
-            ULog.w(.cameraTag, "Recording capabilities received for an unknown camera id=\(id>>8)")
         }
-    }
 
     func onPhotoCapabilities(
         id: UInt, photoModesBitField: UInt, photoFormatsBitField: UInt, photoFileFormatsBitField: UInt,
         hdr: ArsdkFeatureCameraSupported, listFlagsBitField: UInt) {
-        if let cameraController = self.cameraControllers[id>>8] {
+            if let cameraController = self.cameraControllers[id>>8] {
 
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
-                cameraController.photoCapabilitiesList = [:]
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.first, inBitField: listFlagsBitField) {
+                    cameraController.photoCapabilitiesList = [:]
+                }
+                if !ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
+                    cameraController.photoCapabilitiesList?[id & 0x00FF] = CameraCore.PhotoCapabilitiesEntry(
+                        modes: CameraPhotoMode.createSetFrom(bitField: photoModesBitField),
+                        formats: CameraPhotoFormat.createSetFrom(bitField: photoFormatsBitField),
+                        fileFormats: CameraPhotoFileFormat.createSetFrom(bitField: photoFileFormatsBitField),
+                        hdrAvailable: hdr == .supported)
+                }
+                if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField),
+                   let capabilities = cameraController.photoCapabilitiesList {
+                    cameraController.capabilitiesDidChange(.photo(Array(capabilities.values)))
+                    cameraController.photoCapabilitiesList = nil
+                }
+                self.cameraControllers[id>>8] = cameraController
+            } else {
+                ULog.w(.cameraTag, "Photo capabilities received for an unknown camera id=\(id>>8)")
             }
-            if !ArsdkFeatureGenericListFlagsBitField.isSet(.empty, inBitField: listFlagsBitField) {
-                cameraController.photoCapabilitiesList?[id & 0x00FF] = CameraCore.PhotoCapabilitiesEntry(
-                    modes: CameraPhotoMode.createSetFrom(bitField: photoModesBitField),
-                    formats: CameraPhotoFormat.createSetFrom(bitField: photoFormatsBitField),
-                    fileFormats: CameraPhotoFileFormat.createSetFrom(bitField: photoFileFormatsBitField),
-                    hdrAvailable: hdr == .supported)
-            }
-            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField),
-               let capabilities = cameraController.photoCapabilitiesList {
-                cameraController.capabilitiesDidChange(.photo(Array(capabilities.values)))
-                cameraController.photoCapabilitiesList = nil
-            }
-            self.cameraControllers[id>>8] = cameraController
-        } else {
-            ULog.w(.cameraTag, "Photo capabilities received for an unknown camera id=\(id>>8)")
         }
-    }
 
     func onCameraMode(camId: UInt, mode: ArsdkFeatureCameraCameraMode) {
         if let cameraController = self.cameraControllers[camId] {
@@ -596,10 +585,13 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
     }
 
     func onExposureSettings(camId: UInt, mode: ArsdkFeatureCameraExposureMode,
-        manualShutterSpeed: ArsdkFeatureCameraShutterSpeed, manualShutterSpeedCapabilitiesBitField: UInt64,
-        manualIsoSensitivity: ArsdkFeatureCameraIsoSensitivity, manualIsoSensitivityCapabilitiesBitField: UInt64,
-        maxIsoSensitivity: ArsdkFeatureCameraIsoSensitivity,
-        maxIsoSensitivitiesCapabilitiesBitField: UInt64, meteringMode: ArsdkFeatureCameraAutoExposureMeteringMode) {
+                            manualShutterSpeed: ArsdkFeatureCameraShutterSpeed,
+                            manualShutterSpeedCapabilitiesBitField: UInt64,
+                            manualIsoSensitivity: ArsdkFeatureCameraIsoSensitivity,
+                            manualIsoSensitivityCapabilitiesBitField: UInt64,
+                            maxIsoSensitivity: ArsdkFeatureCameraIsoSensitivity,
+                            maxIsoSensitivitiesCapabilitiesBitField: UInt64,
+                            meteringMode: ArsdkFeatureCameraAutoExposureMeteringMode) {
         if let cameraController = self.cameraControllers[camId] {
             guard let _mode = CameraExposureMode(fromArsdk: mode) else {
                 ULog.w(.cameraTag, "Invalid exposure mode: \(mode.rawValue)")
@@ -636,7 +628,7 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
             cameraController.capabilitiesDidChange(.exposureManualIsoSensitivity(
                 CameraIso.createSetFrom(bitField: manualIsoSensitivityCapabilitiesBitField)))
 
-             if let _maxIsoSensitivity = _maxIsoSensitivity {
+            if let _maxIsoSensitivity = _maxIsoSensitivity {
                 cameraController.camera.update(maximumIsoSensitivity: _maxIsoSensitivity)
             }
             cameraController.capabilitiesDidChange(.exposureMaximumIsoSensitivity(
@@ -645,10 +637,10 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
             let _meteringMode = CameraAutoExposureMeteringMode(fromArsdk: meteringMode)
 
             cameraController.settingDidChange(.exposure(mode: _mode,
-                                       manualShutterSpeed: _manualShutterSpeed!,
-                                       manualIsoSensitivity: _manualIsoSensitivity!,
-                                       maximumIsoSensitivity: _maxIsoSensitivity!,
-                                       autoExposureMeteringMode: _meteringMode!))
+                                                        manualShutterSpeed: _manualShutterSpeed!,
+                                                        manualIsoSensitivity: _manualIsoSensitivity!,
+                                                        maximumIsoSensitivity: _maxIsoSensitivity!,
+                                                        autoExposureMeteringMode: _meteringMode!))
             self.cameraControllers[camId] = cameraController
 
         } else {
@@ -660,34 +652,34 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
         camId: UInt, shutterSpeed: ArsdkFeatureCameraShutterSpeed, isoSensitivity: ArsdkFeatureCameraIsoSensitivity,
         lock: ArsdkFeatureCameraState, lockRoiX: Float, lockRoiY: Float, lockRoiWidth: Float, lockRoiHeight: Float) {
 
-        guard let cameraController = self.cameraControllers[camId] else {
-            ULog.w(.cameraTag, "Exposure received for an unknown camera id=\(camId)")
-            return
-        }
-
-        let mode: CameraExposureLockMode
-        if lock == .active {
-            // if all lockRoi values are greater than zero, the lock mode is region
-            if lockRoiX >= 0 && lockRoiY >= 0 && lockRoiWidth >= 0 && lockRoiHeight >= 0 {
-                mode = .region(centerX: Double(lockRoiX), centerY: Double(lockRoiY),
-                               width: Double(lockRoiWidth), height: Double(lockRoiHeight))
-            } else {
-                mode = .currentValues
+            guard let cameraController = self.cameraControllers[camId] else {
+                ULog.w(.cameraTag, "Exposure received for an unknown camera id=\(camId)")
+                return
             }
-        } else {
-            mode = .none
-        }
-        // if there is no pending request or if the requested lock mode matches the received mode
-        if cameraController.requestedExposureLockMode == nil ||
-            mode.isSameRequest(as: cameraController.requestedExposureLockMode) {
 
-            cameraController.requestedExposureLockMode = nil
-            cameraController.camera.update(exposureLockMode: mode)
-            cameraController.computeEVCompensationAvailableValues()
-            cameraController.camera.notifyUpdated()
-            self.cameraControllers[camId] = cameraController
+            let mode: CameraExposureLockMode
+            if lock == .active {
+                // if all lockRoi values are greater than zero, the lock mode is region
+                if lockRoiX >= 0 && lockRoiY >= 0 && lockRoiWidth >= 0 && lockRoiHeight >= 0 {
+                    mode = .region(centerX: Double(lockRoiX), centerY: Double(lockRoiY),
+                                   width: Double(lockRoiWidth), height: Double(lockRoiHeight))
+                } else {
+                    mode = .currentValues
+                }
+            } else {
+                mode = .none
+            }
+            // if there is no pending request or if the requested lock mode matches the received mode
+            if cameraController.requestedExposureLockMode == nil ||
+                mode.isSameRequest(as: cameraController.requestedExposureLockMode) {
+
+                cameraController.requestedExposureLockMode = nil
+                cameraController.camera.update(exposureLockMode: mode)
+                cameraController.computeEVCompensationAvailableValues()
+                cameraController.camera.notifyUpdated()
+                self.cameraControllers[camId] = cameraController
+            }
         }
-    }
 
     func onEvCompensation(camId: UInt, value: ArsdkFeatureCameraEvCompensation) {
         if let cameraController = self.cameraControllers[camId] {
@@ -758,7 +750,7 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
                 return
             }
             cameraController.settingDidChange(.style(activeStyle: style, saturation: saturation, contrast: contrast,
-                                    sharpness: sharpness))
+                                                     sharpness: sharpness))
             cameraController.settingDidChange(.saturation(min: saturationMin, current: saturation, max: saturationMax))
             cameraController.settingDidChange(.contrast(min: contrastMin, current: contrast, max: contrastMax))
             cameraController.settingDidChange(.sharpness(min: sharpnessMin, current: sharpness, max: sharpnessMax))
@@ -813,7 +805,7 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
                 _hyperlapse = .ratio15
             }
             cameraController.settingDidChange(.recording(mode: _mode, resolution: _resolution, framerate: _framerate,
-                                        hyperlapse: _hyperlapse))
+                                                         hyperlapse: _hyperlapse))
             cameraController.camera.update(recordingBitrate: bitrate).notifyUpdated()
             cameraController.bitrate = bitrate
             self.cameraControllers[camId] = cameraController
@@ -868,7 +860,8 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
                 _bracketing = .preset1ev
             }
             cameraController.settingDidChange(.photo(mode: _mode, format: _format, fileFormat: _fileFormat,
-                burst: _burst, bracketing: _bracketing, captureInterval: Double(captureInterval)))
+                                                     burst: _burst, bracketing: _bracketing,
+                                                     captureInterval: Double(captureInterval)))
             self.cameraControllers[camId] = cameraController
         } else {
             ULog.w(.cameraTag, "Photo Mode received for an unknown camera id=\(camId)")
@@ -887,7 +880,9 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
                     cameraController.camera.update(recordingState: .stopped)
                 case .active:
                     cameraController.camera.update(recordingState: .started,
-                                  startTime: Date(timeIntervalSince1970: Double(startTimestamp)/Double(1000)))
+                                                   startTime:
+                                                    Date(timeIntervalSince1970:
+                                                            Double(startTimestamp)/Double(1000)))
                 @unknown default:
                     cameraController.camera.update(recordingState: .stopped)
                 }
@@ -986,28 +981,28 @@ extension CameraFeatureCameraRouter: ArsdkFeatureCameraCallback {
     func onZoomInfo(
         camId: UInt, available: ArsdkFeatureCameraAvailability, highQualityMaximumLevel: Float, maximumLevel: Float) {
 
-        guard let cameraController = self.cameraControllers[camId] else {
-            ULog.w(.cameraTag, "Zoom info received for an unknown camera id=\(camId)")
-            return
-        }
-        guard available != .sdkCoreUnknown else {
-            ULog.w(.tag, "Unknown zoom availability, skipping this event.")
-            return
-        }
-        let zoomIsAvailable = available == .available
-        guard !zoomIsAvailable || highQualityMaximumLevel >= 1.0 && maximumLevel >= 1.0 else {
-            ULog.w(.cameraTag, "Zoom bounds are not correct, skipping this event.")
-            return
-        }
+            guard let cameraController = self.cameraControllers[camId] else {
+                ULog.w(.cameraTag, "Zoom info received for an unknown camera id=\(camId)")
+                return
+            }
+            guard available != .sdkCoreUnknown else {
+                ULog.w(.tag, "Unknown zoom availability, skipping this event.")
+                return
+            }
+            let zoomIsAvailable = available == .available
+            guard !zoomIsAvailable || highQualityMaximumLevel >= 1.0 && maximumLevel >= 1.0 else {
+                ULog.w(.cameraTag, "Zoom bounds are not correct, skipping this event.")
+                return
+            }
 
-        cameraController.camera.update(zoomIsAvailable: zoomIsAvailable)
-        if zoomIsAvailable {
-            cameraController.camera.update(maxLossLessZoomLevel: Double(highQualityMaximumLevel))
-                .update(maxLossyZoomLevel: Double(maximumLevel))
+            cameraController.camera.update(zoomIsAvailable: zoomIsAvailable)
+            if zoomIsAvailable {
+                cameraController.camera.update(maxLossLessZoomLevel: Double(highQualityMaximumLevel))
+                    .update(maxLossyZoomLevel: Double(maximumLevel))
+            }
+            cameraController.camera.notifyUpdated()
+            self.cameraControllers[camId] = cameraController
         }
-        cameraController.camera.notifyUpdated()
-        self.cameraControllers[camId] = cameraController
-    }
 
     func onZoomLevel(camId: UInt, level: Float) {
         if let cameraController = self.cameraControllers[camId] {
@@ -1652,7 +1647,7 @@ extension CameraExposureLockMode {
         if let lockMode = lockMode {
             switch (self, lockMode) {
             case (.none, .none),
-                 (.currentValues, .currentValues):
+                (.currentValues, .currentValues):
                 return true
             case let (.region(lx, ly, _, _), .region(rx, ry, _, _)):
                 return lx.isCloseTo(rx, withDelta: 0.1) && ly.isCloseTo(ry, withDelta: 0.1)

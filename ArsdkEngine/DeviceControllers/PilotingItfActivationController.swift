@@ -97,14 +97,12 @@ class PilotingItfActivationController {
     /// - Returns: true if the operation could be initiated, otherwise false
     func activate(pilotingItf: ActivablePilotingItfController) -> Bool {
         if pilotingItf != currentPilotingItf && pilotingItf.canActivate {
-            if let currentPilotingItf = currentPilotingItf {
-                if currentPilotingItf.canDeactivate {
-                    nextPilotingItf = pilotingItf
-                    currentPilotingItf.requestDeactivation()
-                    return true
-                }
-            } else {
+            if pilotingItf.hasActivationCommand || currentPilotingItf == nil {
                 pilotingItf.requestActivation()
+                return true
+            } else if let currentPilotingItf, currentPilotingItf.canDeactivate {
+                nextPilotingItf = pilotingItf
+                currentPilotingItf.requestDeactivation()
                 return true
             }
         }
@@ -148,8 +146,8 @@ class PilotingItfActivationController {
     func onUnavailable(pilotingItf: ActivablePilotingItfController) {
         if pilotingItf == currentPilotingItf {
             currentPilotingItf = nil
-            activateRelevantPilotingItf()
-        } else if isConnected && currentPilotingItf == nil {
+        }
+        if isConnected && currentPilotingItf == nil {
             activateRelevantPilotingItf()
         }
     }
@@ -160,9 +158,8 @@ class PilotingItfActivationController {
     func onIdle(pilotingItf: ActivablePilotingItfController) {
         if pilotingItf == currentPilotingItf {
             currentPilotingItf = nil
-
-            activateRelevantPilotingItf()
-        } else if isConnected && currentPilotingItf == nil {
+        }
+        if isConnected && currentPilotingItf == nil {
             activateRelevantPilotingItf()
         }
     }
@@ -172,14 +169,13 @@ class PilotingItfActivationController {
     /// - Parameter pilotingItf: piloting interface controller whose interface is now active
     func onActive(pilotingItf: ActivablePilotingItfController) {
         if pilotingItf != currentPilotingItf {
-            let pilotingItfToDeactivate = currentPilotingItf
+            currentPilotingItf?.pilotingItf.update(activeState: .idle).notifyUpdated()
             currentPilotingItf = pilotingItf
-            pilotingItfToDeactivate?.requestDeactivation()
             if let pilotingInterface = currentPilotingItf {
                 GroundSdkCore.logEvent(
                     message: "EVT:PILOTING;mode='\(String(describing: type(of: pilotingInterface)))'")
             }
-         }
+        }
     }
 
     /// Register in NoAck command loop.

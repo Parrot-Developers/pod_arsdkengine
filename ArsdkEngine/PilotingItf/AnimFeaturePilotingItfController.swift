@@ -98,7 +98,7 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
                 availableAnimations: getAvailableAnimations(supportedAnimations[.followMe]))
         case is AnafiPoiPilotingItf:
             animationPilotingItf.update(availableAnimations: getAvailableAnimations(supportedAnimations[.poi]))
-        case is AnafiCopterManualPilotingItf:
+        case is AnafiManualPilotingItf:
             animationPilotingItf.update(availableAnimations: getAvailableAnimations(supportedAnimations[.manual]))
         default:
             break
@@ -129,20 +129,18 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.rotationAngle != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationHorizontalPanoramaConfigParam>.of(.rotationAngle)
+            Bitfield<ArsdkFeatureAnimationHorizontalPanoramaConfigParam>.of(.rotationAngle)
         }
 
         if config.rotationSpeed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationHorizontalPanoramaConfigParam>.of(.rotationSpeed)
+            Bitfield<ArsdkFeatureAnimationHorizontalPanoramaConfigParam>.of(.rotationSpeed)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startHorizontalPanoramaEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startHorizontalPanoramaEncoder(
             providedParamsBitField: customParamsBitfield,
             rotationAngle: Float((config.rotationAngle ?? 0.0).toRadians()),
             rotationSpeed: Float((config.rotationSpeed ?? 0.0).toRadians())))
-
-        return true
     }
 
     /// Start a candle animation.
@@ -153,26 +151,24 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationCandleConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationCandleConfigParam>.of(.speed)
         }
 
         if config.verticalDistance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationCandleConfigParam>.of(.verticalDistance)
+            Bitfield<ArsdkFeatureAnimationCandleConfigParam>.of(.verticalDistance)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationCandleConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationCandleConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startCandleEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startCandleEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             verticalDistance: Float(config.verticalDistance ?? 0.0),
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start a dolly slide animation.
@@ -183,32 +179,30 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.speed)
         }
 
         if config.angle != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.angle)
+            Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.angle)
         }
 
         if config.horizontalDistance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.horizontalDistance)
+            Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.horizontalDistance)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationDollySlideConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startDollySlideEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startDollySlideEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             angle: Float((config.angle ?? 0.0).toRadians()),
             horizontalDistance: Float(config.horizontalDistance ?? 0.0),
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start a dronie animation.
@@ -219,26 +213,24 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationDronieConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationDronieConfigParam>.of(.speed)
         }
 
         if config.distance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationDronieConfigParam>.of(.distance)
+            Bitfield<ArsdkFeatureAnimationDronieConfigParam>.of(.distance)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationDronieConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationDronieConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startDronieEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startDronieEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             distance: Float(config.distance ?? 0.0),
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start a flip animation.
@@ -246,9 +238,7 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
     /// - Parameter config: the config that should be used to start the animation
     /// - Returns: true if the command has been sent, false otherwise
     private func startFlip(_ config: FlipAnimationConfig) -> Bool {
-        sendCommand(ArsdkFeatureAnimation.startFlipEncoder(type: config.direction.arsdkVal()))
-
-        return true
+        return sendCommand(ArsdkFeatureAnimation.startFlipEncoder(type: config.direction.arsdkVal()))
     }
 
     /// Start an horizontal reveal animation.
@@ -259,26 +249,24 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationHorizontalRevealConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationHorizontalRevealConfigParam>.of(.speed)
         }
 
         if config.distance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationHorizontalRevealConfigParam>.of(.distance)
+            Bitfield<ArsdkFeatureAnimationHorizontalRevealConfigParam>.of(.distance)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationHorizontalRevealConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationHorizontalRevealConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startHorizontalRevealEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startHorizontalRevealEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             distance: Float(config.distance ?? 0.0),
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start a parabola animation.
@@ -289,26 +277,24 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationParabolaConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationParabolaConfigParam>.of(.speed)
         }
 
         if config.verticalDistance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationParabolaConfigParam>.of(.verticalDistance)
+            Bitfield<ArsdkFeatureAnimationParabolaConfigParam>.of(.verticalDistance)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationParabolaConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationParabolaConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startParabolaEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startParabolaEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             verticalDistance: Float(config.verticalDistance ?? 0.0),
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start a spiral animation.
@@ -319,38 +305,36 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.speed)
         }
 
         if config.radiusVariation != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.radiusVariation)
+            Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.radiusVariation)
         }
 
         if config.verticalDistance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.verticalDistance)
+            Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.verticalDistance)
         }
 
         if config.revolutionAmount != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.revolutionNb)
+            Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.revolutionNb)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationSpiralConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startSpiralEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startSpiralEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             radiusVariation: Float(config.radiusVariation ?? 0.0),
             verticalDistance: Float(config.verticalDistance ?? 0.0),
             revolutionNb: Float(config.revolutionAmount ?? 0.0),
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start a spiral animation.
@@ -361,38 +345,36 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.verticalSpeed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.speed)
         }
 
         if config.verticalDistance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.verticalDistance)
+            Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.verticalDistance)
         }
 
         if config.rotationAngle != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.rotationAngle)
+            Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.rotationAngle)
         }
 
         if config.rotationSpeed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.rotationSpeed)
+            Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.rotationSpeed)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationVerticalRevealConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startVerticalRevealEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startVerticalRevealEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.verticalSpeed ?? 0.0),
             verticalDistance: Float(config.verticalDistance ?? 0.0),
             rotationAngle: Float((config.rotationAngle ?? 0.0).toRadians()),
             rotationSpeed: Float((config.rotationSpeed ?? 0.0).toRadians()),
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start a vertigo animation.
@@ -403,32 +385,30 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.duration != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.duration)
+            Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.duration)
         }
 
         if config.maxZoomLevel != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.maxZoomLevel)
+            Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.maxZoomLevel)
         }
 
         if config.finishAction != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.finishAction)
+            Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.finishAction)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationVertigoConfigParam>.of(.playMode)
         }
 
-        sendCommand(ArsdkFeatureAnimation.startVertigoEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startVertigoEncoder(
             providedParamsBitField: customParamsBitfield,
             duration: Float(config.duration ?? 0),
             maxZoomLevel: Float(config.maxZoomLevel ?? 0.0),
             finishAction: config.finishAction?.arsdkValue ?? .none,
             playMode: config.mode?.arsdkValue ?? .normal))
-
-        return true
     }
 
     /// Start twist up animation
@@ -439,35 +419,34 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.speed)
         }
 
         if config.verticalDistance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.verticalDistance)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.verticalDistance)
         }
 
         if config.rotationAngle != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationAngle)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationAngle)
         }
 
         if config.rotationSpeed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationSpeed)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationSpeed)
         }
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.playMode)
         }
-        sendCommand(ArsdkFeatureAnimation.startTwistUpEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startTwistUpEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             verticalDistance: Float(config.verticalDistance ?? 0.0),
             rotationAngle: Float((config.rotationAngle ?? 0.0).toRadians()),
             rotationSpeed: Float((config.rotationSpeed ?? 0.0).toRadians()),
             playMode: config.mode?.arsdkValue ?? .normal))
-        return true
     }
 
     /// Start position twist up animation
@@ -478,56 +457,51 @@ class AnimFeaturePilotingItfController: DeviceComponentController, PilotingItfAc
         var customParamsBitfield = UInt(0)
         if config.speed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.speed)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.speed)
         }
 
         if config.verticalDistance != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.verticalDistance)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.verticalDistance)
         }
 
         if config.rotationAngle != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationAngle)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationAngle)
         }
 
         if config.rotationSpeed != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationSpeed)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.rotationSpeed)
         }
 
         if config.mode != nil {
             customParamsBitfield = customParamsBitfield |
-                Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.playMode)
+            Bitfield<ArsdkFeatureAnimationTwistUpConfigParam>.of(.playMode)
         }
-        sendCommand(ArsdkFeatureAnimation.startPositionTwistUpEncoder(
+        return sendCommand(ArsdkFeatureAnimation.startPositionTwistUpEncoder(
             providedParamsBitField: customParamsBitfield,
             speed: Float(config.speed ?? 0.0),
             verticalDistance: Float(config.verticalDistance ?? 0.0),
             rotationAngle: Float((config.rotationAngle ?? 0.0).toRadians()),
             rotationSpeed: Float((config.rotationSpeed ?? 0.0).toRadians()),
             playMode: config.mode?.arsdkValue ?? .normal))
-        return true
     }
 
     private func startHorizontal180PhotoPanorama(_ config: Horizontal180PhotoPanoramaAnimationCfg) -> Bool {
-        sendCommand(ArsdkFeatureAnimation.startHorizontal180PhotoPanoramaEncoder())
-        return true
+        return sendCommand(ArsdkFeatureAnimation.startHorizontal180PhotoPanoramaEncoder())
     }
 
     private func startVertical180PhotoPanorama(_ config: Vertical180PhotoPanoramaAnimationConfig) -> Bool {
-        sendCommand(ArsdkFeatureAnimation.startVertical180PhotoPanoramaEncoder())
-        return true
+        return sendCommand(ArsdkFeatureAnimation.startVertical180PhotoPanoramaEncoder())
     }
 
     private func startSphericalPhotoPanorama(_ config: SphericalPhotoPanoramaAnimationConfig) -> Bool {
-        sendCommand(ArsdkFeatureAnimation.startSphericalPhotoPanoramaEncoder())
-        return true
+        return sendCommand(ArsdkFeatureAnimation.startSphericalPhotoPanoramaEncoder())
     }
 
     private func startSuperWidePhotoPanorama(_ config: SuperWidePhotoPanoramaAnimationConfig) -> Bool {
-        sendCommand(ArsdkFeatureAnimation.startSuperWidePhotoPanoramaEncoder())
-        return true
+        return sendCommand(ArsdkFeatureAnimation.startSuperWidePhotoPanoramaEncoder())
     }
 }
 
@@ -574,10 +548,8 @@ extension AnimFeaturePilotingItfController: AnimationPilotingItfBackend {
     }
 
     func abortCurrentAnimation() -> Bool {
-        sendCommand(ArsdkFeatureAnimation.cancelEncoder())
-        return true
+        return sendCommand(ArsdkFeatureAnimation.cancelEncoder())
     }
-
 }
 
 /// Extension of AnimFeaturePilotingItfController that implements the animation feature callbacks
@@ -657,7 +629,7 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
         case .superWidePhotoPanorama:
             animation = .superWidePhotoPanorama
         case .sdkCoreUnknown,
-             .none:
+                .none:
             fallthrough
         @unknown default:
             break
@@ -741,7 +713,7 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
                 .update(progress: Int(percent)).notifyUpdated()
         } else {
             ULog.w(.animationTag, "Animation type mismatch: received \(type) but expected \(animationType). \n" +
-                "This maybe means that the general state has been received before the specific one.")
+                   "This maybe means that the general state has been received before the specific one.")
         }
     }
 
@@ -751,7 +723,7 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
         if state != .idle {
             animationType = .candle
             if let mode = AnimationMode(fromArsdk: playMode) {
-            animation = CandleCore(speed: Double(speed), verticalDistance: Double(verticalDistance), mode: mode)
+                animation = CandleCore(speed: Double(speed), verticalDistance: Double(verticalDistance), mode: mode)
             } else {
                 animation = AnimationCore.Unidentified()
             }
@@ -878,21 +850,21 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
         state: ArsdkFeatureAnimationState, duration: Float, maxZoomLevel: Float,
         finishAction: ArsdkFeatureAnimationVertigoFinishAction, playMode: ArsdkFeatureAnimationPlayMode) {
 
-        var animation: AnimationCore?
-        if state != .idle {
-            animationType = .vertigo
-            if let mode = AnimationMode(fromArsdk: playMode),
-                let finishAction = VertigoAnimationFinishAction(fromArsdk: finishAction) {
+            var animation: AnimationCore?
+            if state != .idle {
+                animationType = .vertigo
+                if let mode = AnimationMode(fromArsdk: playMode),
+                   let finishAction = VertigoAnimationFinishAction(fromArsdk: finishAction) {
 
-                animation = VertigoCore(
-                    duration: Double(duration), maxZoomLevel: Double(maxZoomLevel),
-                    finishAction: finishAction, mode: mode)
-            } else {
-                animation = AnimationCore.Unidentified()
+                    animation = VertigoCore(
+                        duration: Double(duration), maxZoomLevel: Double(maxZoomLevel),
+                        finishAction: finishAction, mode: mode)
+                } else {
+                    animation = AnimationCore.Unidentified()
+                }
+                animationPilotingItf.update(animation: animation, status: AnimationStatus.from(state)).notifyUpdated()
             }
-            animationPilotingItf.update(animation: animation, status: AnimationStatus.from(state)).notifyUpdated()
         }
-    }
 
     func onTwistUpState(state: ArsdkFeatureAnimationState, speed: Float, verticalDistance: Float, rotationAngle: Float,
                         rotationSpeed: Float, playMode: ArsdkFeatureAnimationPlayMode) {
@@ -902,10 +874,10 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
             animationType = .twistUp
             if let mode = AnimationMode(fromArsdk: playMode) {
                 animation = GenericTwistUpCore(type: .twistUp, speed: Double(speed),
-                                        verticalDistance: Double(verticalDistance),
-                                        rotationAngle: Double(rotationAngle).toDegrees(),
-                                        rotationSpeed: Double(rotationSpeed).toDegrees(),
-                                        mode: mode)
+                                               verticalDistance: Double(verticalDistance),
+                                               rotationAngle: Double(rotationAngle).toDegrees(),
+                                               rotationSpeed: Double(rotationSpeed).toDegrees(),
+                                               mode: mode)
             } else {
                 animation = AnimationCore.Unidentified()
             }
@@ -921,10 +893,10 @@ extension AnimFeaturePilotingItfController: ArsdkFeatureAnimationCallback {
             animationType = .positionTwistUp
             if let mode = AnimationMode(fromArsdk: playMode) {
                 animation = GenericTwistUpCore(type: .positionTwistUp, speed: Double(speed),
-                                        verticalDistance: Double(verticalDistance),
-                                        rotationAngle: Double(rotationAngle).toDegrees(),
-                                        rotationSpeed: Double(rotationSpeed).toDegrees(),
-                                        mode: mode)
+                                               verticalDistance: Double(verticalDistance),
+                                               rotationAngle: Double(rotationAngle).toDegrees(),
+                                               rotationSpeed: Double(rotationSpeed).toDegrees(),
+                                               mode: mode)
             } else {
                 animation = AnimationCore.Unidentified()
             }
@@ -1006,7 +978,7 @@ extension AnimationType {
         case .superWidePhotoPanorama:
             return .superWidePhotoPanorama
         case .sdkCoreUnknown,
-             .none:
+                .none:
             fallthrough
         @unknown default:
             return nil
@@ -1149,5 +1121,5 @@ extension AnimationType: ArsdkMappableEnum {
         .vertical180PhotoPanorama: .vertical180PhotoPanorama,
         .sphericalPhotoPanorama: .sphericalPhotoPanorama,
         .superWidePhotoPanorama: .superWidePhotoPanorama
-        ])
+    ])
 }

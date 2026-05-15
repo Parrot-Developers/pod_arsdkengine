@@ -85,12 +85,10 @@ extension Anafi2CellularSession {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendCommand(_ command: Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = Encoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends command to get state.
@@ -110,7 +108,6 @@ extension Anafi2CellularSession: ArsdkNetworkEventDecoderListener {
         }
 
         cellularSession.publish()
-        cellularSession.notifyUpdated()
     }
 
     /// Processes a `LinksStatus` message.

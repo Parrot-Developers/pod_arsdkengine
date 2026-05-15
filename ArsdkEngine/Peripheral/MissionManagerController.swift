@@ -36,18 +36,31 @@ class MissionManagerController: DeviceComponentController, MissionManagerBackend
     /// Missions Manager
     private var missionManager: MissionManagerCore!
 
+    /// Mission asset storage utility.
+    private var missionAssetStorage: MissionAssetStorageCore!
+
+    /// Monitor on the mission storage
+    private var missionStorageMonitor: MonitorCore?
+
+    /// Missions present on the drone by uid
     private var missions: [String: MissionCore] = [:]
 
     /// Device representation in the persistent store
     let deviceStore: SettingsStore
 
+    /// `true` if this controller has persisted device specific values
+    private var isPersisted: Bool { !deviceStore.new }
+
+    /// Tells weather assets directory is ready to be accessed
+    private var storeIsReady = false
+
     /// Component settings key
     private static let settingKey = "MissionManagerController"
 
     /// All settings that can be stored
-   enum SettingKey: String, StoreKey {
-       case missionsKey = "missions"
-   }
+    enum SettingKey: String, StoreKey {
+        case missionsKey = "missions"
+    }
 
     /// Stored capabilities.
     enum Capabilities {
@@ -70,11 +83,10 @@ class MissionManagerController: DeviceComponentController, MissionManagerBackend
     override init(deviceController: DeviceController) {
         deviceStore = deviceController.deviceStore.getSettingsStore(key: MissionManagerController.settingKey)
         super.init(deviceController: deviceController)
-
+        missionAssetStorage = deviceController.engine.utilities.getUtility(Utilities.missionAssetStorage)
         missionManager = MissionManagerCore(store: deviceController.device.peripheralStore, backend: self)
 
-        // load settings
-        if !deviceStore.new {
+        if isPersisted {
             loadPersistedData()
             if missions.count > 0 {
                 missionManager.publish()
@@ -97,21 +109,21 @@ class MissionManagerController: DeviceComponentController, MissionManagerBackend
     ///
     /// - Parameter uid: mission unique identifier
     func load(uid: String) {
-        sendCommand(ArsdkFeatureMission.loadEncoder(uid: uid))
+        _ = sendCommand(ArsdkFeatureMission.loadEncoder(uid: uid))
     }
 
     /// Unload the mission.
     ///
     /// - Parameter uid: mission unique identifier
     func unload(uid: String) {
-        sendCommand(ArsdkFeatureMission.unloadEncoder(uid: uid))
+        _ = sendCommand(ArsdkFeatureMission.unloadEncoder(uid: uid))
     }
 
     /// Activate the mission.
     ///
     /// - Parameter uid: mission unique identifier
     func activate(uid: String) {
-        sendCommand(ArsdkFeatureMission.activateEncoder(uid: uid))
+        _ = sendCommand(ArsdkFeatureMission.activateEncoder(uid: uid))
     }
 
     /// Send message
@@ -119,40 +131,62 @@ class MissionManagerController: DeviceComponentController, MissionManagerBackend
     /// - Parameter message: mission message
     func sendMessage(message: MissionMessage) {
         if let mission = missions[message.missionUid], let recipientId = mission.recipientId {
-            sendCommand(ArsdkFeatureMission.customCmdEncoder(recipientId: recipientId,
-                serviceId: message.serviceUid,
-                msgNum: message.messageUid, payload: message.payload))
+            _ = sendCommand(ArsdkFeatureMission.customCmdEncoder(recipientId: recipientId,
+                                                             serviceId: message.serviceUid,
+                                                             msgNum: message.messageUid, payload: message.payload))
         }
+    }
+
+    /// Get assets directory for the specified mission.
+    ///
+    /// - Parameter uid: mission uid
+    /// - Returns: the asset directory
+    func getAssetDirectory(uid: String) -> URL? {
+        return storeIsReady ? missionAssetStorage.workDir.appendingPathComponent(uid) : nil
     }
 
     /// Drone did connect.
     override func didConnect() {
         if missions.count > 0 {
-            sendCommand(ArsdkFeatureMission.customMsgEnableEncoder())
+            _ = sendCommand(ArsdkFeatureMission.customMsgEnableEncoder())
+
+            missionStorageMonitor = missionAssetStorage.startMonitoring { [weak self] in
+                self?.storeIsReady = true
+                self?.missionManager.forceNotifyUpdated()
+            }
             missionManager.publish()
+        } else {
+            willForget()
         }
-        super.didConnect()
     }
 
     /// Drone did disconnect.
     override func didDisconnect() {
-        if GroundSdkConfig.sharedInstance.offlineSettings == .off {
-            missionManager.unpublish()
-        } else {
+        if isPersisted {
             for mission in missions {
                 let mission = mission.value
                 missionManager.update(uid: mission.uid, state: .unavailable, unavailabilityReason: .none)
                 missionManager.reset(updatingMission: mission.uid)
             }
-            missionManager.notifyUpdated()
+            missionManager.publish()
+        } else {
+            missionManager.unpublish()
         }
-        super.didDisconnect()
+        missionStorageMonitor?.stop()
+        missionStorageMonitor = nil
+        storeIsReady = false
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        missionManager.unpublish()
     }
 
     /// Drone is about to be forgotten
     override func willForget() {
+        deviceStore.clear()
         missionManager.unpublish()
-        super.willForget()
     }
 
     /// Called when a command that notifies a capabilities change has been received.
@@ -186,7 +220,8 @@ class MissionManagerController: DeviceComponentController, MissionManagerBackend
 extension MissionManagerController: ArsdkFeatureMissionCallback {
 
     func onCapabilities(uid: String, name: String, desc: String, version: String, recipientId: UInt,
-        targetModelId: UInt, targetMinVersion: String, targetMaxVersion: String, listFlagsBitField: UInt) {
+                        targetModelId: UInt, targetMinVersion: String, targetMaxVersion: String,
+                        listFlagsBitField: UInt) {
         let targetModel = DeviceModel.from(internalId: Int(targetModelId))
         switch targetModel {
         case .drone(let model):
@@ -196,22 +231,22 @@ extension MissionManagerController: ArsdkFeatureMissionCallback {
                 missions[uid] = nil
             }
             let mission = MissionCore(uid: uid, description: desc, name: name, version: version,
-                recipientId: recipientId, targetModelId: model,
-                minTargetVersion: FirmwareVersion.parse(versionStr: targetMinVersion),
-                maxTargetVersion: FirmwareVersion.parse(versionStr: targetMaxVersion))
+                                      recipientId: recipientId, targetModelId: model,
+                                      minTargetVersion: FirmwareVersion.parse(versionStr: targetMinVersion),
+                                      maxTargetVersion: FirmwareVersion.parse(versionStr: targetMaxVersion))
 
-                missions[uid] = mission
-                if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
-                    capabilitiesDidChange(.missions(missions))
-                    missionManager.update(missions: missions).notifyUpdated()
-                }
+            missions[uid] = mission
+            if ArsdkFeatureGenericListFlagsBitField.isSet(.last, inBitField: listFlagsBitField) {
+                capabilitiesDidChange(.missions(missions))
+                missionManager.update(missions: missions).notifyUpdated()
+            }
         default:
             break
         }
     }
 
     func onState(uid: String, state: ArsdkFeatureMissionState,
-        unavailabilityReason: ArsdkFeatureMissionUnavailabilityReason) {
+                 unavailabilityReason: ArsdkFeatureMissionUnavailabilityReason) {
         guard missions[uid] != nil else {
             return
         }

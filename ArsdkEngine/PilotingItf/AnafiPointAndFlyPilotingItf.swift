@@ -40,17 +40,24 @@ class AnafiPointAndFlyPilotingItf: ActivablePilotingItfController {
     }
 
     /// Decoder for point'n'fly events.
-    private var arsdkDecoder: ArsdkPointnflyEventDecoder!
+    private var arsdkPointAndFlyDecoder: ArsdkPointnflyEventDecoder!
+
+    /// Decoder for backup telemetry events.
+    private var arsdkBackupTelemetryDecoder: ArsdkBackuplinkEventDecoder!
 
     /// Pending point'n'fly directive.
     private var pendingDirective: PointAndFlyDirective?
+
+    /// Requested point'n'fly directive.
+    private var requestedDirective: PointAndFlyDirective?
 
     /// Constructor
     ///
     /// - Parameter activationController: activation controller that owns this piloting interface controller
     init(activationController: PilotingItfActivationController) {
         super.init(activationController: activationController, sendsPilotingCommands: true)
-        arsdkDecoder = ArsdkPointnflyEventDecoder(listener: self)
+        arsdkPointAndFlyDecoder = ArsdkPointnflyEventDecoder(listener: self)
+        arsdkBackupTelemetryDecoder = ArsdkBackuplinkEventDecoder(listener: self)
         pilotingItf = PointAndFlyPilotingItfCore(store: droneController.drone.pilotingItfStore, backend: self)
     }
 
@@ -63,25 +70,31 @@ class AnafiPointAndFlyPilotingItf: ActivablePilotingItfController {
         // Component will be published once state is received
     }
 
+    override func backupLinkDidActivate() {
+        pilotingItf.publish()
+    }
+
     override func didDisconnect() {
         super.didDisconnect()
         pilotingItf.unpublish()
         pendingDirective = nil
+        requestedDirective = nil
     }
 
     override func didReceiveCommand(_ command: OpaquePointer) {
-        arsdkDecoder.decode(command)
+        arsdkPointAndFlyDecoder.decode(command)
+        arsdkBackupTelemetryDecoder.decode(command)
     }
 
     override func requestActivation() {
         if let directive = pendingDirective {
+            requestedDirective = directive
             _ = sendExecuteCommand(directive: directive)
             pendingDirective = nil
         }
     }
 
     override func requestDeactivation() {
-        pendingDirective = nil
         _ = sendDeactivateCommand()
     }
 }
@@ -90,6 +103,7 @@ class AnafiPointAndFlyPilotingItf: ActivablePilotingItfController {
 extension AnafiPointAndFlyPilotingItf: PointAndFlyPilotingItfBackend {
     func execute(directive: PointAndFlyDirective) {
         if pilotingItf.state == .active {
+            requestedDirective = directive
             _ = sendExecuteCommand(directive: directive)
         } else {
             pendingDirective = directive
@@ -117,12 +131,10 @@ extension AnafiPointAndFlyPilotingItf {
     /// - Parameter command: command to send
     /// - Returns: `true` if the command has been sent
     func sendPointAndFlyCommand(_ command: Arsdk_Pointnfly_Command.OneOf_ID) -> Bool {
-        var sent = false
         if let encoder = ArsdkPointnflyCommandEncoder.encoder(command) {
-            sendCommand(encoder)
-            sent = true
+            return sendCommand(encoder)
         }
-        return sent
+        return false
     }
 
     /// Sends get state command.
@@ -164,6 +176,7 @@ extension AnafiPointAndFlyPilotingItf {
             fly.maxVerticalSpeed = flyDirective.verticalSpeed
             fly.maxYawRotationSpeed = flyDirective.yawRotationSpeed
             fly.heading = flyDirective.heading.arsdkValue
+            fly.enabledLinks = flyDirective.enabledLinks.arsdkValue ?? .all
             execute.directive = Arsdk_Pointnfly_Command.Execute.OneOf_Directive.fly(fly)
         default:
             return false
@@ -173,9 +186,14 @@ extension AnafiPointAndFlyPilotingItf {
     }
 }
 
-/// Extension for events processing.
+/// Extension for point and fly events processing.
 extension AnafiPointAndFlyPilotingItf: ArsdkPointnflyEventDecoderListener {
     func onState(_ state: Arsdk_Pointnfly_Event.State) {
+        if state.hasCapabilities {
+            pointAndFlyPilotingItf.update(availableRadioLinks: Set(state.capabilities.allowedLinks
+                .compactMap { $0.gsdk }))
+        }
+
         if let state = state.state {
             switch state {
             case .unavailable(let unavailable):
@@ -196,6 +214,7 @@ extension AnafiPointAndFlyPilotingItf: ArsdkPointnflyEventDecoderListener {
                                                                 altitude: point.altitude, gimbalControlMode: mode)
                             pointAndFlyPilotingItf.update(unavailabilityReasons: [])
                                 .update(currentDirective: pointDirective)
+                            requestedDirective = nil
                             notifyActive()
                         }
                     case .fly(let fly):
@@ -205,9 +224,14 @@ extension AnafiPointAndFlyPilotingItf: ArsdkPointnflyEventDecoderListener {
                                                             altitude: fly.altitude, gimbalControlMode: mode,
                                                             horizontalSpeed: fly.maxHorizontalSpeed,
                                                             verticalSpeed: fly.maxVerticalSpeed,
-                                                            yawRotationSpeed: fly.maxYawRotationSpeed, heading: heading)
+                                                            yawRotationSpeed: fly.maxYawRotationSpeed, heading: heading,
+                                                            enabledLinks: pointAndFlyPilotingItf.availableRadioLinks
+                                .contains(fly.enabledLinks.gsdk) ? fly.enabledLinks.gsdk :
+                                                                pointAndFlyPilotingItf.availableRadioLinks.first!)
+
                             pointAndFlyPilotingItf.update(unavailabilityReasons: [])
                                 .update(currentDirective: flyDirective)
+                            requestedDirective = nil
                             notifyActive()
                         }
                     }
@@ -219,8 +243,36 @@ extension AnafiPointAndFlyPilotingItf: ArsdkPointnflyEventDecoderListener {
     }
 
     func onExecution(_ execution: Arsdk_Pointnfly_Event.Execution) {
-        pointAndFlyPilotingItf.update(executionStatus: PointAndFlyExecutionStatus(fromArsdk: execution.status)).notifyUpdated()
+        pointAndFlyPilotingItf
+            .update(executionStatus: PointAndFlyExecutionStatus(fromArsdk: execution.status))
+            .notifyUpdated()
         pointAndFlyPilotingItf.update(executionStatus: nil).notifyUpdated()
+    }
+}
+
+/// Extension for telemetry events processing.
+extension AnafiPointAndFlyPilotingItf: ArsdkBackuplinkEventDecoderListener {
+    func onTelemetry(_ telemetry: Arsdk_Backuplink_Event.Telemetry) {
+        switch telemetry.flyingState {
+        case .pointnfly:
+            if let directive = requestedDirective {
+                pointAndFlyPilotingItf.update(currentDirective: directive)
+                // do not reset requestedDirective. Telemetry can be received with a delay,
+                // the current directive will be lost in case of a different flying state.
+            }
+            pointAndFlyPilotingItf.update(unavailabilityReasons: Set())
+            notifyActive()
+        case .landed:
+            pointAndFlyPilotingItf.update(currentDirective: nil).update(unavailabilityReasons: [.droneNotFlying])
+            notifyUnavailable()
+        default:
+            pointAndFlyPilotingItf.update(currentDirective: nil).update(unavailabilityReasons: Set())
+            notifyIdle()
+        }
+    }
+
+    func onMainRadioDisconnecting(_ mainRadioDisconnecting: SwiftProtobuf.Google_Protobuf_Empty) {
+        // nothing to do
     }
 }
 

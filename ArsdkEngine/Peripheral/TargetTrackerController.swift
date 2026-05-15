@@ -124,7 +124,13 @@ class TargetTrackerController: DeviceComponentController {
     override func didDisconnect() {
         // stop using location
         useControllerLocation = false
-        targetTracker.update(targetTrajectory: nil).cancelSettingsRollback().notifyUpdated()
+        targetTracker.update(targetTrajectory: nil).cancelSettingsRollback().publish()
+    }
+
+    /// Backup link is active
+    override func backupLinkDidActivate() {
+        super.backupLinkDidActivate()
+        targetTracker.unpublish()
     }
 
     /// Device is about to be forgotten
@@ -137,7 +143,7 @@ class TargetTrackerController: DeviceComponentController {
     /// value on the drone
     private func sendTargetIsController() {
         if requestedTargetIsController != receivedTargetIsController {
-            self.sendCommand(ArsdkFeatureFollowMe.setTargetIsControllerEncoder(
+            _ = self.sendCommand(ArsdkFeatureFollowMe.setTargetIsControllerEncoder(
                 targetIsController: requestedTargetIsController ? 1 : 0))
         }
     }
@@ -150,7 +156,7 @@ class TargetTrackerController: DeviceComponentController {
         }
         let horizontalInt = Int(round(100.0 * requestedFraming.horizontal))
         let verticalInt = Int(round(100.0 * requestedFraming.vertical))
-        sendCommand(ArsdkFeatureFollowMe.targetFramingPositionEncoder(horizontal: horizontalInt, vertical: verticalInt))
+        _ = sendCommand(ArsdkFeatureFollowMe.targetFramingPositionEncoder(horizontal: horizontalInt, vertical: verticalInt))
     }
 }
 
@@ -175,7 +181,7 @@ extension TargetTrackerController: TargetTrackerBackend {
     }
 
     func set(targetDetectionInfo: TargetDetectionInfo) {
-        sendCommand(ArsdkFeatureFollowMe.targetImageDetectionEncoder(
+        _ = sendCommand(ArsdkFeatureFollowMe.targetImageDetectionEncoder(
             targetAzimuth: Float(targetDetectionInfo.targetAzimuth),
             targetElevation: Float(targetDetectionInfo.targetElevation),
             changeOfScale: Float(targetDetectionInfo.changeOfScale),
@@ -202,10 +208,10 @@ extension TargetTrackerController: ArsdkFeatureFollowMeCallback {
     func onTargetTrajectory(
         latitude: Double, longitude: Double, altitude: Float, northSpeed: Float, eastSpeed: Float, downSpeed: Float) {
 
-        let targetTrajectory = TargetTrajectoryCore(
-            latitude: latitude, longitude: longitude, altitude: Double(altitude), northSpeed: Double(northSpeed),
-            eastSpeed: Double(eastSpeed), downSpeed: Double(downSpeed))
+            let targetTrajectory = TargetTrajectoryCore(
+                latitude: latitude, longitude: longitude, altitude: Double(altitude), northSpeed: Double(northSpeed),
+                eastSpeed: Double(eastSpeed), downSpeed: Double(downSpeed))
 
-        targetTracker.update(targetTrajectory: targetTrajectory).notifyUpdated()
-    }
+            targetTracker.update(targetTrajectory: targetTrajectory).notifyUpdated()
+        }
 }

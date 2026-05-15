@@ -82,15 +82,16 @@ class DeviceServer {
         api: String, query: [String: String]? = nil,
         completion: @escaping (_ result: HttpSessionCore.Result, _ data: Data?) -> Void) -> CancelableCore {
 
-        var urlComponents = URLComponents(url: baseHttpUrl.appendingPathComponent(api), resolvingAgainstBaseURL: false)!
-        urlComponents.queryItems = query?.map { return URLQueryItem(name: $0.key, value: $0.value) }
-        // The '+' symbol is not percent encoded by URLComponents, so we have to do it manually
-        urlComponents.percentEncodedQuery = urlComponents.percentEncodedQuery?
-            .replacingOccurrences(of: "+", with: "%2B")
-        let request = URLRequest(url: urlComponents.url!, cachePolicy: .reloadIgnoringLocalCacheData)
+            var urlComponents = URLComponents(url: baseHttpUrl.appendingPathComponent(api),
+                                              resolvingAgainstBaseURL: false)!
+            urlComponents.queryItems = query?.map { return URLQueryItem(name: $0.key, value: $0.value) }
+            // The '+' symbol is not percent encoded by URLComponents, so we have to do it manually
+            urlComponents.percentEncodedQuery = urlComponents.percentEncodedQuery?
+                .replacingOccurrences(of: "+", with: "%2B")
+            let request = URLRequest(url: urlComponents.url!, cachePolicy: .reloadIgnoringLocalCacheData)
 
-        return httpSession.getData(request: request, completion: completion)
-    }
+            return httpSession.getData(request: request, completion: completion)
+        }
 
     /// Send a file with a put request
     ///
@@ -112,13 +113,14 @@ class DeviceServer {
         progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ result: HttpSessionCore.Result, _ data: Data?) -> Void) -> CancelableCore {
 
-        var urlComponents = URLComponents(url: baseHttpUrl.appendingPathComponent(api), resolvingAgainstBaseURL: false)!
-        urlComponents.queryItems = query?.map { return URLQueryItem(name: $0.key, value: $0.value) }
-        let request = URLRequest(url: urlComponents.url!, cachePolicy: .reloadIgnoringLocalCacheData,
-        timeoutInterval: timeoutInterval)
+            var urlComponents = URLComponents(url: baseHttpUrl.appendingPathComponent(api),
+                                              resolvingAgainstBaseURL: false)!
+            urlComponents.queryItems = query?.map { return URLQueryItem(name: $0.key, value: $0.value) }
+            let request = URLRequest(url: urlComponents.url!, cachePolicy: .reloadIgnoringLocalCacheData,
+                                     timeoutInterval: timeoutInterval)
 
-        return httpSession.sendFile(request: request, fileUrl: fileUrl, progress: progress, completion: completion)
-    }
+            return httpSession.sendFile(request: request, fileUrl: fileUrl, progress: progress, completion: completion)
+        }
 
     /// Download a file with a get request
     ///
@@ -140,15 +142,16 @@ class DeviceServer {
         destination: URL, progress: @escaping (_ progressValue: Int) -> Void,
         completion: @escaping (_ result: HttpSessionCore.Result, _ localFileUrl: URL?) -> Void) -> CancelableCore {
 
-        var components = URLComponents(url: baseHttpUrl.appendingPathComponent(api), resolvingAgainstBaseURL: false)!
-        components.queryItems = parameters.map { (key, value) in
-            URLQueryItem(name: key, value: value)
-        }
-        let request = URLRequest(url: components.url!, cachePolicy: .reloadIgnoringLocalCacheData)
+            var components = URLComponents(url: baseHttpUrl.appendingPathComponent(api),
+                                           resolvingAgainstBaseURL: false)!
+            components.queryItems = parameters.map { (key, value) in
+                URLQueryItem(name: key, value: value)
+            }
+            let request = URLRequest(url: components.url!, cachePolicy: .reloadIgnoringLocalCacheData)
 
-        return httpSession.downloadFile(
-            request: request, destination: destination, progress: progress, completion: completion)
-    }
+            return httpSession.downloadFile(
+                request: request, destination: destination, progress: progress, completion: completion)
+        }
 
     /// Download a file with a get request and uses a StreamDecoder to convert the result
     ///
@@ -166,11 +169,11 @@ class DeviceServer {
         api: String, withStreamDecoder: StreamDecoder, destination: URL,
         completion: @escaping (_ result: HttpSessionCore.Result, _ localFileUrl: URL?) -> Void) -> CancelableCore {
 
-        let request = URLRequest(url: baseHttpUrl.appendingPathComponent(api),
-                                 cachePolicy: .reloadIgnoringLocalCacheData)
-        return httpSession.downloadFile(
-            streamDecoder: withStreamDecoder, request: request, destination: destination, completion: completion)
-    }
+            let request = URLRequest(url: baseHttpUrl.appendingPathComponent(api),
+                                     cachePolicy: .reloadIgnoringLocalCacheData)
+            return httpSession.downloadFile(
+                streamDecoder: withStreamDecoder, request: request, destination: destination, completion: completion)
+        }
 
     /// Request a delete
     ///
@@ -181,7 +184,7 @@ class DeviceServer {
     ///   - result: the request result
     /// - Returns: the request
     func delete(api: String, query: [String: String]? = nil,
-        completion: @escaping (_ result: HttpSessionCore.Result) -> Void) -> CancelableCore {
+                completion: @escaping (_ result: HttpSessionCore.Result) -> Void) -> CancelableCore {
 
         var urlComponents = URLComponents(url: baseHttpUrl.appendingPathComponent(api), resolvingAgainstBaseURL: false)!
         urlComponents.queryItems = query?.map { return URLQueryItem(name: $0.key, value: $0.value) }

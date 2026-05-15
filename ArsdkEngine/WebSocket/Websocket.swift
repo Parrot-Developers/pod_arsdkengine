@@ -91,7 +91,7 @@ class WebSocketClientSession: WebSocketSession {
     required init?(baseUrl: URL, api: String, delegate: WebSocketSessionDelegate) {
         if let urlComponents = NSURLComponents(
             url: baseUrl.appendingPathComponent(api), resolvingAgainstBaseURL: false),
-            urlComponents.scheme == "ws", let host = urlComponents.host {
+           urlComponents.scheme == "ws", let host = urlComponents.host {
             connection = StreamSocketConnection(addr: host, port: urlComponents.port?.uint32Value ?? 80)
             connection.write(utf8string: buildConnectHeader(host: host, path: urlComponents.path ?? "/"))
             self.delegate = delegate
@@ -143,7 +143,7 @@ class WebSocketClientSession: WebSocketSession {
         inputBuffer += data
         // Process http header if not connect and the whole header has been received
         if !connected, let headerSeparatorPos = inputBuffer.range(of: httpHeaderSeparator),
-            let response = String(data: inputBuffer.subdata(in: 0..<headerSeparatorPos.lowerBound), encoding: .utf8) {
+           let response = String(data: inputBuffer.subdata(in: 0..<headerSeparatorPos.lowerBound), encoding: .utf8) {
             connected = processHttpResponse(response)
             if connected {
                 // connected: remove header data from input buffer
@@ -281,7 +281,7 @@ class WebSocketClientSession: WebSocketSession {
 
                 if maskBit {
                     mask = data.subdata(in: headerLen..<headerLen+2).withUnsafeBytes {
-                            $0.load(as: UInt16.self)
+                        $0.load(as: UInt16.self)
                     }
                     headerLen += 2
                 }

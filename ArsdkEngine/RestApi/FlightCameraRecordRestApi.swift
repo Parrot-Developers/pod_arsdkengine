@@ -54,28 +54,28 @@ class FlightCameraRecordRestApi {
     /// - Returns: the request
     func getFlightCameraRecordList(
         completion: @escaping (_ flightCameraRecordList: [FlightCameraRecord]?) -> Void) -> CancelableCore {
-        return server.getData(api: "\(baseApi)") { result, data in
-            switch result {
-            case .success:
-                // listing the flight camera records is successful
-                if let data = data {
-                    let decoder = JSONDecoder()
-                    decoder.dateDecodingStrategy = .formatted(.iso8601Base)
-                    do {
-                        let flightCameraRecords = try decoder.decode([FlightCameraRecord].self, from: data)
-                        completion(flightCameraRecords)
-                    } catch let error {
-                        ULog.w(.flightCameraRecordTag,
-                               "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
-                                error.localizedDescription)
-                        completion(nil)
+            return server.getData(api: "\(baseApi)") { result, data in
+                switch result {
+                case .success:
+                    // listing the flight camera records is successful
+                    if let data = data {
+                        let decoder = JSONDecoder()
+                        decoder.dateDecodingStrategy = .formatted(.iso8601Base)
+                        do {
+                            let flightCameraRecords = try decoder.decode([FlightCameraRecord].self, from: data)
+                            completion(flightCameraRecords)
+                        } catch let error {
+                            ULog.w(.flightCameraRecordTag,
+                                   "Failed to decode data \(String(data: data, encoding: .utf8) ?? ""): " +
+                                   error.localizedDescription)
+                            completion(nil)
+                        }
                     }
+                default:
+                    completion(nil)
                 }
-            default:
-                completion(nil)
             }
         }
-    }
 
     /// Download a given flight camera record to a given directory
     ///
@@ -90,15 +90,15 @@ class FlightCameraRecordRestApi {
         _ flightCameraRecord: FlightCameraRecord, toDirectory directory: URL, deviceUid: String,
         completion: @escaping (_ fileUrl: URL?) -> Void) -> CancelableCore {
 
-        let name = URL(string: flightCameraRecord.name)?.lastPathComponent ?? flightCameraRecord.name
-        return server.downloadFile(
-            api: flightCameraRecord.urlPath,
-            destination: directory.appendingPathComponent(name),
-            progress: { _ in },
-            completion: { _, localFileUrl in
-                completion(localFileUrl)
-        })
-    }
+            let name = URL(string: flightCameraRecord.name)?.lastPathComponent ?? flightCameraRecord.name
+            return server.downloadFile(
+                api: flightCameraRecord.urlPath,
+                destination: directory.appendingPathComponent(name),
+                progress: { _ in },
+                completion: { _, localFileUrl in
+                    completion(localFileUrl)
+                })
+        }
 
     /// Delete a given flight camera record on the device
     ///
@@ -108,7 +108,7 @@ class FlightCameraRecordRestApi {
     ///   - success: whether the delete task was successful or not
     /// - Returns: the request
     func deleteFlightCameraRecord(_ flightCameraRecord: FlightCameraRecord,
-        completion: @escaping (_ success: Bool) -> Void) -> CancelableCore {
+                                  completion: @escaping (_ success: Bool) -> Void) -> CancelableCore {
         return server.delete(api: "\(baseApi)/\(flightCameraRecord.name)") { result in
             switch result {
             case .success:

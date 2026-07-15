@@ -533,7 +533,11 @@ extension ThermalController2: ArsdkThermalcontrolEventDecoderListener {
         })
         thermalControl.update(supportedCalibrationMode: [.manual])
             .update(supportedPowerSavingModes: modes.isEmpty ? [.max] : modes)
-            .notifyUpdated()
+        if let calibrationMethod = ThermalCalibrationMethod(fromArsdk: defaultCapabilities.calibrationMethod) {
+            thermalControl.update(method: calibrationMethod)
+        }
+
+        thermalControl.notifyUpdated()
     }
 
     func onCalibrationState(_ calibrationState: Arsdk_Thermalcontrol_Event.UniformtiyCalibrationState) {
@@ -739,6 +743,14 @@ extension CalibrationState: ArsdkMappableEnum {
         .calibrated: .calibrated
     ])
 }
+
+// Extension that adds conversion from/to arsdk enum.
+extension ThermalCalibrationMethod: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<ThermalCalibrationMethod, Arsdk_Thermalcontrol_CalibrationMethod>([
+        .cover: .cover,
+        .shutter: .shutter])
+}
+
 
 // Extension that adds conversion from/to arsdk enum.
 extension ThermalPowerSavingMode: ArsdkMappableEnum {

@@ -79,6 +79,10 @@ enum Arsdk_Esim_ErrorCode: SwiftProtobuf.Enum {
   case confirmationCodeRequired // = 10
   case serverAuthenticationFailure // = 11
   case clientAuthenticationFailure // = 12
+  case iccidAlreadyExists // = 13
+  case eidRefused // = 14
+  case notEnoughMemory // = 15
+  case installFailed // = 16
   case UNRECOGNIZED(Int)
 
   init() {
@@ -100,6 +104,10 @@ enum Arsdk_Esim_ErrorCode: SwiftProtobuf.Enum {
     case 10: self = .confirmationCodeRequired
     case 11: self = .serverAuthenticationFailure
     case 12: self = .clientAuthenticationFailure
+    case 13: self = .iccidAlreadyExists
+    case 14: self = .eidRefused
+    case 15: self = .notEnoughMemory
+    case 16: self = .installFailed
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -119,6 +127,10 @@ enum Arsdk_Esim_ErrorCode: SwiftProtobuf.Enum {
     case .confirmationCodeRequired: return 10
     case .serverAuthenticationFailure: return 11
     case .clientAuthenticationFailure: return 12
+    case .iccidAlreadyExists: return 13
+    case .eidRefused: return 14
+    case .notEnoughMemory: return 15
+    case .installFailed: return 16
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -143,6 +155,10 @@ extension Arsdk_Esim_ErrorCode: CaseIterable {
     .confirmationCodeRequired,
     .serverAuthenticationFailure,
     .clientAuthenticationFailure,
+    .iccidAlreadyExists,
+    .eidRefused,
+    .notEnoughMemory,
+    .installFailed,
   ]
 }
 
@@ -196,6 +212,14 @@ struct Arsdk_Esim_Command {
     set {id = .httpResponse(newValue)}
   }
 
+  var renameProfile: Arsdk_Esim_Command.RenameProfile {
+    get {
+      if case .renameProfile(let v)? = id {return v}
+      return Arsdk_Esim_Command.RenameProfile()
+    }
+    set {id = .renameProfile(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
@@ -204,6 +228,7 @@ struct Arsdk_Esim_Command {
     case enableProfile(Arsdk_Esim_Command.EnableProfile)
     case deleteProfile(Arsdk_Esim_Command.DeleteProfile)
     case httpResponse(Arsdk_Esim_Command.HttpResponse)
+    case renameProfile(Arsdk_Esim_Command.RenameProfile)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Esim_Command.OneOf_ID, rhs: Arsdk_Esim_Command.OneOf_ID) -> Bool {
@@ -229,6 +254,10 @@ struct Arsdk_Esim_Command {
       }()
       case (.httpResponse, .httpResponse): return {
         guard case .httpResponse(let l) = lhs, case .httpResponse(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.renameProfile, .renameProfile): return {
+        guard case .renameProfile(let l) = lhs, case .renameProfile(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -319,6 +348,20 @@ struct Arsdk_Esim_Command {
 
     /// response data
     var data: Data = Data()
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct RenameProfile {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var iccid: String = String()
+
+    var nickname: String = String()
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -465,6 +508,12 @@ struct Arsdk_Esim_Profile {
 
   var enabled: Bool = false
 
+  /// default profile name
+  var name: String = String()
+
+  /// nickname set by user
+  var nickname: String = String()
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -503,12 +552,21 @@ struct Arsdk_Esim_ProfileOperationStatus {
     set {type = .deleteProfileStatus(newValue)}
   }
 
+  var renameProfileStatus: Arsdk_Esim_RenameProfileStatus {
+    get {
+      if case .renameProfileStatus(let v)? = type {return v}
+      return Arsdk_Esim_RenameProfileStatus()
+    }
+    set {type = .renameProfileStatus(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Type: Equatable {
     case downloadProfileStatus(Arsdk_Esim_DownloadProfileStatus)
     case enableProfileStatus(Arsdk_Esim_EnableProfileStatus)
     case deleteProfileStatus(Arsdk_Esim_DeleteProfileStatus)
+    case renameProfileStatus(Arsdk_Esim_RenameProfileStatus)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Esim_ProfileOperationStatus.OneOf_Type, rhs: Arsdk_Esim_ProfileOperationStatus.OneOf_Type) -> Bool {
@@ -526,6 +584,10 @@ struct Arsdk_Esim_ProfileOperationStatus {
       }()
       case (.deleteProfileStatus, .deleteProfileStatus): return {
         guard case .deleteProfileStatus(let l) = lhs, case .deleteProfileStatus(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.renameProfileStatus, .renameProfileStatus): return {
+        guard case .renameProfileStatus(let l) = lhs, case .renameProfileStatus(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -585,6 +647,20 @@ struct Arsdk_Esim_DeleteProfileStatus {
   init() {}
 }
 
+struct Arsdk_Esim_RenameProfileStatus {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var iccid: String = String()
+
+  var nickname: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 struct Arsdk_Esim_ProfileList {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -636,6 +712,10 @@ extension Arsdk_Esim_ErrorCode: SwiftProtobuf._ProtoNameProviding {
     10: .same(proto: "ERROR_CODE_CONFIRMATION_CODE_REQUIRED"),
     11: .same(proto: "ERROR_CODE_SERVER_AUTHENTICATION_FAILURE"),
     12: .same(proto: "ERROR_CODE_CLIENT_AUTHENTICATION_FAILURE"),
+    13: .same(proto: "ERROR_CODE_ICCID_ALREADY_EXISTS"),
+    14: .same(proto: "ERROR_CODE_EID_REFUSED"),
+    15: .same(proto: "ERROR_CODE_NOT_ENOUGH_MEMORY"),
+    16: .same(proto: "ERROR_CODE_INSTALL_FAILED"),
   ]
 }
 
@@ -647,6 +727,7 @@ extension Arsdk_Esim_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     18: .standard(proto: "enable_profile"),
     19: .standard(proto: "delete_profile"),
     20: .standard(proto: "http_response"),
+    21: .standard(proto: "rename_profile"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -720,6 +801,19 @@ extension Arsdk_Esim_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
           self.id = .httpResponse(v)
         }
       }()
+      case 21: try {
+        var v: Arsdk_Esim_Command.RenameProfile?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .renameProfile(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .renameProfile(v)
+        }
+      }()
       default: break
       }
     }
@@ -750,6 +844,10 @@ extension Arsdk_Esim_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     case .httpResponse?: try {
       guard case .httpResponse(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+    }()
+    case .renameProfile?: try {
+      guard case .renameProfile(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
     case nil: break
     }
@@ -963,6 +1061,44 @@ extension Arsdk_Esim_Command.HttpResponse: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
+extension Arsdk_Esim_Command.RenameProfile: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Esim_Command.protoMessageName + ".RenameProfile"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "iccid"),
+    2: .same(proto: "nickname"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.iccid) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.nickname) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.iccid.isEmpty {
+      try visitor.visitSingularStringField(value: self.iccid, fieldNumber: 1)
+    }
+    if !self.nickname.isEmpty {
+      try visitor.visitSingularStringField(value: self.nickname, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Esim_Command.RenameProfile, rhs: Arsdk_Esim_Command.RenameProfile) -> Bool {
+    if lhs.iccid != rhs.iccid {return false}
+    if lhs.nickname != rhs.nickname {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Esim_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Event"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -1143,6 +1279,8 @@ extension Arsdk_Esim_Profile: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     1: .same(proto: "iccid"),
     2: .same(proto: "provider"),
     3: .same(proto: "enabled"),
+    4: .same(proto: "name"),
+    5: .same(proto: "nickname"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1154,6 +1292,8 @@ extension Arsdk_Esim_Profile: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
       case 1: try { try decoder.decodeSingularStringField(value: &self.iccid) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.provider) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.enabled) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.nickname) }()
       default: break
       }
     }
@@ -1169,6 +1309,12 @@ extension Arsdk_Esim_Profile: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     if self.enabled != false {
       try visitor.visitSingularBoolField(value: self.enabled, fieldNumber: 3)
     }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 4)
+    }
+    if !self.nickname.isEmpty {
+      try visitor.visitSingularStringField(value: self.nickname, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1176,6 +1322,8 @@ extension Arsdk_Esim_Profile: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
     if lhs.iccid != rhs.iccid {return false}
     if lhs.provider != rhs.provider {return false}
     if lhs.enabled != rhs.enabled {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.nickname != rhs.nickname {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1188,6 +1336,7 @@ extension Arsdk_Esim_ProfileOperationStatus: SwiftProtobuf.Message, SwiftProtobu
     2: .standard(proto: "download_profile_status"),
     3: .standard(proto: "enable_profile_status"),
     4: .standard(proto: "delete_profile_status"),
+    5: .standard(proto: "rename_profile_status"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1236,6 +1385,19 @@ extension Arsdk_Esim_ProfileOperationStatus: SwiftProtobuf.Message, SwiftProtobu
           self.type = .deleteProfileStatus(v)
         }
       }()
+      case 5: try {
+        var v: Arsdk_Esim_RenameProfileStatus?
+        var hadOneofValue = false
+        if let current = self.type {
+          hadOneofValue = true
+          if case .renameProfileStatus(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.type = .renameProfileStatus(v)
+        }
+      }()
       default: break
       }
     }
@@ -1261,6 +1423,10 @@ extension Arsdk_Esim_ProfileOperationStatus: SwiftProtobuf.Message, SwiftProtobu
     case .deleteProfileStatus?: try {
       guard case .deleteProfileStatus(let v)? = self.type else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .renameProfileStatus?: try {
+      guard case .renameProfileStatus(let v)? = self.type else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
     case nil: break
     }
@@ -1376,6 +1542,44 @@ extension Arsdk_Esim_DeleteProfileStatus: SwiftProtobuf.Message, SwiftProtobuf._
 
   static func ==(lhs: Arsdk_Esim_DeleteProfileStatus, rhs: Arsdk_Esim_DeleteProfileStatus) -> Bool {
     if lhs.iccid != rhs.iccid {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Esim_RenameProfileStatus: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".RenameProfileStatus"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "iccid"),
+    2: .same(proto: "nickname"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.iccid) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.nickname) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.iccid.isEmpty {
+      try visitor.visitSingularStringField(value: self.iccid, fieldNumber: 1)
+    }
+    if !self.nickname.isEmpty {
+      try visitor.visitSingularStringField(value: self.nickname, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Esim_RenameProfileStatus, rhs: Arsdk_Esim_RenameProfileStatus) -> Bool {
+    if lhs.iccid != rhs.iccid {return false}
+    if lhs.nickname != rhs.nickname {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

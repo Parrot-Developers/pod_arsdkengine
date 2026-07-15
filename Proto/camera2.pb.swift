@@ -770,6 +770,9 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
   case framerate100 // = 7
   case framerate120 // = 8
   case framerate9 // = 9
+  case framerate12 // = 10
+  case framerate12Point5 // = 11
+  case framerate15 // = 12
   case UNRECOGNIZED(Int)
 
   init() {
@@ -788,6 +791,9 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
     case 7: self = .framerate100
     case 8: self = .framerate120
     case 9: self = .framerate9
+    case 10: self = .framerate12
+    case 11: self = .framerate12Point5
+    case 12: self = .framerate15
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -804,6 +810,9 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
     case .framerate100: return 7
     case .framerate120: return 8
     case .framerate9: return 9
+    case .framerate12: return 10
+    case .framerate12Point5: return 11
+    case .framerate15: return 12
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -825,6 +834,9 @@ extension Arsdk_Camera_Framerate: CaseIterable {
     .framerate100,
     .framerate120,
     .framerate9,
+    .framerate12,
+    .framerate12Point5,
+    .framerate15,
   ]
 }
 
@@ -1280,6 +1292,7 @@ enum Arsdk_Camera_PhotoResolution: SwiftProtobuf.Enum {
   case photoResolution21MegaPixels // = 1
   case photoResolution12MegaPixels // = 2
   case photoResolution50MegaPixels // = 3
+  case photoResolution12Point5MegaPixels // = 4
   case UNRECOGNIZED(Int)
 
   init() {
@@ -1292,6 +1305,7 @@ enum Arsdk_Camera_PhotoResolution: SwiftProtobuf.Enum {
     case 1: self = .photoResolution21MegaPixels
     case 2: self = .photoResolution12MegaPixels
     case 3: self = .photoResolution50MegaPixels
+    case 4: self = .photoResolution12Point5MegaPixels
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -1302,6 +1316,7 @@ enum Arsdk_Camera_PhotoResolution: SwiftProtobuf.Enum {
     case .photoResolution21MegaPixels: return 1
     case .photoResolution12MegaPixels: return 2
     case .photoResolution50MegaPixels: return 3
+    case .photoResolution12Point5MegaPixels: return 4
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -1317,6 +1332,7 @@ extension Arsdk_Camera_PhotoResolution: CaseIterable {
     .photoResolution21MegaPixels,
     .photoResolution12MegaPixels,
     .photoResolution50MegaPixels,
+    .photoResolution12Point5MegaPixels,
   ]
 }
 
@@ -4737,6 +4753,9 @@ extension Arsdk_Camera_Framerate: SwiftProtobuf._ProtoNameProviding {
     7: .same(proto: "FRAMERATE_100"),
     8: .same(proto: "FRAMERATE_120"),
     9: .same(proto: "FRAMERATE_9"),
+    10: .same(proto: "FRAMERATE_12"),
+    11: .same(proto: "FRAMERATE_12_POINT_5"),
+    12: .same(proto: "FRAMERATE_15"),
   ]
 }
 
@@ -4836,6 +4855,7 @@ extension Arsdk_Camera_PhotoResolution: SwiftProtobuf._ProtoNameProviding {
     1: .same(proto: "PHOTO_RESOLUTION_21_MEGA_PIXELS"),
     2: .same(proto: "PHOTO_RESOLUTION_12_MEGA_PIXELS"),
     3: .same(proto: "PHOTO_RESOLUTION_50_MEGA_PIXELS"),
+    4: .same(proto: "PHOTO_RESOLUTION_12_POINT_5_MEGA_PIXELS"),
   ]
 }
 

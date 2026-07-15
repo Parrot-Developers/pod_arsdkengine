@@ -44,7 +44,7 @@ class HttpDtedStoreApi: NSObject, DtedStoreApi {
 
     func configure() {
         if let droneServer = deviceController.deviceServer {
-            dtedRestApi = DtedRestApi(server: droneServer, deviceModel: deviceController.deviceModel)
+            dtedRestApi = DtedRestApi(server: droneServer)
         }
     }
 
@@ -56,9 +56,10 @@ class HttpDtedStoreApi: NSObject, DtedStoreApi {
         if let droneServer = deviceController.deviceServer {
             dtedWsApi = DtedWsApi(
                 server: droneServer,
-                deviceModel: deviceController.deviceModel) { [unowned self] event  in
+                baseApi: dtedRestApi?.baseApi,
+                onEvent: { [unowned self] event in
                     self.delegate?.receivedDtedStoreChangedEvent(event)
-                }
+                })
         }
     }
 

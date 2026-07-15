@@ -47,23 +47,15 @@ public class DtedWsApi {
     ///
     /// - Parameters:
     ///   - server: the drone server from which dted files should be accessed
-    ///   - deviceModel: the device model
+    ///   - baseApi: the base REST api path to use
     ///   - onEvent: callback called when dted store content has changed
     ///   - event: the event that occured
-    init(server: DeviceServer, deviceModel: DeviceModel,
+    init(server: DeviceServer,
+         baseApi: String?,
          onEvent: @escaping (_ event: DtedStoreApiChangeEvent) -> Void) {
-        switch deviceModel {
-        case .drone(let droneModel):
-            switch droneModel {
-            case .anafi4k, .anafiThermal, .anafi2, .anafiUa, .anafiUsa:
-                api = "/api/v1/upload-terrain/notifications"
-            default:
-                api = "/api/v1/terrain/notifications"
-            }
-        case .rc:
-            api = ""
-        }
-    
+        let base = baseApi ?? "/api/v1/terrain"
+        self.api = "\(base)/notifications"
+
         self.server = server
         self.eventOccured = onEvent
         startSession()

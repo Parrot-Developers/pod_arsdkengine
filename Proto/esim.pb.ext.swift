@@ -118,6 +118,7 @@ extension Arsdk_Esim_Command.OneOf_ID {
         case .enableProfile: return 18
         case .deleteProfile: return 19
         case .httpResponse: return 20
+        case .renameProfile: return 21
         }
     }
 }
@@ -142,12 +143,17 @@ extension Arsdk_Esim_Command.HttpResponse {
     static var messageFieldNumber: Int32 { 4 }
     static var dataFieldNumber: Int32 { 5 }
 }
+extension Arsdk_Esim_Command.RenameProfile {
+    static var iccidFieldNumber: Int32 { 1 }
+    static var nicknameFieldNumber: Int32 { 2 }
+}
 extension Arsdk_Esim_Command {
     static var getStateFieldNumber: Int32 { 16 }
     static var downloadProfileFieldNumber: Int32 { 17 }
     static var enableProfileFieldNumber: Int32 { 18 }
     static var deleteProfileFieldNumber: Int32 { 19 }
     static var httpResponseFieldNumber: Int32 { 20 }
+    static var renameProfileFieldNumber: Int32 { 21 }
 }
 extension Arsdk_Esim_Event.State {
     static var simStatusValueFieldNumber: Int32 { 2 }
@@ -169,12 +175,15 @@ extension Arsdk_Esim_Profile {
     static var iccidFieldNumber: Int32 { 1 }
     static var providerFieldNumber: Int32 { 2 }
     static var enabledFieldNumber: Int32 { 3 }
+    static var nameFieldNumber: Int32 { 4 }
+    static var nicknameFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Esim_ProfileOperationStatus {
     static var errorCodeFieldNumber: Int32 { 1 }
     static var downloadProfileStatusFieldNumber: Int32 { 2 }
     static var enableProfileStatusFieldNumber: Int32 { 3 }
     static var deleteProfileStatusFieldNumber: Int32 { 4 }
+    static var renameProfileStatusFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Esim_DownloadProfileStatus {
     static var profileFieldNumber: Int32 { 1 }
@@ -185,6 +194,10 @@ extension Arsdk_Esim_EnableProfileStatus {
 }
 extension Arsdk_Esim_DeleteProfileStatus {
     static var iccidFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Esim_RenameProfileStatus {
+    static var iccidFieldNumber: Int32 { 1 }
+    static var nicknameFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Esim_ProfileList {
     static var profilesFieldNumber: Int32 { 1 }

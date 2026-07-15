@@ -143,6 +143,7 @@ extension Arsdk_Thermalcontrol_Command {
 }
 extension Arsdk_Thermalcontrol_Event.Capabilities {
     static var powersavingModesFieldNumber: Int32 { 1 }
+    static var calibrationMethodFieldNumber: Int32 { 2 }
 }
 extension Arsdk_Thermalcontrol_Event.UniformtiyCalibrationState {
     static var stepFieldNumber: Int32 { 1 }

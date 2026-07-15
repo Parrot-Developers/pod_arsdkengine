@@ -1559,6 +1559,7 @@ extension Camera2PhotoMode: ArsdkMappableEnum {
 extension Camera2PhotoResolution: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2PhotoResolution, Arsdk_Camera_PhotoResolution>([
         .res12MegaPixels: .photoResolution12MegaPixels,
+        .res12_5MegaPixels: .photoResolution12Point5MegaPixels,
         .res21MegaPixels: .photoResolution21MegaPixels,
         .res48MegaPixels: .photoResolution48MegaPixels,
         .res50MegaPixels: .photoResolution50MegaPixels])
@@ -1630,6 +1631,9 @@ extension Camera2RecordingResolution: ArsdkMappableEnum {
 extension Camera2RecordingFramerate: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2RecordingFramerate, Arsdk_Camera_Framerate>([
         .fps9: .framerate9,
+        .fps12: .framerate12,
+        .fps12_5: .framerate12Point5,
+        .fps15: .framerate15,
         .fps24: .framerate24,
         .fps25: .framerate25,
         .fps30: .framerate30,
@@ -2018,6 +2022,7 @@ extension Camera2DynamicRange: StorableEnum {
 extension Camera2PhotoResolution: StorableEnum {
     static var storableMapper = Mapper<Camera2PhotoResolution, String>([
         .res12MegaPixels: "res12MegaPixels",
+        .res12_5MegaPixels: "res12_5MegaPixels",
         .res21MegaPixels: "res21MegaPixels",
         .res48MegaPixels: "res48MegaPixels",
         .res50MegaPixels: "res50MegaPixels"])
@@ -2096,6 +2101,9 @@ extension Camera2RecordingResolution: StorableEnum {
 extension Camera2RecordingFramerate: StorableEnum {
     static let storableMapper = Mapper<Camera2RecordingFramerate, String>([
         .fps9: "9",
+        .fps12: "12",
+        .fps12_5: "12_5",
+        .fps15: "15",
         .fps24: "24",
         .fps25: "25",
         .fps30: "30",

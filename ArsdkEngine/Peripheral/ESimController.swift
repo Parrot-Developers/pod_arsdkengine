@@ -99,6 +99,13 @@ class ESimController: DeviceComponentController, ESimBackend {
         return sendESimCommand(.enableProfile(enableProfile))
     }
 
+    func renameProfile(iccid: String, nickname: String) -> Bool {
+        var renameProfile = Arsdk_Esim_Command.RenameProfile()
+        renameProfile.iccid = iccid
+        renameProfile.nickname = nickname
+        return sendESimCommand(.renameProfile(renameProfile))
+    }
+
     func httpCommand(id: UInt32, code: Int?, errorCode: ESimErrorCode?, message: String?, data: Data?) {
         var httpCommand = Arsdk_Esim_Command.HttpResponse()
         httpCommand.id = id
@@ -164,7 +171,8 @@ extension ESimController: ArsdkEsimEventDecoderListener {
     func onState(_ state: Arsdk_Esim_Event.State) {
         if state.hasProfileList {
             let profileList = state.profileList.profiles.compactMap { profile in
-                ESimProfile(iccid: profile.iccid, provider: profile.provider, enabled: profile.enabled)
+                ESimProfile(iccid: profile.iccid, provider: profile.provider, enabled: profile.enabled,
+                            name: profile.name, nickname: profile.nickname)
             }
             eSim.update(profileList: Set(profileList))
         }
@@ -182,9 +190,9 @@ extension ESimController: ArsdkEsimEventDecoderListener {
             let errorCode = ESimErrorCode(fromArsdk: state.profileOperationStatus.errorCode) ?? .unknown
             switch state.profileOperationStatus.type {
             case .downloadProfileStatus(let status):
-                let profile = ESimProfile(iccid: status.profile.iccid,
-                                          provider: status.profile.provider,
-                                          enabled: status.profile.enabled)
+                let profile = ESimProfile(iccid: status.profile.iccid, provider: status.profile.provider,
+                                          enabled: status.profile.enabled, name: status.profile.name,
+                                          nickname: status.profile.nickname)
                 eSim.update(operationState: OperationState.download(error: errorCode, profile: profile))
 
             case .enableProfileStatus(let status):
@@ -192,6 +200,9 @@ extension ESimController: ArsdkEsimEventDecoderListener {
                                                        enabled: status.enabled))
             case .deleteProfileStatus(let status):
                 eSim.update(operationState: OperationState.delete(error: errorCode, iccid: status.iccid))
+            case .renameProfileStatus(let status):
+                eSim.update(operationState: OperationState.rename(error: errorCode, iccid: status.iccid,
+                                                                  nickname: status.nickname))
             default:
                 break
             }
@@ -231,6 +242,10 @@ extension ESimErrorCode: ArsdkMappableEnum {
         .invalidActivationCode: .invalidActivationCode,
         .confirmationCodeRequired: .confirmationCodeRequired,
         .serverAuthenticationFailure: .serverAuthenticationFailure,
-        .clientAuthenticationFailure: .clientAuthenticationFailure
+        .clientAuthenticationFailure: .clientAuthenticationFailure,
+        .iccidAlreadyExists: .iccidAlreadyExists,
+        .eidRefused: .eidRefused,
+        .notEnoughMemory: .notEnoughMemory,
+        .installFailed: .installFailed
     ])
 }

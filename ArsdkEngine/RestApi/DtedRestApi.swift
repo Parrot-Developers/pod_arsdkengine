@@ -31,36 +31,33 @@ import Foundation
 import GroundSdk
 import CoreLocation
 
-/// Rest api to get/delete dtedd file through an http server.
+/// Rest api to get/delete DTED file through an http server.
 class DtedRestApi {
 
     /// Drone server
     private let server: DeviceServer
 
     /// Base address to access the dted api
-    private let baseApi: String
+    internal private(set) var baseApi: String = "/api/v1/terrain"
 
     /// Constructor
     ///
     /// - Parameters:
     ///   - server: the drone server from which dted files should be accessed
     ///   - deviceModel: the device model
-    init(server: DeviceServer, deviceModel: DeviceModel) {
+    init(server: DeviceServer) {
         self.server = server
+        let modulesRestApi = ModulesRestApi(server: server)
 
-        switch deviceModel {
-        case .drone(let droneModel):
+        modulesRestApi.listModules { [weak self] services in
+            guard let self = self else { return }
+            guard let services = services else { return }
 
-            switch droneModel {
-            case .anafi4k, .anafiThermal, .anafi2, .anafiUa, .anafiUsa:
-                baseApi = "api/v1/upload-terrain"
-
-            default:
-                baseApi = "api/v1/terrain"
+            if services.contains(.uploadTerrain) {
+                self.baseApi = "/api/v1/upload-terrain"
+            } else {
+                self.baseApi = "/api/v1/terrain"
             }
-
-        case .rc:
-            baseApi = ""
         }
     }
 

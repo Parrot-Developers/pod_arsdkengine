@@ -204,6 +204,7 @@ extension Camera2PhotoResolution {
     var stsh: ArsdkStreamOverlayResolution? {
         switch self {
         case .res12MegaPixels: return .photo12Mpx
+        case .res12_5MegaPixels: return .photo12_5Mpx
         case .res21MegaPixels: return .photo21Mpx
         case .res48MegaPixels: return .photo48Mpx
         case .res50MegaPixels: return .photo50Mpx

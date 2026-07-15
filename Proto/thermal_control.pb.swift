@@ -156,6 +156,51 @@ extension Arsdk_Thermalcontrol_UniformityCalibrationStep: CaseIterable {
 
 #endif  // swift(>=4.2)
 
+/// Calibration method. 
+enum Arsdk_Thermalcontrol_CalibrationMethod: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+
+  /// Calibration with a cover placed by the user on the camera. 
+  case cover // = 0
+
+  /// Calibration using the shutter embedded in the camera. 
+  case shutter // = 1
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .cover
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .cover
+    case 1: self = .shutter
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .cover: return 0
+    case .shutter: return 1
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Thermalcontrol_CalibrationMethod: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Thermalcontrol_CalibrationMethod] = [
+    .cover,
+    .shutter,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 /// This is the entry point to send messages to the drone 
 struct Arsdk_Thermalcontrol_Command {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -407,8 +452,11 @@ struct Arsdk_Thermalcontrol_Event {
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    /// Capabilities of this feature 
+    /// Capabilities of this feature. 
     var powersavingModes: [Arsdk_Thermalcontrol_PowerSavingMode] = []
+
+    /// Calibration method that will be used. 
+    var calibrationMethod: Arsdk_Thermalcontrol_CalibrationMethod = .cover
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -454,6 +502,13 @@ extension Arsdk_Thermalcontrol_UniformityCalibrationStep: SwiftProtobuf._ProtoNa
     4: .same(proto: "CALIBRATING"),
     5: .same(proto: "WAIT_GIMBAL_COVER_OFF"),
     6: .same(proto: "CALIBRATED"),
+  ]
+}
+
+extension Arsdk_Thermalcontrol_CalibrationMethod: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "COVER"),
+    1: .same(proto: "SHUTTER"),
   ]
 }
 
@@ -813,6 +868,7 @@ extension Arsdk_Thermalcontrol_Event.Capabilities: SwiftProtobuf.Message, SwiftP
   static let protoMessageName: String = Arsdk_Thermalcontrol_Event.protoMessageName + ".Capabilities"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "powersaving_modes"),
+    2: .standard(proto: "calibration_method"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -822,6 +878,7 @@ extension Arsdk_Thermalcontrol_Event.Capabilities: SwiftProtobuf.Message, SwiftP
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedEnumField(value: &self.powersavingModes) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.calibrationMethod) }()
       default: break
       }
     }
@@ -831,11 +888,15 @@ extension Arsdk_Thermalcontrol_Event.Capabilities: SwiftProtobuf.Message, SwiftP
     if !self.powersavingModes.isEmpty {
       try visitor.visitPackedEnumField(value: self.powersavingModes, fieldNumber: 1)
     }
+    if self.calibrationMethod != .cover {
+      try visitor.visitSingularEnumField(value: self.calibrationMethod, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Thermalcontrol_Event.Capabilities, rhs: Arsdk_Thermalcontrol_Event.Capabilities) -> Bool {
     if lhs.powersavingModes != rhs.powersavingModes {return false}
+    if lhs.calibrationMethod != rhs.calibrationMethod {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

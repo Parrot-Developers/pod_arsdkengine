@@ -332,7 +332,8 @@ class ThermalControllerBase: DeviceComponentController, ThermalControlCoreBacken
     override func didConnect() {
         storeNewPresets()
         applyPresets()
-        if thermalControl.modeSetting.supportedModes.isEmpty {
+        if thermalControl.modeSetting.supportedModes.isEmpty
+            || thermalControl.modeSetting.supportedModes == [.disabled] {
             thermalControl.unpublish()
         } else {
             thermalControl.publish()
@@ -780,7 +781,6 @@ extension ThermalControllerBase: ArsdkFeatureThermalCallback {
             availableMode.insert(.blended)
         }
         capabilitiesDidChange(.mode(availableMode))
-        thermalControl.notifyUpdated()
     }
 
     func onBackgroundTemperature(backgroundTemperature: Float) {
@@ -911,7 +911,6 @@ extension ThermalControllerBase: ArsdkFeatureThermalCallback {
         }
     }
 }
-
 
 extension ThermalControllerBase: ArsdkCameraEventDecoderListener {
     func onState(_ state: Arsdk_Camera_Event.State) {

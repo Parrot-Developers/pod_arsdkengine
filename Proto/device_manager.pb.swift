@@ -66,10 +66,21 @@ extension Arsdk_Devicemanager_ConnectionFailureReason: CaseIterable {
 
 enum Arsdk_Devicemanager_Transport: SwiftProtobuf.Enum {
   typealias RawValue = Int
+
+  /// Drone is connected via Wi-Fi. 
   case wifi // = 0
+
+  /// Drone is connected via cellular connection through Parrot servers. 
   case cellular // = 1
+
+  /// Drone is connected via a Microhard radio. 
   case microhard // = 2
+
+  /// Drone is connected via a Mars radio. 
   case mars // = 3
+
+  /// Drone is connected using Backup link. 
+  case backupLink // = 4
   case UNRECOGNIZED(Int)
 
   init() {
@@ -82,6 +93,7 @@ enum Arsdk_Devicemanager_Transport: SwiftProtobuf.Enum {
     case 1: self = .cellular
     case 2: self = .microhard
     case 3: self = .mars
+    case 4: self = .backupLink
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -92,6 +104,7 @@ enum Arsdk_Devicemanager_Transport: SwiftProtobuf.Enum {
     case .cellular: return 1
     case .microhard: return 2
     case .mars: return 3
+    case .backupLink: return 4
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -107,6 +120,7 @@ extension Arsdk_Devicemanager_Transport: CaseIterable {
     .cellular,
     .microhard,
     .mars,
+    .backupLink,
   ]
 }
 
@@ -210,6 +224,9 @@ enum Arsdk_Devicemanager_PairingFailureReason: SwiftProtobuf.Enum {
 
   /// Controller is in remote antenna mode without a remote antenna connected. 
   case noRemoteAntenna // = 1
+
+  /// Pairing has been refused by the drone because it's already paired with another remote control. 
+  case unauthorized // = 2
   case UNRECOGNIZED(Int)
 
   init() {
@@ -220,6 +237,7 @@ enum Arsdk_Devicemanager_PairingFailureReason: SwiftProtobuf.Enum {
     switch rawValue {
     case 0: self = .radioNotReady
     case 1: self = .noRemoteAntenna
+    case 2: self = .unauthorized
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -228,6 +246,7 @@ enum Arsdk_Devicemanager_PairingFailureReason: SwiftProtobuf.Enum {
     switch self {
     case .radioNotReady: return 0
     case .noRemoteAntenna: return 1
+    case .unauthorized: return 2
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -241,6 +260,7 @@ extension Arsdk_Devicemanager_PairingFailureReason: CaseIterable {
   static var allCases: [Arsdk_Devicemanager_PairingFailureReason] = [
     .radioNotReady,
     .noRemoteAntenna,
+    .unauthorized,
   ]
 }
 
@@ -1419,6 +1439,7 @@ extension Arsdk_Devicemanager_Transport: SwiftProtobuf._ProtoNameProviding {
     1: .same(proto: "TRANSPORT_CELLULAR"),
     2: .same(proto: "TRANSPORT_MICROHARD"),
     3: .same(proto: "TRANSPORT_MARS"),
+    4: .same(proto: "TRANSPORT_BACKUP_LINK"),
   ]
 }
 
@@ -1441,6 +1462,7 @@ extension Arsdk_Devicemanager_PairingFailureReason: SwiftProtobuf._ProtoNameProv
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "PAIRING_FAILURE_REASON_RADIO_NOT_READY"),
     1: .same(proto: "PAIRING_FAILURE_REASON_NO_REMOTE_ANTENNA"),
+    2: .same(proto: "PAIRING_FAILURE_REASON_UNAUTHORIZED"),
   ]
 }
 

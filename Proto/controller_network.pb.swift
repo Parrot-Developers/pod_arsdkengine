@@ -20,7 +20,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-/// This is the entry point to send messages to the drone. 
+/// This is the entry point to send messages to the controller. 
 struct Arsdk_Controllernetwork_Command {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -36,10 +36,19 @@ struct Arsdk_Controllernetwork_Command {
     set {id = .getState(newValue)}
   }
 
+  var setEthernetIpConfig: Arsdk_Network_Command.SetEthernetIpConfig {
+    get {
+      if case .setEthernetIpConfig(let v)? = id {return v}
+      return Arsdk_Network_Command.SetEthernetIpConfig()
+    }
+    set {id = .setEthernetIpConfig(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
     case getState(Arsdk_Controllernetwork_Command.GetState)
+    case setEthernetIpConfig(Arsdk_Network_Command.SetEthernetIpConfig)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Controllernetwork_Command.OneOf_ID, rhs: Arsdk_Controllernetwork_Command.OneOf_ID) -> Bool {
@@ -51,6 +60,11 @@ struct Arsdk_Controllernetwork_Command {
         guard case .getState(let l) = lhs, case .getState(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.setEthernetIpConfig, .setEthernetIpConfig): return {
+        guard case .setEthernetIpConfig(let l) = lhs, case .setEthernetIpConfig(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
       }
     }
   #endif
@@ -70,7 +84,7 @@ struct Arsdk_Controllernetwork_Command {
   init() {}
 }
 
-/// This is the entry point to receive messages from the drone. 
+/// This is the entry point to receive messages from the controller. 
 struct Arsdk_Controllernetwork_Event {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -121,11 +135,21 @@ struct Arsdk_Controllernetwork_Event {
     /// Clears the value of `linksStatus`. Subsequent reads from it will return its default value.
     mutating func clearLinksStatus() {self._linksStatus = nil}
 
+    var ethernetIpConfig: Arsdk_Network_IpConfig {
+      get {return _ethernetIpConfig ?? Arsdk_Network_IpConfig()}
+      set {_ethernetIpConfig = newValue}
+    }
+    /// Returns true if `ethernetIpConfig` has been explicitly set.
+    var hasEthernetIpConfig: Bool {return self._ethernetIpConfig != nil}
+    /// Clears the value of `ethernetIpConfig`. Subsequent reads from it will return its default value.
+    mutating func clearEthernetIpConfig() {self._ethernetIpConfig = nil}
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
 
     fileprivate var _linksStatus: Arsdk_Network_LinksStatus? = nil
+    fileprivate var _ethernetIpConfig: Arsdk_Network_IpConfig? = nil
   }
 
   init() {}
@@ -139,6 +163,7 @@ extension Arsdk_Controllernetwork_Command: SwiftProtobuf.Message, SwiftProtobuf.
   static let protoMessageName: String = _protobuf_package + ".Command"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .standard(proto: "get_state"),
+    17: .standard(proto: "set_ethernet_ip_config"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -160,6 +185,19 @@ extension Arsdk_Controllernetwork_Command: SwiftProtobuf.Message, SwiftProtobuf.
           self.id = .getState(v)
         }
       }()
+      case 17: try {
+        var v: Arsdk_Network_Command.SetEthernetIpConfig?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .setEthernetIpConfig(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .setEthernetIpConfig(v)
+        }
+      }()
       default: break
       }
     }
@@ -170,9 +208,17 @@ extension Arsdk_Controllernetwork_Command: SwiftProtobuf.Message, SwiftProtobuf.
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if case .getState(let v)? = self.id {
+    switch self.id {
+    case .getState?: try {
+      guard case .getState(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
-    } }()
+    }()
+    case .setEthernetIpConfig?: try {
+      guard case .setEthernetIpConfig(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -254,6 +300,7 @@ extension Arsdk_Controllernetwork_Event.State: SwiftProtobuf.Message, SwiftProto
   static let protoMessageName: String = Arsdk_Controllernetwork_Event.protoMessageName + ".State"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     4: .standard(proto: "links_status"),
+    5: .standard(proto: "ethernet_ip_config"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -263,6 +310,7 @@ extension Arsdk_Controllernetwork_Event.State: SwiftProtobuf.Message, SwiftProto
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 4: try { try decoder.decodeSingularMessageField(value: &self._linksStatus) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._ethernetIpConfig) }()
       default: break
       }
     }
@@ -276,11 +324,15 @@ extension Arsdk_Controllernetwork_Event.State: SwiftProtobuf.Message, SwiftProto
     try { if let v = self._linksStatus {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
+    try { if let v = self._ethernetIpConfig {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Controllernetwork_Event.State, rhs: Arsdk_Controllernetwork_Event.State) -> Bool {
     if lhs._linksStatus != rhs._linksStatus {return false}
+    if lhs._ethernetIpConfig != rhs._ethernetIpConfig {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -39,10 +39,14 @@ class AnafiDevToolbox: DeviceComponentController, DevToolboxBackend {
     /// Debug settings indexed by id.
     private var settings = [UInt: DebugSettingCore]()
 
+    /// Stream sharing manager utility.
+    private var streamSharingManager: StreamSharingManager?
+
     /// Constructor.
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
+        streamSharingManager = deviceController.engine.utilities.getUtility(Utilities.streamSharingManager)
         super.init(deviceController: deviceController)
         devToolbox = DevToolboxCore(store: deviceController.device.peripheralStore, backend: self)
     }
@@ -171,7 +175,9 @@ extension AnafiDevToolbox: ArsdkFeatureDebugCallback {
     }
 
     func onTagNotify(id: String) {
-        ULog.d(.tag, "Debug tag notified by drone \(String(describing: id))")
+        ULog.d(.tag, "Debug tag notified by drone: \(String(describing: id))")
         devToolbox.update(debugTagId: id).notifyUpdated()
+        streamSharingManager?.addRecordChapter(name: id, timestamp: nil)
+        devToolbox.update(debugTagId: nil).notifyUpdated()
     }
 }

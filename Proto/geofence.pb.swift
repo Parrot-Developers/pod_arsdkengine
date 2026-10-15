@@ -24,11 +24,19 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 enum Arsdk_Geofence_Mode: SwiftProtobuf.Enum {
   typealias RawValue = Int
 
-  /// The drone flying zone is only bounded by the maximum altitude setting.
+  /// The drone flying zone should only be bounded by the maximum altitude setting,
+  /// but it is actually not bounded due to a drone issue.
+  /// Deprecated in 8.5, replaced by NONE.
   case altitude // = 0
 
   /// The drone flying zone is bounded by the cylinder defined by the maximum altitude and distance settings.
   case cylinder // = 1
+
+  /// The drone flying zone is only bounded by the maximum altitude setting.
+  case ceiling // = 2
+
+  /// The drone flying zone is not bounded.
+  case none // = 3
   case UNRECOGNIZED(Int)
 
   init() {
@@ -39,6 +47,8 @@ enum Arsdk_Geofence_Mode: SwiftProtobuf.Enum {
     switch rawValue {
     case 0: self = .altitude
     case 1: self = .cylinder
+    case 2: self = .ceiling
+    case 3: self = .none
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -47,6 +57,8 @@ enum Arsdk_Geofence_Mode: SwiftProtobuf.Enum {
     switch self {
     case .altitude: return 0
     case .cylinder: return 1
+    case .ceiling: return 2
+    case .none: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -60,6 +72,8 @@ extension Arsdk_Geofence_Mode: CaseIterable {
   static var allCases: [Arsdk_Geofence_Mode] = [
     .altitude,
     .cylinder,
+    .ceiling,
+    .none,
   ]
 }
 
@@ -406,6 +420,8 @@ extension Arsdk_Geofence_Mode: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "ALTITUDE"),
     1: .same(proto: "CYLINDER"),
+    2: .same(proto: "CEILING"),
+    3: .same(proto: "NONE"),
   ]
 }
 

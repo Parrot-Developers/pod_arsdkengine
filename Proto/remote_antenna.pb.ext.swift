@@ -181,9 +181,14 @@ extension Arsdk_Remoteantenna_Event {
 extension Arsdk_Remoteantenna_GpsCoordinates {
     static var latitudeFieldNumber: Int32 { 1 }
     static var longitudeFieldNumber: Int32 { 2 }
+    static var altitudeFieldNumber: Int32 { 3 }
 }
 extension Arsdk_Remoteantenna_Capabilities {
     static var cloudAntennaFieldNumber: Int32 { 1 }
+    static var supportedFeaturesFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Remoteantenna_SupportedFeatures {
+    static var featuresFieldNumber: Int32 { 1 }
 }
 extension Arsdk_Remoteantenna_BatteryStateValue {
     static var valueFieldNumber: Int32 { 1 }

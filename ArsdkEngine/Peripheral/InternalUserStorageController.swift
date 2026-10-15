@@ -40,12 +40,17 @@ class InternalUserStorageController: UserStorageController {
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
+        arsdkStorageProtoEncoder = ArsdkStorageEventDecoder(listener: self)
         internalUserStorage = InternalUserStorageCore(store: deviceController.device.peripheralStore, backend: self)
         userStorage = internalUserStorage!
     }
 
+    override func willConnect() {
+        _ = sendListStorageCommand()
+    }
+
     override func didConnect() {
-        if userStorageId != nil {
+        if userStorageSupport == .legacyV2 {
             internalUserStorage.publish()
         }
     }
@@ -59,6 +64,7 @@ class InternalUserStorageController: UserStorageController {
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
+        super.didReceiveCommand(command)
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureUserStorageV2Uid {
             ArsdkFeatureUserStorageV2.decode(command, callback: self)
         }
@@ -71,7 +77,7 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
     func onCapabilities(storageId: UInt, supportedFeaturesBitField: UInt,
                         storageType: ArsdkFeatureUserStorageV2StorageType, listFlagsBitField: UInt) {
         if storageType == .internalStorage {
-            userStorageType = .internalStorage
+            userStorageSupport = .legacyV2
             userStorageId = storageId
             capabilities(supportedFeaturesBitField: supportedFeaturesBitField)
         }
@@ -132,6 +138,91 @@ extension InternalUserStorageController: ArsdkFeatureUserStorageV2Callback {
     func onDecryption(storageId: UInt, result: ArsdkFeatureUserStorageV2PasswordResult, listFlagsBitField: UInt) {
         if userStorageId == storageId {
             decryption(result: result)
+        }
+    }
+}
+
+/// Internal user storage protobuf decode callback implementation
+extension InternalUserStorageController: ArsdkStorageEventDecoderListener {
+    func onStorageList(_ storageList: Arsdk_Storage_Event.StorageList) {
+        userStorageSupport = .proto
+
+        for storage in storageList.storages where storage.type == .internal {
+            userStorageId = UInt(storage.id)
+            _ = sendGetStateCommand(storageId: storage.id)
+            return
+        }
+    }
+
+    func onState(_ state: Arsdk_Storage_Event.State) {
+        guard UInt(state.id) == userStorageId else {
+            return
+        }
+
+        if state.hasDefaultCapabilities {
+            forceCapabilities()
+            supportedFormattingTypes(supportedTypes: state.defaultCapabilities.supportedErasingTypes)
+        }
+
+        if state.hasStorageInfo {
+            internalUserStorage.update(name: state.storageInfo.name, capacity: Int64(state.storageInfo.capacity))
+        }
+
+        if state.hasStorageState {
+            isEncrypted(isEncrypted: state.storageState.attributes.contains(.encrypted))
+            hasCheckError(hasCheckError: state.storageState.attributes.contains(.checkError))
+            if state.storageState.hasEncryptionState {
+                let encryptionState = state.storageState.encryptionState
+                if let encryptionType = UserStorageEncryptionType(fromArsdk: encryptionState.encryptionType) {
+                    internalUserStorage.update(encryptionState: UserStorageEncryptionState(
+                        type: encryptionType,
+                        isLocked: encryptionState.isLocked,
+                        hasPassphrase: encryptionState.hasPassphrase_p,
+                        canAddPassphrase: encryptionState.canAddPassphrase,
+                        canChangePassphrase: encryptionState.canChangePassphrase,
+                        canRemovePassphrase: encryptionState.canRemovePassphrase))
+                }
+            }
+            update(physicalState: state.storageState.physicalState, fileSystemState: state.storageState.fileSystemState,
+                  attributes: state.storageState.attributes, monitorEnabled: state.storageState.isMonitoringEnabled,
+                  monitorPeriod: Int(state.storageState.monitoringPeriod))
+        }
+
+        if state.hasStorageUuid {
+            sdcardUuid(uuid: state.storageUuid.uuid)
+        }
+        internalUserStorage.publish()
+    }
+
+    func onFormattingProgress(_ formattingProgress: Arsdk_Storage_Event.FormattingProgress) {
+        if UInt(formattingProgress.id) == userStorageId {
+            formatProgress(step: formattingProgress.step, percentage: UInt(formattingProgress.percentage))
+        }
+    }
+
+    func onMonitor(_ monitor: Arsdk_Storage_Event.Monitor) {
+        if UInt(monitor.id) == userStorageId {
+            internalUserStorage.update(availableSpace: Int64(monitor.availableSpace)).notifyUpdated()
+        }
+    }
+
+    func onFormattingResult(_ formattingResult: Arsdk_Storage_Event.FormattingResult) {
+        if UInt(formattingResult.id) == userStorageId {
+            formattingStatus(status: formattingResult.status)
+        }
+    }
+
+    func onUnlockResult(_ unlockResult: Arsdk_Storage_Event.UnlockResult) {
+        if UInt(unlockResult.id) == userStorageId {
+            unlock(result: unlockResult.status)
+        }
+    }
+
+    func onPassphraseResult(_ passphraseResult: Arsdk_Storage_Event.PassphraseResult) {
+        if UInt(passphraseResult.id) == userStorageId {
+            internalUserStorage.update(
+                passphraseStatus: UserStoragePassphraseStatus(fromArsdk: passphraseResult.error)).notifyUpdated()
+            internalUserStorage.update(passphraseStatus: nil).notifyUpdated()
         }
     }
 }

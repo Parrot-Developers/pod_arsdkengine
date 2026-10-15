@@ -29,6 +29,9 @@ enum Arsdk_Mobiledevice_LocationSource: SwiftProtobuf.Enum {
 
   /// Location data are coming from an auxiliary GNSS device
   case sourceAuxiliary // = 1
+
+  /// Location data are coming from remote antenna device
+  case sourceRemoteAntenna // = 2
   case UNRECOGNIZED(Int)
 
   init() {
@@ -39,6 +42,7 @@ enum Arsdk_Mobiledevice_LocationSource: SwiftProtobuf.Enum {
     switch rawValue {
     case 0: self = .sourceMain
     case 1: self = .sourceAuxiliary
+    case 2: self = .sourceRemoteAntenna
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -47,6 +51,7 @@ enum Arsdk_Mobiledevice_LocationSource: SwiftProtobuf.Enum {
     switch self {
     case .sourceMain: return 0
     case .sourceAuxiliary: return 1
+    case .sourceRemoteAntenna: return 2
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -60,6 +65,7 @@ extension Arsdk_Mobiledevice_LocationSource: CaseIterable {
   static var allCases: [Arsdk_Mobiledevice_LocationSource] = [
     .sourceMain,
     .sourceAuxiliary,
+    .sourceRemoteAntenna,
   ]
 }
 
@@ -415,6 +421,7 @@ extension Arsdk_Mobiledevice_LocationSource: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "SOURCE_MAIN"),
     1: .same(proto: "SOURCE_AUXILIARY"),
+    2: .same(proto: "SOURCE_REMOTE_ANTENNA"),
   ]
 }
 

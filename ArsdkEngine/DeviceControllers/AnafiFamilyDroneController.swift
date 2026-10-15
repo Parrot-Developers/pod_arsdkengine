@@ -159,6 +159,9 @@ class AnafiFamilyDroneController: DroneController {
         componentControllers.append(AnafiNightVision(deviceController: self))
         componentControllers.append(AnafiUsbPower(deviceController: self))
         componentControllers.append(ESimController(deviceController: self))
+        componentControllers.append(VehicleController(deviceController: self))
+        componentControllers.append(CalibrationController(deviceController: self))
+        componentControllers.append(AnafiPairing(deviceController: self))
 
         switch model {
         case .anafi4k,
@@ -174,10 +177,10 @@ class AnafiFamilyDroneController: DroneController {
             componentControllers.append(CameraFeatureCameraRouter(deviceController: self))
             componentControllers.append(AnafiThermalController(deviceController: self))
             componentControllers.append(AnafiCertificateUploader(deviceController: self))
-        case .anafi3,
-             .anafi3Gov,
-             .anafi3Mil,
-             .chuck3:
+        case .anafi3Mil,
+             .chuck3,
+             .chuck3On,
+             .anafi4:
             componentControllers.append(Anafi3ThermalController(deviceController: self))
             componentControllers.append(ThermalController2(deviceController: self))
             componentControllers.append(Anafi3KillSwitch(deviceController: self))

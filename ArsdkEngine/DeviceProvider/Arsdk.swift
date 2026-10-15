@@ -281,6 +281,10 @@ class ArsdkDeviceCtrlBackend: NSObject, DeviceControllerBackend {
         return arsdk.arsdkCore.createVideoStream()
     }
 
+    func getMuxContext() -> OpaquePointer? {
+        return arsdk.arsdkCore.getMuxCtx(deviceHandle)
+    }
+
     func browseMedia(model: DeviceModel, completion: @escaping ArsdkMediaListCompletion) -> ArsdkRequest {
         return arsdk.arsdkCore.listMedia(deviceHandle, deviceType: model.internalId, completion: completion)
     }

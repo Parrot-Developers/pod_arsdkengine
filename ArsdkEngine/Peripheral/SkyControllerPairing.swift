@@ -36,32 +36,34 @@ class SkyControllerPairing: DeviceComponentController, ArsdkDevicemanagerEventDe
     private var pairing: PairingCore!
 
     /// Decoder for device manager events.
-    private var arsdkDecoder: ArsdkDevicemanagerEventDecoder!
+    private var deviceManagerDecoder: ArsdkDevicemanagerEventDecoder!
+
+    /// Decoder for controller privacy events.
+    private var controllerprivacyDecoder: ArsdkControllerprivacyEventDecoder!
 
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
-        pairing = PairingCore(store: deviceController.device.peripheralStore)
-        arsdkDecoder = ArsdkDevicemanagerEventDecoder(listener: self)
+        pairing = PairingCore(store: deviceController.device.peripheralStore, backend: self)
+        deviceManagerDecoder = ArsdkDevicemanagerEventDecoder(listener: self)
+        controllerprivacyDecoder = ArsdkControllerprivacyEventDecoder(listener: self)
     }
 
     /// Drone is connected
     override func didConnect() {
-        super.didConnect()
         pairing.publish()
     }
 
     /// Drone is disconnected
     override func didDisconnect() {
-        super.didDisconnect()
         pairing.unpublish()
     }
 
     override func didReceiveCommand(_ command: OpaquePointer) {
-        super.didReceiveCommand(command)
-        arsdkDecoder.decode(command)
+        deviceManagerDecoder.decode(command)
+        controllerprivacyDecoder.decode(command)
     }
 }
 
@@ -93,10 +95,69 @@ extension SkyControllerPairing {
     }
 }
 
+/// Privacy backend implementation
+extension SkyControllerPairing: PairingBackend {
+    func setAuthorization(_ value: PairingAuthorization) -> Bool {
+        return setAuthorization(authorization: value)
+    }
+}
+
+/// Extension for methods to send privacy command.
+extension SkyControllerPairing {
+
+    /// Sets the pairing authorization
+    ///
+    /// - Parameter authorization: the pairing authorization
+    /// - Returns: `true` if the command has been sent.
+    func setAuthorization(authorization: PairingAuthorization) -> Bool {
+        var pairing = Arsdk_Privacy_Command.AuthorizePairing()
+        pairing.value = authorization.arsdkValue!
+        return sendPrivacyCommand(.authorizePairing(pairing))
+    }
+
+    /// Sends to the sky controller a privacy command.
+    ///
+    /// - Parameter command: command to send
+    /// - Returns: `true` if the command has been sent
+    func sendPrivacyCommand(_ command: Arsdk_Controllerprivacy_Command.OneOf_ID) -> Bool {
+        if let encoder = ArsdkControllerprivacyCommandEncoder.encoder(command) {
+            return sendCommand(encoder)
+        }
+        return false
+    }
+}
+
+extension SkyControllerPairing: ArsdkControllerprivacyEventDecoderListener {
+    func onState(_ state: Arsdk_Privacy_Event.State) {
+        if state.hasDefaultCapabilities {
+            let supportedAuthorizations =  state.defaultCapabilities.supportedAuthorizations.compactMap {
+                PairingAuthorization(fromArsdk: $0)
+            }
+            pairing.update(supportedAuthorizations: Set(supportedAuthorizations))
+        }
+
+        if state.hasPairingAuthorization,
+           let value = PairingAuthorization(fromArsdk: state.pairingAuthorization.value) {
+            pairing.update(authorization: value)
+        }
+        pairing.publish()
+    }
+}
+
 /// Extension that adds conversion from/to arsdk enum.
 extension PairingFailureReason: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<PairingFailureReason, Arsdk_Devicemanager_PairingFailureReason>([
         .radioNotReady: .radioNotReady,
-        .noRemoteAntenna: .noRemoteAntenna
+        .noRemoteAntenna: .noRemoteAntenna,
+        .unauthorized: .unauthorized
+    ])
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension PairingAuthorization: ArsdkMappableEnum {
+    static let arsdkMapper = Mapper<PairingAuthorization, Arsdk_Privacy_Authorization>([
+        .always: .always,
+        .never: .never,
+        .once: .once
     ])
 }

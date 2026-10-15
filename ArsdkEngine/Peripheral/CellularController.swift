@@ -28,6 +28,7 @@
 //    SUCH DAMAGE.
 
 import Foundation
+import Security
 import GroundSdk
 
 /// Cellular supported capabilities
@@ -46,6 +47,7 @@ public enum CellularSupportedCapabilities: String, CaseIterable {
 
 /// Base controller for cellular peripheral
 class CellularController: DeviceComponentController, CellularBackend {
+
     /// Main modem identifier
     private let MODEM_ID_MAIN: UInt = 0
 
@@ -69,6 +71,12 @@ class CellularController: DeviceComponentController, CellularBackend {
 
     /// Store APN configuration values
     private var apnConfigurationPresets: ApnConfigurationPresets!
+
+    /// Monitor of the userAccount changes
+    private var userAccountMonitor: MonitorCore!
+
+    /// Academy rest api
+    private var academyRestApi: AcademyRestApi?
 
     /// All data that can be stored
     enum PersistedDataKey: String, StoreKey {
@@ -115,10 +123,31 @@ class CellularController: DeviceComponentController, CellularBackend {
     /// Setting values as received from the drone
     private var droneSettings = Set<Setting>()
 
+    /// User account utility.
+    private let userAccountUtility: UserAccountUtilityCore?
+
+    /// Certificate images storage utility.
+    private let certificateImageStorage: CertificateImagesStorageCore?
+
+    /// Delegate of http secure element downloader.
+    // swiftlint:disable:next weak_delegate
+    private var delegate: HttpSecureElementDownloaderDelegate?
+
+    /// Internet connectivity utility
+    private var internetConnectivityCore: InternetConnectivityCore?
+
     /// Constructor
     ///
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
+        delegate = HttpSecureElementDownloaderDelegate()
+        self.userAccountUtility = deviceController.engine.utilities.getUtility(Utilities.userAccount)
+        self.certificateImageStorage = deviceController.engine.utilities.getUtility(Utilities.certificateImagesStorage)
+        internetConnectivityCore = deviceController.engine.utilities.getUtility(Utilities.internetConnectivity)
+        // can force unwrap because this utility is always published.
+        if let cloudServer = deviceController.engine.utilities.getUtility(Utilities.cloudServer) {
+            academyRestApi = AcademyRestApi(cloudServer: cloudServer)
+        }
         deviceStore = deviceController.deviceStore.getSettingsStore(key: CellularController.settingKey)
         if GroundSdkConfig.sharedInstance.offlineSettings == .off {
             presetStore = nil
@@ -134,6 +163,7 @@ class CellularController: DeviceComponentController, CellularBackend {
         loadPresets()
 
         if isPersisted {
+            checkPairing()
             cellular.publish()
         }
     }
@@ -183,6 +213,7 @@ class CellularController: DeviceComponentController, CellularBackend {
     }
 
     override func didConnect() {
+        delegate?.configure(deviceServer: deviceController.deviceServer)
         applyPresets()
         if isSupported {
             cellular.publish()
@@ -211,6 +242,9 @@ class CellularController: DeviceComponentController, CellularBackend {
             .update(resetState: .none)
 
         isSupported = false
+
+        userAccountMonitor?.stop()
+        userAccountMonitor = nil
 
         if isPersisted {
             cellular.publish()
@@ -409,6 +443,213 @@ class CellularController: DeviceComponentController, CellularBackend {
         return false
     }
 
+    /// Requests pairing
+    func requestPairing() {
+        guard checkInternet() else {
+            return
+        }
+        cellular.update(pairingState: .checkingAccountValidity).notifyUpdated()
+        checkUserAccountValidity { error, result in
+            if error != .none && error != .missingToken {
+                self.updateFinalPairingState(error: error)
+                return
+            }
+            if !result {
+                self.cellular.update(pairingState: .creatingTemporaryAccount).notifyUpdated()
+                _ = self.userAccountUtility?.createTemporaryAccount { error in
+                    if error != .none {
+                        self.updateFinalPairingState(error: error)
+                        return
+                    }
+                }
+            }
+            self.requestChallenge()
+        }
+    }
+
+    /// Requests unpairing
+    func requestUnpairing() {
+        guard let certificateUrl = certificateImageStorage?.workDir
+            .appendingPathComponent("\(deviceController.device.uid).der"),
+              let certificateData = try? Data(contentsOf: certificateUrl),
+              let cert = SecCertificateCreateWithData(nil, certificateData as CFData) else {
+            updateFinalPairingState(error: .noCertificate)
+            return
+        }
+        var commonName: CFString?
+        SecCertificateCopyCommonName(cert, &commonName)
+        guard let commonName = commonName as String? else {
+            updateFinalPairingState(error: .noCertificate)
+            return
+        }
+        sendUnpairingRequest(commonName: commonName)
+    }
+
+    /// Checks user account validity.
+    private func checkUserAccountValidity(completion: @escaping (CellularPairingError, Bool) -> Void) {
+        _ = userAccountUtility?.checkValidity { error, result  in
+            completion(error, result)
+        }
+    }
+
+    /// Requests challenge.
+    private func requestChallenge() {
+        guard checkInternet() else {
+            return
+        }
+        guard let userAccountToken = userAccountUtility?.userAccountInfo?.token else {
+            updateFinalPairingState(error: .missingToken)
+            return
+        }
+
+        cellular.update(pairingState: .requestingChallenge).notifyUpdated()
+        _ = academyRestApi?.requestChallenge(userAccountToken: userAccountToken) { challenge in
+            if let challenge {
+                self.signChallenge(challenge: challenge)
+            } else {
+                self.updateFinalPairingState(error: .failedToGetChallenge)
+            }
+        }
+    }
+
+    /// Requests the drone to sign a challenge.
+    ///
+    /// - Parameters:
+    ///   - challenge: challenge to send
+    private func signChallenge(challenge: String) {
+        cellular.update(pairingState: .signingChallenge).notifyUpdated()
+
+        guard connected else {
+            self.updateFinalPairingState(error: .noDrone)
+            return
+        }
+
+        _ = delegate?.sign(challenge: challenge, with: .associate) { token in
+            do {
+                if let certificateUrl = self.certificateImageStorage?.workDir
+                    .appendingPathComponent("\(self.deviceController.device.uid).der") {
+                    let certificateData = try Data(contentsOf: certificateUrl)
+                    let encodedCertificate = certificateData.base64EncodedString()
+                    if let token = token {
+                        self.sendPairingRequest(message: token, encodedCertificate: encodedCertificate)
+
+                     } else {
+                         self.updateFinalPairingState(error: .failedToSignChallenge)
+                     }
+                } else {
+                    self.updateFinalPairingState(error: .noCertificate)
+                }
+            } catch {
+                self.updateFinalPairingState(error: .failedToSignChallenge)
+            }
+        }
+    }
+
+    /// Sends pairing request.
+    ///
+    /// - Parameters:
+    ///   - message: message to send
+    ///   - encodedCertificate: encodedCertificate to send
+    private func sendPairingRequest(message: String, encodedCertificate: String) {
+        guard checkInternet() else {
+            return
+        }
+        guard let userAccountToken = self.userAccountUtility?.userAccountInfo?.token else {
+            updateFinalPairingState(error: .missingToken)
+            return
+        }
+        cellular.update(pairingState: .sendingPairingRequest).notifyUpdated()
+
+        _ = academyRestApi?.requestPairing(userAccountToken: userAccountToken, signedChallenge: message,
+                                    certificate: encodedCertificate, completion: { result in
+            if result {
+                self.getDroneList()
+            }
+        })
+    }
+
+    /// Sends unpairing request.
+    ///
+    /// - Parameter commonName: the drone common name (serial number)
+    private func sendUnpairingRequest(commonName: String) {
+        guard checkInternet() else { return }
+        
+        guard let userAccountToken = userAccountUtility?.userAccountInfo?.token else {
+            updateFinalPairingState(error: .missingToken)
+            return
+        }
+        cellular.update(pairingState: .sendingUnpairingRequest).notifyUpdated()
+        _ = academyRestApi?.requestUnpairing(apcToken: userAccountToken, commonName: commonName) { error in
+            if error != .none {
+                self.updateFinalPairingState(error: error)
+            } else {
+                self.getDroneList(state: .unpaired)
+            }
+        }
+    }
+
+    /// Gets drone list.
+    private func getDroneList(state: CellularPairingState? = nil) {
+        guard checkInternet() else {
+            return
+        }
+        guard let userAccountToken = self.userAccountUtility?.userAccountInfo?.token else {
+            updateFinalPairingState(error: .missingToken)
+            return
+        }
+        cellular.update(pairingState: .gettingDroneList).notifyUpdated()
+        _ = academyRestApi?.getDroneList(apcToken: userAccountToken,
+                                         completion: { error, droneList in
+            if error == .none, let droneList {
+                self.userAccountUtility?.set(droneList: droneList)
+                self.updateFinalPairingState(error: .none, state: state)
+            } else {
+                self.updateFinalPairingState(error: error)
+            }
+        })
+    }
+
+    /// Checks pairing based on current drone list in user account and updates pairing state accordingly.
+    private func checkPairing() {
+        guard let droneListJson = userAccountUtility?.userAccountInfo?.droneList, !droneListJson.isEmpty else {
+            return
+        }
+        do {
+            let drones = try JSONDecoder().decode([UserAccountDrone].self, from: Data(droneListJson.utf8))
+            if drones.first(where: { $0.serial == deviceController.device.uid })?.pairedFor4G == true {
+                cellular.update(pairingState: .paired)
+            }
+        } catch {
+            ULog.e(.tag, "Could not decode drone list: \(error)")
+        }
+    }
+
+    /// Checks internet.
+    private func checkInternet() -> Bool {
+        guard internetConnectivityCore?.internetAvailable == true else {
+            updateFinalPairingState(error: .noInternetConnection)
+            return false
+        }
+        return true
+    }
+
+    /// Updates final pairing state according to the given error.
+    ///
+    /// - Parameters:
+    ///   - error: the cellular pairing error
+    ///   - state: the cellular pairing state
+    private func updateFinalPairingState(error: CellularPairingError, state: CellularPairingState? = nil) {
+        ULog.d(.tag, "Cellular pairing request final state: \(cellular.pairingState); error: \(error)")
+        if error == .none {
+            cellular.update(pairingState: .success).notifyUpdated()
+            cellular.update(pairingState: state ?? .paired)
+        } else {
+            cellular.update(pairingState: .failure(error)).notifyUpdated()
+            cellular.update(pairingState: state ?? .unpaired)
+        }
+        cellular.notifyUpdated()
+    }
+
     /// Send mode command. Subclass must override this function to send the command
     ///
     /// - Parameter mode: requested mode.
@@ -466,7 +707,8 @@ class CellularController: DeviceComponentController, CellularBackend {
         case .mode5g:
             arsdNetworkMode = .mode5g
         }
-        return sendCommand(ArsdkFeatureCellular.setNetworkModeEncoder(modemId: MODEM_ID_MAIN, networkMode: arsdNetworkMode))
+        return sendCommand(ArsdkFeatureCellular.setNetworkModeEncoder(modemId: MODEM_ID_MAIN,
+                                                                      networkMode: arsdNetworkMode))
     }
 
     /// Send PIN code command. Subclass must override this function to send the command
@@ -536,6 +778,8 @@ extension CellularController: ArsdkFeatureCellularCallback {
         case .ready:
             newStatus = .ready
             cellular.update(isPinCodeRequested: false).update(isPinCodeInvalid: false)
+        case .noProfile:
+            newStatus = .noProfile
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -863,4 +1107,18 @@ private struct ApnConfigurationPresets {
         data.username = username
         data.password = password
     }
+}
+
+/// An object representing the user account drone.
+private struct UserAccountDrone: Decodable {
+    enum CodingKeys: String, CodingKey {
+        /// The drone serial
+        case serial
+
+        /// Whether the drone is paired for 4G or not
+        case pairedFor4G = "paired_for_4g"
+    }
+
+    let serial: String
+    let pairedFor4G: Bool
 }

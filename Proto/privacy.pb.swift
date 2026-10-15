@@ -22,12 +22,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 
 enum Arsdk_Privacy_LogConfigPersistence: SwiftProtobuf.Enum {
   typealias RawValue = Int
-
-  /// Persistent configuration. 
   case persistent // = 0
-
-  /// Configuration will only be valid for the current device boot.
-  ///Configuration will revert to the default factory configuration after the device reboots (and not the previous persistent one). 
   case oneshot // = 1
   case UNRECOGNIZED(Int)
 
@@ -67,15 +62,8 @@ extension Arsdk_Privacy_LogConfigPersistence: CaseIterable {
 
 enum Arsdk_Privacy_LogStorage: SwiftProtobuf.Enum {
   typealias RawValue = Int
-
-  /// Logs are written to persistent storage. 
   case persistent // = 0
-
-  /// Logs are written to volatile storage, non persistent across reboots.
-  ///Some logs will be disabled in this mode. 
   case volatile // = 1
-
-  /// Logs are not written. 
   case none // = 2
   case UNRECOGNIZED(Int)
 
@@ -111,6 +99,50 @@ extension Arsdk_Privacy_LogStorage: CaseIterable {
     .persistent,
     .volatile,
     .none,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+enum Arsdk_Privacy_Authorization: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case never // = 0
+  case always // = 1
+  case once // = 2
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .never
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .never
+    case 1: self = .always
+    case 2: self = .once
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .never: return 0
+    case .always: return 1
+    case .once: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Privacy_Authorization: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Privacy_Authorization] = [
+    .never,
+    .always,
+    .once,
   ]
 }
 
@@ -155,6 +187,14 @@ struct Arsdk_Privacy_Command {
     set {id = .disableLogEncryption(newValue)}
   }
 
+  var authorizePairing: Arsdk_Privacy_Command.AuthorizePairing {
+    get {
+      if case .authorizePairing(let v)? = id {return v}
+      return Arsdk_Privacy_Command.AuthorizePairing()
+    }
+    set {id = .authorizePairing(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
@@ -162,6 +202,7 @@ struct Arsdk_Privacy_Command {
     case setLogMode(Arsdk_Privacy_Command.SetLogMode)
     case enableLogEncryption(Arsdk_Privacy_Command.EnableLogEncryption)
     case disableLogEncryption(Arsdk_Privacy_Command.DisableLogEncryption)
+    case authorizePairing(Arsdk_Privacy_Command.AuthorizePairing)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Privacy_Command.OneOf_ID, rhs: Arsdk_Privacy_Command.OneOf_ID) -> Bool {
@@ -185,14 +226,16 @@ struct Arsdk_Privacy_Command {
         guard case .disableLogEncryption(let l) = lhs, case .disableLogEncryption(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.authorizePairing, .authorizePairing): return {
+        guard case .authorizePairing(let l) = lhs, case .authorizePairing(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       default: return false
       }
     }
   #endif
   }
 
-  /// Get Current State.
-  ///A State event is expected afterwards. 
   struct GetState {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -205,8 +248,6 @@ struct Arsdk_Privacy_Command {
     init() {}
   }
 
-  /// Set log mode.
-  ///A State event is expected afterwards. 
   struct SetLogMode {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -221,7 +262,6 @@ struct Arsdk_Privacy_Command {
     init() {}
   }
 
-  /// Enable encryption. 
   struct EnableLogEncryption {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -234,11 +274,22 @@ struct Arsdk_Privacy_Command {
     init() {}
   }
 
-  /// Disable encryption. 
   struct DisableLogEncryption {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+  }
+
+  struct AuthorizePairing {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var value: Arsdk_Privacy_Authorization = .never
 
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -283,13 +334,11 @@ struct Arsdk_Privacy_Event {
   #endif
   }
 
-  /// Sent after GetState or SetLogMode is received, or on changes. 
   struct State {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
 
-    /// Only present if triggered from a GetState with include_default_capabilities == true. 
     var defaultCapabilities: Arsdk_Privacy_Capabilities {
       get {return _defaultCapabilities ?? Arsdk_Privacy_Capabilities()}
       set {_defaultCapabilities = newValue}
@@ -312,12 +361,22 @@ struct Arsdk_Privacy_Event {
     /// Clears the value of `logEncryption`. Subsequent reads from it will return its default value.
     mutating func clearLogEncryption() {self._logEncryption = nil}
 
+    var pairingAuthorization: Arsdk_Privacy_PairingAuthorization {
+      get {return _pairingAuthorization ?? Arsdk_Privacy_PairingAuthorization()}
+      set {_pairingAuthorization = newValue}
+    }
+    /// Returns true if `pairingAuthorization` has been explicitly set.
+    var hasPairingAuthorization: Bool {return self._pairingAuthorization != nil}
+    /// Clears the value of `pairingAuthorization`. Subsequent reads from it will return its default value.
+    mutating func clearPairingAuthorization() {self._pairingAuthorization = nil}
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
 
     fileprivate var _defaultCapabilities: Arsdk_Privacy_Capabilities? = nil
     fileprivate var _logEncryption: Arsdk_Privacy_Event.LogEncryption? = nil
+    fileprivate var _pairingAuthorization: Arsdk_Privacy_PairingAuthorization? = nil
   }
 
   struct LogEncryption {
@@ -344,6 +403,20 @@ struct Arsdk_Privacy_Capabilities {
 
   var supportedLogConfigPersistence: [Arsdk_Privacy_LogConfigPersistence] = []
 
+  var supportedAuthorizations: [Arsdk_Privacy_Authorization] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Arsdk_Privacy_PairingAuthorization {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var value: Arsdk_Privacy_Authorization = .never
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -368,6 +441,14 @@ extension Arsdk_Privacy_LogStorage: SwiftProtobuf._ProtoNameProviding {
   ]
 }
 
+extension Arsdk_Privacy_Authorization: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "AUTHORIZATION_NEVER"),
+    1: .same(proto: "AUTHORIZATION_ALWAYS"),
+    2: .same(proto: "AUTHORIZATION_ONCE"),
+  ]
+}
+
 extension Arsdk_Privacy_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Command"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -375,6 +456,7 @@ extension Arsdk_Privacy_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     17: .standard(proto: "set_log_mode"),
     18: .standard(proto: "enable_log_encryption"),
     19: .standard(proto: "disable_log_encryption"),
+    20: .standard(proto: "authorize_pairing"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -435,6 +517,19 @@ extension Arsdk_Privacy_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
           self.id = .disableLogEncryption(v)
         }
       }()
+      case 20: try {
+        var v: Arsdk_Privacy_Command.AuthorizePairing?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .authorizePairing(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .authorizePairing(v)
+        }
+      }()
       default: break
       }
     }
@@ -461,6 +556,10 @@ extension Arsdk_Privacy_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     case .disableLogEncryption?: try {
       guard case .disableLogEncryption(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+    }()
+    case .authorizePairing?: try {
+      guard case .authorizePairing(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     case nil: break
     }
@@ -595,6 +694,38 @@ extension Arsdk_Privacy_Command.DisableLogEncryption: SwiftProtobuf.Message, Swi
   }
 }
 
+extension Arsdk_Privacy_Command.AuthorizePairing: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Privacy_Command.protoMessageName + ".AuthorizePairing"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "value"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.value) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.value != .never {
+      try visitor.visitSingularEnumField(value: self.value, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Privacy_Command.AuthorizePairing, rhs: Arsdk_Privacy_Command.AuthorizePairing) -> Bool {
+    if lhs.value != rhs.value {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Privacy_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Event"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -650,6 +781,7 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     2: .standard(proto: "log_storage"),
     3: .standard(proto: "log_config_persistence"),
     4: .standard(proto: "log_encryption"),
+    5: .standard(proto: "pairing_authorization"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -662,6 +794,7 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
       case 2: try { try decoder.decodeSingularEnumField(value: &self.logStorage) }()
       case 3: try { try decoder.decodeSingularEnumField(value: &self.logConfigPersistence) }()
       case 4: try { try decoder.decodeSingularMessageField(value: &self._logEncryption) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._pairingAuthorization) }()
       default: break
       }
     }
@@ -684,6 +817,9 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     try { if let v = self._logEncryption {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
     } }()
+    try { if let v = self._pairingAuthorization {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -692,6 +828,7 @@ extension Arsdk_Privacy_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     if lhs.logStorage != rhs.logStorage {return false}
     if lhs.logConfigPersistence != rhs.logConfigPersistence {return false}
     if lhs._logEncryption != rhs._logEncryption {return false}
+    if lhs._pairingAuthorization != rhs._pairingAuthorization {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -734,6 +871,7 @@ extension Arsdk_Privacy_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Mess
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "supported_log_storage"),
     2: .standard(proto: "supported_log_config_persistence"),
+    3: .standard(proto: "supported_authorizations"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -744,6 +882,7 @@ extension Arsdk_Privacy_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Mess
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedEnumField(value: &self.supportedLogStorage) }()
       case 2: try { try decoder.decodeRepeatedEnumField(value: &self.supportedLogConfigPersistence) }()
+      case 3: try { try decoder.decodeRepeatedEnumField(value: &self.supportedAuthorizations) }()
       default: break
       }
     }
@@ -756,12 +895,48 @@ extension Arsdk_Privacy_Capabilities: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if !self.supportedLogConfigPersistence.isEmpty {
       try visitor.visitPackedEnumField(value: self.supportedLogConfigPersistence, fieldNumber: 2)
     }
+    if !self.supportedAuthorizations.isEmpty {
+      try visitor.visitPackedEnumField(value: self.supportedAuthorizations, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Privacy_Capabilities, rhs: Arsdk_Privacy_Capabilities) -> Bool {
     if lhs.supportedLogStorage != rhs.supportedLogStorage {return false}
     if lhs.supportedLogConfigPersistence != rhs.supportedLogConfigPersistence {return false}
+    if lhs.supportedAuthorizations != rhs.supportedAuthorizations {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Privacy_PairingAuthorization: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".PairingAuthorization"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "value"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.value) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.value != .never {
+      try visitor.visitSingularEnumField(value: self.value, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Privacy_PairingAuthorization, rhs: Arsdk_Privacy_PairingAuthorization) -> Bool {
+    if lhs.value != rhs.value {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

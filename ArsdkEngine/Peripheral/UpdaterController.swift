@@ -112,10 +112,10 @@ class UpdaterController: DeviceComponentController {
                     .rc(.skyCtrlUA2):
                 return Sc4UpdaterEventReceiver()
             case .drone(.anafi2),
-                    .drone(.anafi3),
                     .drone(.anafi3Mil),
-                    .drone(.anafi3Gov),
-                    .drone(.chuck3):
+                    .drone(.chuck3),
+                    .drone(.chuck3On),
+                    .drone(.anafi4):
                 return Anafi2UpdaterEventReceiver()
             case .drone:
                 return AnafiUpdaterEventReceiver()
@@ -299,10 +299,7 @@ class UpdaterController: DeviceComponentController {
             }, updateEndStatus: { [weak self] state in
                 self?.currentUpdate = nil
                 if state == .success {
-                    // in case of automatic reboot, state will be updated to .waitingForReboot on disconnection
-                    if !reboot {
-                        self?.firmwareUpdater.update(updateState: .waitingForReboot).notifyUpdated()
-                    }
+                    self?.firmwareUpdater.update(updateState: .readyToReboot).notifyUpdated()
                 } else {
                     self?.updateDidEnd(withState: state)
                 }

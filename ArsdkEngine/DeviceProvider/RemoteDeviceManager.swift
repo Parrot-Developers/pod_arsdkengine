@@ -352,17 +352,6 @@ class RemoteDeviceManager: DeviceComponentController {
     /// - Parameter backupLink: `true` if backup link is active
     func providerWillConnect(_ info: ProviderInfo, backupLink: Bool = false) {
         if let provider = getOrCreateProvider(info) {
-            // if another device is active and not disconnected or the same device has its transport link connected
-            if let activeProvider = activeProvider,
-               (activeProvider.deviceUid != info.deviceUid
-                && activeProvider.controller?.connectionSession.state != .disconnected)
-                || (activeProvider.deviceUid == info.deviceUid
-                    && activeProvider.controller?.connectionSession.state != .disconnected
-                    && activeProvider.controller?.connectionSession.state != .connecting) {
-                // force a link disconnection
-                provider.controller?.linkDidDisconnect(removing: false)
-            }
-
             provider.active = true
             provider.controller?.linkWillConnect(provider: provider, backupLink: backupLink)
         }

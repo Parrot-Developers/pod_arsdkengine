@@ -133,7 +133,7 @@ extension CommonBatteryInfo: ArsdkFeatureBatteryCallback {
         batteryInfo
             .update(batteryDescription: BatteryDescription(date: DateFormatter.iso8601Base.date(from: date),
                                                            serial: serial,
-                                                           cellCount: cellCount,
+                                                           cellCount: (cellCount == UInt16.max ? 1 : cellCount),
                                                            cellMinVoltage: cellMinVoltage,
                                                            cellMaxVoltage: cellMaxVoltage,
                                                            designCapacity: design))

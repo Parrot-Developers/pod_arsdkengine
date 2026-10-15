@@ -450,13 +450,17 @@ extension AnafiGeofence: ArsdkGeofenceEventDecoderListener {
 extension GeofenceMode: StorableEnum {
     static var storableMapper = Mapper<GeofenceMode, String>([
         .altitude: "altitude",
-        .cylinder: "cylinder"])
+        .cylinder: "cylinder",
+        .ceiling:  "ceiling",
+        .none:     "none"])
 }
 
 /// Extension that adds conversion from/to arsdk enum.
 extension GeofenceMode: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<GeofenceMode, Arsdk_Geofence_Mode>([
         .altitude: .altitude,
-        .cylinder: .cylinder
+        .cylinder: .cylinder,
+        .ceiling:  .ceiling,
+        .none:     .none
     ])
 }

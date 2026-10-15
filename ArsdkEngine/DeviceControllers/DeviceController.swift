@@ -132,6 +132,11 @@ protocol DeviceControllerBackend: AnyObject {
     /// - Returns: a new instance of a stream
     func createVideoStream() -> ArsdkStream
 
+    /// Gets the native MUX (USB) channel used to reach the controlled device, if any.
+    ///
+    /// - Returns: the native mux_ctx pointer, or `nil` if the device is not connected through a MUX backend
+    func getMuxContext() -> OpaquePointer?
+
     /// List all medias stored in the device
     ///
     /// - Parameters:
@@ -442,6 +447,19 @@ class DeviceController: NSObject {
         ULog.d(.ctrlTag, "Create \(self)]")
     }
 
+    /**
+     * Gets the native MUX (USB) channel used to reach the controlled device, if any.
+     *
+     * - Returns: the native mux_ctx pointer, or `0` if the device is not connected through a MUX backend
+     */
+    func getMuxContext() -> Int64 {
+        if let ptr = backend?.getMuxContext() {
+            // Bridge the opaque pointer value to an integer for clients that expect an integer handle.
+            return Int64(bitPattern: UInt64(UInt(bitPattern: ptr)))
+        }
+        return 0
+    }
+
     /// Start the controller
     ///
     /// - Parameter stopListener: listener called if the device controller stops itself
@@ -629,7 +647,7 @@ class DeviceController: NSObject {
     ///   - file: the firmware file path
     ///   - progress: progress closure
     ///   - completion: completion closure
-    /// - Returns: low level request, that can be used to cancel the upload request
+    /// - Returns: low level request that can be used to cancel the upload request
     final func update(withFile file: String, progress: @escaping ArsdkUpdateProgress,
                       completion: @escaping ArsdkUpdateCompletion) -> CancelableCore? {
         if let backend = backend {
@@ -774,7 +792,7 @@ class DeviceController: NSObject {
             deviceStore.write(key: PersistentStore.devicePresetUid, value: presetStore.key)
             deviceStore.commit()
             device.stateHolder.state?.update(connectionState: .connected,
-                                             withCause: .none)
+                                             withCause: DeviceState.ConnectionStateCause.none)
                 .update(persisted: true).notifyUpdated()
         default:
             break
@@ -961,29 +979,38 @@ extension DeviceController {
     }
 
     final func linkWillConnect(provider: DeviceProvider, backupLink: Bool) {
-        // connectionSession.state can be set to .connecting before linkWillConnect call
-        guard connectionSession.state == .disconnected ||
-                connectionSession.state == .connectionRequested ||
-                connectionSession.state == .connecting ||
-                connectionSession.state == .backupLink else {
-            ULog.e(.ctrlTag, "Bad connection session state: \(connectionSession.state)")
+        switch connectionSession.state {
+        case .disconnected, .connectionRequested, .backupLink:
+            break
+        case .connecting:
+            // a proxy device controller may callback multiple times here in this state, ignore.
             return
+        case .creatingDeviceHttpClient, .gettingAllSettings, .gettingAllStates, .connected, .disconnecting:
+            // a proxy device controller may callback directly here while in those states; mock disconnection first.
+            if activeProvider == provider
+                || (activeProvider?.parent != nil && activeProvider?.parent === provider.parent) {
+                linkDidDisconnect(removing: false)
+            }
         }
 
         let cause: DeviceState.ConnectionStateCause? = backupLink ? .backupLink : nil
 
-        if activeProvider == nil || activeProvider == provider {
-            ULog.d(.ctrlTag, "\(self) link connecting [provider: \(provider)]")
-
+        // We only handle the event if:
+        // - The active provider is null, which means that this is the first connection of the DeviceController
+        // - The active provider is equal to the connecting provider, which means that the event is either a duplicate
+        //   (which should be ignored by the previous switch() case), or the first event after a manual connection.
+        // - The active provider has the same parent as the connecting provider, which means that the parent provider
+        //   changed some connection parameters, which should be reflected back in the DeviceConnector.
+        //
+        // Otherwise, the event should be ignored as the DeviceController should not change the DeviceConnector on its
+        // own. Those changes (e.g. WIFI to USB/RC switch) will be done by the GroundSdk AutoConnection.
+        if activeProvider == nil || activeProvider == provider ||
+            (activeProvider?.parent != nil && activeProvider?.parent == provider.parent) {
             activeProvider = provider
             autoReconnect = false
             connectionSession.state = .connecting
+            device.stateHolder.state?.update(connectionState: .connecting, withCause: cause)
 
-            if let cause = cause {
-                device.stateHolder.state?.update(connectionState: .connecting, withCause: cause)
-            } else {
-                device.stateHolder.state?.update(connectionState: .connecting)
-            }
             device.stateHolder.state?.update(activeConnector: activeProvider!.connector)
                 .notifyUpdated()
         }
@@ -991,11 +1018,15 @@ extension DeviceController {
 
     final func linkDidConnect(provider: DeviceProvider, backend: DeviceControllerBackend) {
         // connectionSession.state can be set to .connecting before linkWillConnect call
-        guard connectionSession.state == .connecting ||
-                connectionSession.state == .disconnecting ||
-                connectionSession.state == .disconnected ||
-                connectionSession.state == .connectionRequested ||
-                connectionSession.state == .backupLink else {
+
+        switch connectionSession.state {
+        case .connecting:
+            break
+        case .disconnecting, .disconnected, .connectionRequested, .backupLink:
+            // a proxy device controller may callback directly here (without calling linkWillConnect), so make sure to
+            // pass through connecting state
+            linkWillConnect(provider: provider, backupLink: false)
+        default:
             // a proxy device controller may callback multiple times here in bad states, ignore.
             ULog.w(.ctrlTag, "Bad connection session state: \(connectionSession.state)")
             return
@@ -1004,12 +1035,6 @@ extension DeviceController {
         ULog.d(.ctrlTag, "\(self) link connected [provider: \(provider)]")
 
         self.backend = backend
-
-        // a proxy device controller may callback directly here (without calling linkWillConnect), so make sure to
-        // pass through connecting state
-        if connectionSession.state != .connecting {
-            linkWillConnect(provider: provider, backupLink: false)
-        }
 
         transitToNextConnectionState()
     }
@@ -1075,6 +1100,11 @@ extension DeviceController {
     }
 
     final func didReceiveCommand(_ command: OpaquePointer) {
+        guard connectionSession.state != .disconnected && connectionSession.state != .connectionRequested
+              && connectionSession.state != .connecting else {
+            return
+        }
+
         protocolDidReceiveCommand(command)
         componentControllers.forEach { component in
             component.didReceiveCommand(command)

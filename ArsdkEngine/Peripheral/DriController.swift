@@ -201,6 +201,10 @@ class DriController: DeviceComponentController, DriBackend {
     /// - Parameter enabled: the new dri enabled value
     /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
     func set(enabled: Bool) -> Bool {
+        guard !backupLinkIsActive else {
+            dri.forceNotifyUpdated()
+            return false
+        }
         return enabledSetting.setValue(value: enabled)
     }
 
@@ -208,6 +212,10 @@ class DriController: DeviceComponentController, DriBackend {
     ///
     /// - Parameter type: the new type configuration
     func set(type: DriTypeConfig?) {
+        guard !backupLinkIsActive else {
+            dri.forceNotifyUpdated()
+            return
+        }
         if let type = type {
             presetStore?.write(key: SettingKey.type, value: type).commit()
             if connected && sendTypeCommand(type) {
@@ -333,11 +341,6 @@ class DriController: DeviceComponentController, DriBackend {
         } else {
             dri.unpublish()
         }
-    }
-
-    override func backupLinkDidActivate() {
-        super.backupLinkDidActivate()
-        dri.unpublish()
     }
 
     override func willForget() {

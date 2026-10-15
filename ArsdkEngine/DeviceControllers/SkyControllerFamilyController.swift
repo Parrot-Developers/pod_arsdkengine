@@ -105,6 +105,7 @@ class SkyControllerFamilyController: RCController {
             componentControllers.append(MicrohardController(deviceController: self))
         }
         componentControllers.append(SkyControllerPrivacy(deviceController: self))
+        componentControllers.append(SkyControllerNetwork(deviceController: self))
         if !useFtp {
             componentControllers.append(ArsdkLatestLogDownloader(deviceController: self))
         }

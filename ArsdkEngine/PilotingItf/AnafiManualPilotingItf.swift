@@ -46,10 +46,10 @@ class AnafiManualPilotingItf: ManualCopterPilotingItfController {
     override func sendTakeOffCommand() {
         switch self.droneController.drone.model {
         case .anafi2,
-             .anafi3,
              .anafi3Mil,
-             .anafi3Gov,
-             .chuck3:
+             .chuck3,
+             .chuck3On,
+             .anafi4:
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending smarttakeoffland command")
             _ = sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
         default:
@@ -68,10 +68,10 @@ class AnafiManualPilotingItf: ManualCopterPilotingItfController {
     override func sendLandCommand() {
         switch self.droneController.drone.model {
         case .anafi2,
-             .anafi3,
              .anafi3Mil,
-             .anafi3Gov,
-             .chuck3:
+             .chuck3,
+             .chuck3On,
+             .anafi4:
             ULog.d(.ctrlTag, "AnafiCopter manual piloting: sending smarttakeoffland command")
             _ = sendCommand(ArsdkFeatureArdrone3Piloting.smartTakeOffLandEncoder())
         default:

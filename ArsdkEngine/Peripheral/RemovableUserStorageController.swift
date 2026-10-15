@@ -40,12 +40,15 @@ class RemovableUserStorageController: UserStorageController {
     /// - Parameter deviceController: device controller owning this component controller (weak)
     override init(deviceController: DeviceController) {
         super.init(deviceController: deviceController)
+        arsdkStorageProtoEncoder = ArsdkStorageEventDecoder(listener: self)
         removableUserStorage = RemovableUserStorageCore(store: deviceController.device.peripheralStore, backend: self)
         userStorage = removableUserStorage!
     }
 
     override func didConnect() {
-        removableUserStorage.publish()
+        if userStorageSupport == .legacyV1 || userStorageSupport == .legacyV2 {
+            removableUserStorage.publish()
+        }
     }
 
     override func didDisconnect() {
@@ -57,6 +60,7 @@ class RemovableUserStorageController: UserStorageController {
     ///
     /// - Parameter command: received command
     override func didReceiveCommand(_ command: OpaquePointer) {
+        super.didReceiveCommand(command)
         if ArsdkCommand.getFeatureId(command) == kArsdkFeatureUserStorageUid {
             ArsdkFeatureUserStorage.decode(command, callback: self)
         }
@@ -66,7 +70,7 @@ class RemovableUserStorageController: UserStorageController {
     }
 }
 
-/// User storage decode callback implementation
+/// Removable user storage decode callback implementation
 extension RemovableUserStorageController: ArsdkFeatureUserStorageCallback {
 
     func onInfo(name: String, capacity: UInt64) {
@@ -95,6 +99,7 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageCallback {
     }
 
     func onCapabilities(supportedFeaturesBitField: UInt) {
+        userStorageSupport = .legacyV1
         capabilities(supportedFeaturesBitField: supportedFeaturesBitField)
     }
 
@@ -115,13 +120,13 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageCallback {
     }
 }
 
-/// user storage decode callback implementation
+/// Removable user storage V2 decode callback implementation
 extension RemovableUserStorageController: ArsdkFeatureUserStorageV2Callback {
 
     func onCapabilities(storageId: UInt, supportedFeaturesBitField: UInt,
                         storageType: ArsdkFeatureUserStorageV2StorageType, listFlagsBitField: UInt) {
         if storageType == .removableStorage {
-            userStorageType = .removableStorage
+            userStorageSupport = .legacyV2
             userStorageId = storageId
             capabilities(supportedFeaturesBitField: supportedFeaturesBitField)
         }
@@ -182,6 +187,91 @@ extension RemovableUserStorageController: ArsdkFeatureUserStorageV2Callback {
     func onDecryption(storageId: UInt, result: ArsdkFeatureUserStorageV2PasswordResult, listFlagsBitField: UInt) {
         if userStorageId == storageId {
             decryption(result: result)
+        }
+    }
+}
+
+/// Removable user storage protobuf decode callback implementation
+extension RemovableUserStorageController: ArsdkStorageEventDecoderListener {
+
+    func onStorageList(_ storageList: Arsdk_Storage_Event.StorageList) {
+        userStorageSupport = .proto
+        for storage in storageList.storages where storage.type == .removable {
+            userStorageId = UInt(storage.id)
+            _ = sendGetStateCommand(storageId: storage.id)
+        }
+    }
+
+    func onState(_ state: Arsdk_Storage_Event.State) {
+        userStorageSupport = .proto
+        if state.hasDefaultCapabilities {
+            forceCapabilities()
+            supportedFormattingTypes(supportedTypes: state.defaultCapabilities.supportedErasingTypes)
+        }
+
+        guard UInt(state.id) == userStorageId else {
+            return
+        }
+        if state.hasStorageInfo {
+            removableUserStorage.update(name: state.storageInfo.name, capacity: Int64(state.storageInfo.capacity))
+        }
+
+        if state.hasStorageState {
+            isEncrypted(isEncrypted: state.storageState.attributes.contains(.encrypted))
+            hasCheckError(hasCheckError: state.storageState.attributes.contains(.checkError))
+            if state.storageState.hasEncryptionState {
+                let encryptionState = state.storageState.encryptionState
+                if let encryptionType = UserStorageEncryptionType(fromArsdk: encryptionState.encryptionType) {
+                    removableUserStorage.update(encryptionState: UserStorageEncryptionState(
+                        type: encryptionType,
+                        isLocked: encryptionState.isLocked,
+                        hasPassphrase: encryptionState.hasPassphrase_p,
+                        canAddPassphrase: encryptionState.canAddPassphrase,
+                        canChangePassphrase: encryptionState.canChangePassphrase,
+                        canRemovePassphrase: encryptionState.canRemovePassphrase))
+                }
+            }
+            update(physicalState: state.storageState.physicalState, fileSystemState: state.storageState.fileSystemState,
+                  attributes: state.storageState.attributes, monitorEnabled: state.storageState.isMonitoringEnabled,
+                  monitorPeriod: Int(state.storageState.monitoringPeriod))
+        }
+
+        if state.hasStorageUuid {
+            sdcardUuid(uuid: state.storageUuid.uuid)
+        }
+
+        removableUserStorage.publish()
+    }
+
+    func onFormattingProgress(_ formattingProgress: Arsdk_Storage_Event.FormattingProgress) {
+        if UInt(formattingProgress.id) == userStorageId {
+            formatProgress(step: formattingProgress.step, percentage: UInt(formattingProgress.percentage))
+        }
+    }
+
+    func onMonitor(_ monitor: Arsdk_Storage_Event.Monitor) {
+        if UInt(monitor.id) == userStorageId {
+            removableUserStorage.update(availableSpace: Int64(monitor.availableSpace)).notifyUpdated()
+        }
+    }
+
+    func onFormattingResult(_ formattingResult: Arsdk_Storage_Event.FormattingResult) {
+        if UInt(formattingResult.id) == userStorageId {
+            formattingStatus(status: formattingResult.status)
+        }
+    }
+
+    func onUnlockResult(_ unlockResult: Arsdk_Storage_Event.UnlockResult) {
+        if UInt(unlockResult.id) == userStorageId {
+            unlock(result: unlockResult.status)
+        }
+    }
+
+    func onPassphraseResult(_ passphraseResult: Arsdk_Storage_Event.PassphraseResult) {
+        if UInt(passphraseResult.id) == userStorageId {
+            removableUserStorage.update(
+                passphraseStatus: UserStoragePassphraseStatus(fromArsdk: passphraseResult.error)).notifyUpdated()
+            removableUserStorage.update(passphraseStatus: nil).notifyUpdated()
         }
     }
 }

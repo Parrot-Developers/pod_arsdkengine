@@ -773,6 +773,7 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
   case framerate12 // = 10
   case framerate12Point5 // = 11
   case framerate15 // = 12
+  case framerate7Point5 // = 13
   case UNRECOGNIZED(Int)
 
   init() {
@@ -794,6 +795,7 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
     case 10: self = .framerate12
     case 11: self = .framerate12Point5
     case 12: self = .framerate15
+    case 13: self = .framerate7Point5
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -813,6 +815,7 @@ enum Arsdk_Camera_Framerate: SwiftProtobuf.Enum {
     case .framerate12: return 10
     case .framerate12Point5: return 11
     case .framerate15: return 12
+    case .framerate7Point5: return 13
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -837,6 +840,7 @@ extension Arsdk_Camera_Framerate: CaseIterable {
     .framerate12,
     .framerate12Point5,
     .framerate15,
+    .framerate7Point5,
   ]
 }
 
@@ -4756,6 +4760,7 @@ extension Arsdk_Camera_Framerate: SwiftProtobuf._ProtoNameProviding {
     10: .same(proto: "FRAMERATE_12"),
     11: .same(proto: "FRAMERATE_12_POINT_5"),
     12: .same(proto: "FRAMERATE_15"),
+    13: .same(proto: "FRAMERATE_7_POINT_5"),
   ]
 }
 

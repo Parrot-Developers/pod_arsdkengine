@@ -262,6 +262,7 @@ extension Arsdk_Devicemanager_Transport {
         case .microhard: return .microhard
         case .wifi: return .wifi
         case .mars: return .mars
+        case .backupLink: return .backupLink
         default: return nil
         }
     }
@@ -272,6 +273,7 @@ extension Arsdk_Devicemanager_Transport {
         case .wifi: return .wifi
         case .mars: return .mars
         case .cellular: return .cellular
+        case .backupLink: return .backupLink
         case .UNRECOGNIZED(_):
             return nil
         }

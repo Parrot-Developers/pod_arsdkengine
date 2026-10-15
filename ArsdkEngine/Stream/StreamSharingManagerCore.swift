@@ -50,6 +50,9 @@ public class StreamSharingManagerCore: StreamSharingManager {
     /// Whether streaming service is started.
     private var streamStarted: Bool = false
 
+    /// Native mux_ctx pointer (0 when none)
+    private var muxCtxPtr: Int = 0
+
     /// Registered monitors.
     private var monitors: Set<Monitor> = []
 
@@ -84,6 +87,10 @@ public class StreamSharingManagerCore: StreamSharingManager {
         }
     }
 
+    public func setMuxContext(muxCtxPtr: Int) {
+        self.muxCtxPtr = muxCtxPtr
+    }
+
     public func startRecording(mediaDir: URL, privateDir: URL, resolution: StreamSharingResolution, bitrate: Int,
                                overlay: Bool, unitSystem: OverlayUnitSystem,
                                coordinateSystem: OverlayCoordinateSystem) {
@@ -93,8 +100,17 @@ public class StreamSharingManagerCore: StreamSharingManager {
                                             coordinateSystem: coordinateSystem.arsdkValue!)
     }
 
+    public func addRecordChapter(name: String, timestamp: UInt64?) {
+        sdkCoreStreamSharing.addRecordChapter(name, timestamp: timestamp ?? 0)
+    }
+
     public func stopRecording() {
         sdkCoreStreamSharing.stopRecording()
+        if !recordingStarted {
+            monitors.forEach { monitor in
+                monitor.recordingStateDidChange(.stopped, nil, nil)
+            }
+        }
         recordingStarted = false
     }
 
@@ -102,18 +118,40 @@ public class StreamSharingManagerCore: StreamSharingManager {
         sdkCoreStreamSharing.finalizeRecord(reason)
     }
 
-    public func startStreaming(url: URL, resolution: StreamSharingResolution, maxBitrate: Int, overlay: Bool,
-                               unitSystem: OverlayUnitSystem, coordinateSystem: OverlayCoordinateSystem,
-                               rtspTransport: StreamSharingRtspTransport) {
-        sdkCoreStreamSharing.startStream(url.absoluteString, resolution: resolution.arsdkValue!,
-                                         maxBitrate: Int32(maxBitrate), overlay: overlay,
+    public func startStreaming(url: URL,
+                               resolution: StreamSharingResolution,
+                               maxBitrate: Int,
+                               overlay: Bool,
+                               unitSystem: OverlayUnitSystem,
+                               coordinateSystem: OverlayCoordinateSystem,
+                               rtspTransport: StreamSharingRtspTransport,
+                               networkInterface: StreamNetworkInterface) {
+
+        let mux: Int = (networkInterface == .controller) ? self.muxCtxPtr : 0
+        if networkInterface == .controller && mux == 0 {
+            ULog.e(.streamTag, "Cannot start streaming through controller: no MUX context")
+            monitors.forEach { monitor in
+                monitor.streamingStateDidChange(.error, .controllerNotConnected, url)
+            }
+            return
+        }
+
+        sdkCoreStreamSharing.startStream(url.absoluteString,
+                                         resolution: resolution.arsdkValue!,
+                                         maxBitrate: Int32(maxBitrate),
+                                         overlay: overlay,
                                          unitSystem: unitSystem.arsdkValue!,
                                          coordinateSystem: coordinateSystem.arsdkValue!,
-                                         rtspTransport: rtspTransport.arsdkValue!)
+                                         rtspTransport: rtspTransport.arsdkValue!,
+                                         muxCtxPtr: mux)
     }
 
     public func stopStreaming() {
         sdkCoreStreamSharing.stopStream()
+        if !streamStarted {
+            monitors.forEach { monitor in
+                monitor.streamingStateDidChange(.stopped, nil, nil)}
+        }
         streamStarted = false
     }
 
@@ -219,6 +257,7 @@ extension StreamSharingManagerCore: ArsdkStreamSharingDelegate {
             recordingStarted = true
             monitors.forEach { monitor in monitor.serviceDidStart() }
         case .stop:
+            recordingStarted = false
             state = .stopped
         case .begin:
             state = .recording
@@ -251,6 +290,7 @@ extension StreamSharingManagerCore: ArsdkStreamSharingDelegate {
                 monitors.forEach { monitor in monitor.serviceDidStart() }
                 return .started
             case .stop:
+                streamStarted = false
                 switch status {
                 case -EFAULT:
                     error = .invalidUrl
@@ -264,7 +304,7 @@ extension StreamSharingManagerCore: ArsdkStreamSharingDelegate {
                 return .streaming
             case .end:
                 error = StreamingError(fromArsdk: reason)
-                return streamStarted ? .started : nil
+                return error != .clientRequest ? .error : nil
             case .connecting:
                 return .connecting
             case .error:

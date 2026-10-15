@@ -605,6 +605,14 @@ struct Arsdk_Network_Command {
     set {id = .setDirectConnection(newValue)}
   }
 
+  var setEthernetIpConfig: Arsdk_Network_Command.SetEthernetIpConfig {
+    get {
+      if case .setEthernetIpConfig(let v)? = id {return v}
+      return Arsdk_Network_Command.SetEthernetIpConfig()
+    }
+    set {id = .setEthernetIpConfig(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
@@ -612,6 +620,7 @@ struct Arsdk_Network_Command {
     case setRoutingPolicy(Arsdk_Network_Command.SetRoutingPolicy)
     case setCellularMaxBitrate(Arsdk_Network_Command.SetCellularMaxBitrate)
     case setDirectConnection(Arsdk_Network_Command.SetDirectConnection)
+    case setEthernetIpConfig(Arsdk_Network_Command.SetEthernetIpConfig)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Network_Command.OneOf_ID, rhs: Arsdk_Network_Command.OneOf_ID) -> Bool {
@@ -633,6 +642,10 @@ struct Arsdk_Network_Command {
       }()
       case (.setDirectConnection, .setDirectConnection): return {
         guard case .setDirectConnection(let l) = lhs, case .setDirectConnection(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.setEthernetIpConfig, .setEthernetIpConfig): return {
+        guard case .setEthernetIpConfig(let l) = lhs, case .setEthernetIpConfig(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -695,6 +708,27 @@ struct Arsdk_Network_Command {
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
+  }
+
+  struct SetEthernetIpConfig {
+    // SwiftProtobuf.Message conformance is added in an extension below. See the
+    // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+    // methods supported on all messages.
+
+    var config: Arsdk_Network_IpConfig {
+      get {return _config ?? Arsdk_Network_IpConfig()}
+      set {_config = newValue}
+    }
+    /// Returns true if `config` has been explicitly set.
+    var hasConfig: Bool {return self._config != nil}
+    /// Clears the value of `config`. Subsequent reads from it will return its default value.
+    mutating func clearConfig() {self._config = nil}
+
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+
+    fileprivate var _config: Arsdk_Network_IpConfig? = nil
   }
 
   init() {}
@@ -789,6 +823,15 @@ struct Arsdk_Network_Event {
 
     var directConnectionMode: Arsdk_Network_DirectConnectionMode = .legacy
 
+    var ethernetIpConfig: Arsdk_Network_IpConfig {
+      get {return _ethernetIpConfig ?? Arsdk_Network_IpConfig()}
+      set {_ethernetIpConfig = newValue}
+    }
+    /// Returns true if `ethernetIpConfig` has been explicitly set.
+    var hasEthernetIpConfig: Bool {return self._ethernetIpConfig != nil}
+    /// Clears the value of `ethernetIpConfig`. Subsequent reads from it will return its default value.
+    mutating func clearEthernetIpConfig() {self._ethernetIpConfig = nil}
+
     var unknownFields = SwiftProtobuf.UnknownStorage()
 
     init() {}
@@ -798,6 +841,7 @@ struct Arsdk_Network_Event {
     fileprivate var _globalLinkQuality: Arsdk_Network_GlobalLinkQuality? = nil
     fileprivate var _linksStatus: Arsdk_Network_LinksStatus? = nil
     fileprivate var _cellularMaxBitrate: Arsdk_Network_CellularMaxBitrate? = nil
+    fileprivate var _ethernetIpConfig: Arsdk_Network_IpConfig? = nil
   }
 
   init() {}
@@ -907,6 +951,83 @@ struct Arsdk_Network_CellularMaxBitrate {
   init() {}
 }
 
+struct Arsdk_Network_IpConfig {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var mode: Arsdk_Network_IpConfig.OneOf_Mode? = nil
+
+  var automatic: SwiftProtobuf.Google_Protobuf_Empty {
+    get {
+      if case .automatic(let v)? = mode {return v}
+      return SwiftProtobuf.Google_Protobuf_Empty()
+    }
+    set {mode = .automatic(newValue)}
+  }
+
+  var `static`: Arsdk_Network_StaticIpConfig {
+    get {
+      if case .static(let v)? = mode {return v}
+      return Arsdk_Network_StaticIpConfig()
+    }
+    set {mode = .static(newValue)}
+  }
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  enum OneOf_Mode: Equatable {
+    case automatic(SwiftProtobuf.Google_Protobuf_Empty)
+    case `static`(Arsdk_Network_StaticIpConfig)
+
+  #if !swift(>=4.1)
+    static func ==(lhs: Arsdk_Network_IpConfig.OneOf_Mode, rhs: Arsdk_Network_IpConfig.OneOf_Mode) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.automatic, .automatic): return {
+        guard case .automatic(let l) = lhs, case .automatic(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.static, .static): return {
+        guard case .static(let l) = lhs, case .static(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
+  init() {}
+}
+
+struct Arsdk_Network_StaticIpConfig {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var address: String = String()
+
+  var mask: String = String()
+
+  var gateway: SwiftProtobuf.Google_Protobuf_StringValue {
+    get {return _gateway ?? SwiftProtobuf.Google_Protobuf_StringValue()}
+    set {_gateway = newValue}
+  }
+  /// Returns true if `gateway` has been explicitly set.
+  var hasGateway: Bool {return self._gateway != nil}
+  /// Clears the value of `gateway`. Subsequent reads from it will return its default value.
+  mutating func clearGateway() {self._gateway = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _gateway: SwiftProtobuf.Google_Protobuf_StringValue? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "arsdk.network"
@@ -1013,6 +1134,7 @@ extension Arsdk_Network_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     17: .standard(proto: "set_routing_policy"),
     18: .standard(proto: "set_cellular_max_bitrate"),
     19: .standard(proto: "set_direct_connection"),
+    20: .standard(proto: "set_ethernet_ip_config"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1073,6 +1195,19 @@ extension Arsdk_Network_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
           self.id = .setDirectConnection(v)
         }
       }()
+      case 20: try {
+        var v: Arsdk_Network_Command.SetEthernetIpConfig?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .setEthernetIpConfig(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .setEthernetIpConfig(v)
+        }
+      }()
       default: break
       }
     }
@@ -1099,6 +1234,10 @@ extension Arsdk_Network_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     case .setDirectConnection?: try {
       guard case .setDirectConnection(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+    }()
+    case .setEthernetIpConfig?: try {
+      guard case .setEthernetIpConfig(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     case nil: break
     }
@@ -1240,6 +1379,42 @@ extension Arsdk_Network_Command.SetDirectConnection: SwiftProtobuf.Message, Swif
   }
 }
 
+extension Arsdk_Network_Command.SetEthernetIpConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = Arsdk_Network_Command.protoMessageName + ".SetEthernetIpConfig"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "config"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._config) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._config {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Network_Command.SetEthernetIpConfig, rhs: Arsdk_Network_Command.SetEthernetIpConfig) -> Bool {
+    if lhs._config != rhs._config {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Arsdk_Network_Event: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Event"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -1297,6 +1472,7 @@ extension Arsdk_Network_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     4: .standard(proto: "links_status"),
     5: .standard(proto: "cellular_max_bitrate"),
     6: .standard(proto: "direct_connection_mode"),
+    7: .standard(proto: "ethernet_ip_config"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1311,6 +1487,7 @@ extension Arsdk_Network_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
       case 4: try { try decoder.decodeSingularMessageField(value: &self._linksStatus) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._cellularMaxBitrate) }()
       case 6: try { try decoder.decodeSingularEnumField(value: &self.directConnectionMode) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._ethernetIpConfig) }()
       default: break
       }
     }
@@ -1339,6 +1516,9 @@ extension Arsdk_Network_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     if self.directConnectionMode != .legacy {
       try visitor.visitSingularEnumField(value: self.directConnectionMode, fieldNumber: 6)
     }
+    try { if let v = self._ethernetIpConfig {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1349,6 +1529,7 @@ extension Arsdk_Network_Event.State: SwiftProtobuf.Message, SwiftProtobuf._Messa
     if lhs._linksStatus != rhs._linksStatus {return false}
     if lhs._cellularMaxBitrate != rhs._cellularMaxBitrate {return false}
     if lhs.directConnectionMode != rhs.directConnectionMode {return false}
+    if lhs._ethernetIpConfig != rhs._ethernetIpConfig {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1583,6 +1764,124 @@ extension Arsdk_Network_CellularMaxBitrate: SwiftProtobuf.Message, SwiftProtobuf
 
   static func ==(lhs: Arsdk_Network_CellularMaxBitrate, rhs: Arsdk_Network_CellularMaxBitrate) -> Bool {
     if lhs.maxBitrate != rhs.maxBitrate {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Network_IpConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".IpConfig"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "automatic"),
+    2: .same(proto: "static"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: SwiftProtobuf.Google_Protobuf_Empty?
+        var hadOneofValue = false
+        if let current = self.mode {
+          hadOneofValue = true
+          if case .automatic(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.mode = .automatic(v)
+        }
+      }()
+      case 2: try {
+        var v: Arsdk_Network_StaticIpConfig?
+        var hadOneofValue = false
+        if let current = self.mode {
+          hadOneofValue = true
+          if case .static(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.mode = .static(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.mode {
+    case .automatic?: try {
+      guard case .automatic(let v)? = self.mode else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    }()
+    case .static?: try {
+      guard case .static(let v)? = self.mode else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Network_IpConfig, rhs: Arsdk_Network_IpConfig) -> Bool {
+    if lhs.mode != rhs.mode {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Network_StaticIpConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".StaticIpConfig"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "address"),
+    2: .same(proto: "mask"),
+    3: .same(proto: "gateway"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.address) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.mask) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._gateway) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.address.isEmpty {
+      try visitor.visitSingularStringField(value: self.address, fieldNumber: 1)
+    }
+    if !self.mask.isEmpty {
+      try visitor.visitSingularStringField(value: self.mask, fieldNumber: 2)
+    }
+    try { if let v = self._gateway {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Network_StaticIpConfig, rhs: Arsdk_Network_StaticIpConfig) -> Bool {
+    if lhs.address != rhs.address {return false}
+    if lhs.mask != rhs.mask {return false}
+    if lhs._gateway != rhs._gateway {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

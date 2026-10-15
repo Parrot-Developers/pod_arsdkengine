@@ -53,12 +53,6 @@ class SkyControllerCellularSession: DeviceComponentController {
         arsdkDecoder = Decoder(listener: self)
     }
 
-    /// Device is about to be connected.
-    override func willConnect() {
-        super.willConnect()
-        _ = sendGetStateCommand()
-    }
-
     /// Device is disconnected.
     override func didDisconnect() {
         cellularSession.unpublish()
@@ -84,13 +78,6 @@ extension SkyControllerCellularSession {
             return sendCommand(encoder)
         }
         return false
-    }
-
-    /// Sends command to get state.
-    ///
-    /// - Returns: `true` if the command has been sent
-    func sendGetStateCommand() -> Bool {
-        sendCommand(.getState(Command.GetState()))
     }
 }
 

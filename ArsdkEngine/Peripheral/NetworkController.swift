@@ -174,6 +174,7 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
         networkControl.cancelSettingsRollback()
             .update(link: nil)
             .update(links: [])
+            .clearEthernetIpConfig()
 
         if isPersisted {
             networkControl.publish()
@@ -270,6 +271,14 @@ class NetworkController: DeviceComponentController, NetworkControlBackend {
     func set(directConnectionMode: NetworkDirectConnectionMode) -> Bool {
         return directConnectionModeSetting.setValue(value: directConnectionMode)
     }
+
+    /// Sets ethernet IP config.
+    ///
+    /// - Parameter ethernetIpConfig: the new ethernet IP config
+    /// - Returns: true if the command has been sent, false if not connected and the value has been changed immediately
+    func set(ethernetIpConfig: IpConfig) -> Bool {
+        return sendEthernetIpConfig(ethernetIpConfig)
+    }
 }
 
 /// Extension for methods to send Network commands.
@@ -331,6 +340,16 @@ extension NetworkController {
         }
         return sent
     }
+
+    /// Sends ethernet IP configuration command.
+    ///
+    /// - Parameter config: requested ethernet IP configuration
+    /// - Returns: `true` if the command has been sent
+    func sendEthernetIpConfig(_ config: IpConfig) -> Bool {
+        var msg = Arsdk_Network_Command.SetEthernetIpConfig()
+        msg.config = config.arsdk
+        return sendNetworkCommand(.setEthernetIpConfig(msg))
+    }
 }
 
 /// Extension for events processing.
@@ -375,6 +394,11 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
         // direct connection mode
         if let mode = NetworkDirectConnectionMode(fromArsdk: state.directConnectionMode) {
             directConnectionModeSetting.handleNewValue(value: mode)
+        }
+
+        // ethernet IP config
+        if state.hasEthernetIpConfig {
+            processEthernetIpConfig(state.ethernetIpConfig)
         }
 
         networkControl.publish()
@@ -429,6 +453,15 @@ extension NetworkController: ArsdkNetworkEventDecoderListener {
             maxCellularBitrate = networkControl.maxCellularBitrate.max
         }
         maxCellularBitrateSetting.handleNewValue(value: maxCellularBitrate)
+    }
+
+    /// Processes an `EthernetIpConfig` message.
+    ///
+    /// - Parameter ipConfig: message to process
+    func processEthernetIpConfig(_ ipConfig: Arsdk_Network_IpConfig) {
+        if let gsdkIpConfig = ipConfig.gsdk {
+            networkControl.update(ethernetIpConfig: gsdkIpConfig)
+        }
     }
 }
 
@@ -510,5 +543,43 @@ extension Arsdk_Network_LinksStatus.LinkInfo {
             return NetworkControlLinkInfoCore(type: type, status: status, error: error, quality: gsdkQuality)
         }
         return nil
+    }
+}
+
+/// Extension that adds conversion to gsdk for IpConfig.
+extension Arsdk_Network_IpConfig {
+    /// Creates a `NetworkIpConfig` from `Arsdk_Network_IpConfig`.
+    var gsdk: IpConfig? {
+        switch mode {
+        case .automatic:
+            return .automatic
+        case .static(let staticIp):
+            let gateway: String? = staticIp.hasGateway ? staticIp.gateway.value : nil
+            return .static(address: staticIp.address, mask: staticIp.mask, gateway: gateway)
+        case .none:
+            return nil
+        }
+    }
+}
+
+/// Extension that adds conversion from/to arsdk enum.
+extension IpConfig {
+    var arsdk: Arsdk_Network_IpConfig {
+        var networkIpConfig = Arsdk_Network_IpConfig()
+        switch self {
+        case .automatic:
+            networkIpConfig.mode = .automatic(Google_Protobuf_Empty())
+        case .static(address: let address, mask: let mask, gateway: let gateway):
+            var staticIpConfig = Arsdk_Network_StaticIpConfig()
+            staticIpConfig.address = address
+            staticIpConfig.mask = mask
+            if let gw = gateway {
+                var gwValue = Google_Protobuf_StringValue()
+                gwValue.value = gw
+                staticIpConfig.gateway = gwValue
+            }
+            networkIpConfig.mode = .static(staticIpConfig)
+        }
+        return networkIpConfig
     }
 }

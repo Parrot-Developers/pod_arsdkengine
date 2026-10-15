@@ -60,7 +60,6 @@ class HttpSecureElementDownloaderDelegate: ArsdkSecureElementDownloaderDelegate 
         guard currentRequestForSign == nil else {
             return false
         }
-
         currentRequestForSign = secureElementApi?.sign(challenge: challenge, with: operation, completion: { token in
             completion(token)
             self.currentRequestForSign = nil

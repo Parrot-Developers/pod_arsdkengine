@@ -106,14 +106,17 @@ extension Arsdk_Controllernetwork_Command.OneOf_ID {
     var number: Int32 {
         switch self {
         case .getState: return 16
+        case .setEthernetIpConfig: return 17
         }
     }
 }
 extension Arsdk_Controllernetwork_Command {
     static var getStateFieldNumber: Int32 { 16 }
+    static var setEthernetIpConfigFieldNumber: Int32 { 17 }
 }
 extension Arsdk_Controllernetwork_Event.State {
     static var linksStatusFieldNumber: Int32 { 4 }
+    static var ethernetIpConfigFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Controllernetwork_Event {
     static var stateFieldNumber: Int32 { 16 }

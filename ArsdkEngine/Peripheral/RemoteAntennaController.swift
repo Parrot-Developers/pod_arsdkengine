@@ -98,12 +98,15 @@ extension RemoteAntennaController: RemoteAntennaBackend {
         return sent
     }
 
-    func set(location: CLLocationCoordinate2D) -> Bool {
+    func set(location: Location3D) -> Bool {
         var sent = false
         if connected {
             var coordinate = Arsdk_Remoteantenna_GpsCoordinates()
             coordinate.latitude = location.latitude
             coordinate.longitude = location.longitude
+            if let altitude = location.altitude {
+                coordinate.altitude.value = altitude
+            }
             sent = sendRemoteAntennaCommand(.setAntennaCoordinates(coordinate))
         }
         return sent
@@ -156,6 +159,13 @@ extension RemoteAntennaController {
 extension RemoteAntennaController: ArsdkRemoteantennaEventDecoderListener {
 
     func onState(_ state: Arsdk_Remoteantenna_Event.State) {
+        if state.hasDefaultCapabilities {
+            var enabledSupported = true
+            if state.defaultCapabilities.hasSupportedFeatures {
+                enabledSupported = state.defaultCapabilities.supportedFeatures.features.contains(.toggleable)
+            }
+            remoteAntenna.createOrDestroyEnabledSetting(value: enabledSupported)
+        }
         // enabled
         if state.hasEnabled {
             remoteAntenna.update(enabled: state.enabled.value)
@@ -202,9 +212,11 @@ extension RemoteAntennaController: ArsdkRemoteantennaEventDecoderListener {
             }
 
             if state.hasAntennaCoordinates {
-                remoteAntenna.update(location: CLLocationCoordinate2D(
+                let altitude = state.antennaCoordinates.hasAltitude
+                    ? state.antennaCoordinates.altitude.value : nil
+                remoteAntenna.update(location: Location3D(
                     latitude: state.antennaCoordinates.latitude,
-                    longitude: state.antennaCoordinates.longitude))
+                    longitude: state.antennaCoordinates.longitude, altitude: altitude))
             }
 
             switch state.motorizedSupportStatus {

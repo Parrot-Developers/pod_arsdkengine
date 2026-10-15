@@ -109,6 +109,7 @@ extension Arsdk_Privacy_Command.OneOf_ID {
         case .setLogMode: return 17
         case .enableLogEncryption: return 18
         case .disableLogEncryption: return 19
+        case .authorizePairing: return 20
         }
     }
 }
@@ -122,17 +123,22 @@ extension Arsdk_Privacy_Command.SetLogMode {
 extension Arsdk_Privacy_Command.EnableLogEncryption {
     static var publicKeyFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Privacy_Command.AuthorizePairing {
+    static var valueFieldNumber: Int32 { 1 }
+}
 extension Arsdk_Privacy_Command {
     static var getStateFieldNumber: Int32 { 16 }
     static var setLogModeFieldNumber: Int32 { 17 }
     static var enableLogEncryptionFieldNumber: Int32 { 18 }
     static var disableLogEncryptionFieldNumber: Int32 { 19 }
+    static var authorizePairingFieldNumber: Int32 { 20 }
 }
 extension Arsdk_Privacy_Event.State {
     static var defaultCapabilitiesFieldNumber: Int32 { 1 }
     static var logStorageFieldNumber: Int32 { 2 }
     static var logConfigPersistenceFieldNumber: Int32 { 3 }
     static var logEncryptionFieldNumber: Int32 { 4 }
+    static var pairingAuthorizationFieldNumber: Int32 { 5 }
 }
 extension Arsdk_Privacy_Event.LogEncryption {
     static var enabledFieldNumber: Int32 { 1 }
@@ -143,4 +149,8 @@ extension Arsdk_Privacy_Event {
 extension Arsdk_Privacy_Capabilities {
     static var supportedLogStorageFieldNumber: Int32 { 1 }
     static var supportedLogConfigPersistenceFieldNumber: Int32 { 2 }
+    static var supportedAuthorizationsFieldNumber: Int32 { 3 }
+}
+extension Arsdk_Privacy_PairingAuthorization {
+    static var valueFieldNumber: Int32 { 1 }
 }

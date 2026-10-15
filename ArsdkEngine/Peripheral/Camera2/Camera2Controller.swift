@@ -1630,6 +1630,7 @@ extension Camera2RecordingResolution: ArsdkMappableEnum {
 /// Extension that adds conversion from/to arsdk enum.
 extension Camera2RecordingFramerate: ArsdkMappableEnum {
     static let arsdkMapper = Mapper<Camera2RecordingFramerate, Arsdk_Camera_Framerate>([
+        .fps7_5: .framerate7Point5,
         .fps9: .framerate9,
         .fps12: .framerate12,
         .fps12_5: .framerate12Point5,
@@ -2100,6 +2101,7 @@ extension Camera2RecordingResolution: StorableEnum {
 /// Extension to make Camera2RecordingFramerate storable.
 extension Camera2RecordingFramerate: StorableEnum {
     static let storableMapper = Mapper<Camera2RecordingFramerate, String>([
+        .fps7_5: "7_5",
         .fps9: "9",
         .fps12: "12",
         .fps12_5: "12_5",

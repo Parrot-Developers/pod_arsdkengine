@@ -81,6 +81,36 @@ extension SwiftProtobuf.Google_Protobuf_FieldOptions {
   mutating func clearFieldDoc() {
     clearExtensionValue(ext: Extensions_field_doc)
   }
+
+  var fieldSupport: String {
+    get {return getExtensionValue(ext: Extensions_field_support) ?? String()}
+    set {setExtensionValue(ext: Extensions_field_support, value: newValue)}
+  }
+  /// Returns true if extension `Extensions_field_support`
+  /// has been explicitly set.
+  var hasFieldSupport: Bool {
+    return hasExtensionValue(ext: Extensions_field_support)
+  }
+  /// Clears the value of extension `Extensions_field_support`.
+  /// Subsequent reads from it will return its default value.
+  mutating func clearFieldSupport() {
+    clearExtensionValue(ext: Extensions_field_support)
+  }
+
+  var fieldKnownIssues: String {
+    get {return getExtensionValue(ext: Extensions_field_known_issues) ?? String()}
+    set {setExtensionValue(ext: Extensions_field_known_issues, value: newValue)}
+  }
+  /// Returns true if extension `Extensions_field_known_issues`
+  /// has been explicitly set.
+  var hasFieldKnownIssues: Bool {
+    return hasExtensionValue(ext: Extensions_field_known_issues)
+  }
+  /// Clears the value of extension `Extensions_field_known_issues`.
+  /// Subsequent reads from it will return its default value.
+  mutating func clearFieldKnownIssues() {
+    clearExtensionValue(ext: Extensions_field_known_issues)
+  }
 }
 
 extension SwiftProtobuf.Google_Protobuf_FileOptions {
@@ -113,6 +143,21 @@ extension SwiftProtobuf.Google_Protobuf_FileOptions {
   /// Subsequent reads from it will return its default value.
   mutating func clearArsdkDirection() {
     clearExtensionValue(ext: Extensions_arsdk_direction)
+  }
+
+  var deprecatedVersion: String {
+    get {return getExtensionValue(ext: Extensions_deprecated_version) ?? String()}
+    set {setExtensionValue(ext: Extensions_deprecated_version, value: newValue)}
+  }
+  /// Returns true if extension `Extensions_deprecated_version`
+  /// has been explicitly set.
+  var hasDeprecatedVersion: Bool {
+    return hasExtensionValue(ext: Extensions_deprecated_version)
+  }
+  /// Clears the value of extension `Extensions_deprecated_version`.
+  /// Subsequent reads from it will return its default value.
+  mutating func clearDeprecatedVersion() {
+    clearExtensionValue(ext: Extensions_deprecated_version)
   }
 }
 
@@ -193,6 +238,21 @@ extension SwiftProtobuf.Google_Protobuf_MessageOptions {
     clearExtensionValue(ext: Extensions_map_key)
   }
 
+  var triggeredBy: String {
+    get {return getExtensionValue(ext: Extensions_triggered_by) ?? String()}
+    set {setExtensionValue(ext: Extensions_triggered_by, value: newValue)}
+  }
+  /// Returns true if extension `Extensions_triggered_by`
+  /// has been explicitly set.
+  var hasTriggeredBy: Bool {
+    return hasExtensionValue(ext: Extensions_triggered_by)
+  }
+  /// Clears the value of extension `Extensions_triggered_by`.
+  /// Subsequent reads from it will return its default value.
+  mutating func clearTriggeredBy() {
+    clearExtensionValue(ext: Extensions_triggered_by)
+  }
+
 }
 
 // MARK: - File's ExtensionMap: Extensions_Extensions
@@ -211,7 +271,11 @@ let Extensions_Extensions: SwiftProtobuf.SimpleExtensionMap = [
   Extensions_enum_doc,
   Extensions_enum_value_doc,
   Extensions_arsdk_direction,
-  Extensions_map_key
+  Extensions_map_key,
+  Extensions_field_support,
+  Extensions_triggered_by,
+  Extensions_field_known_issues,
+  Extensions_deprecated_version
 ]
 
 // Extension Objects - The only reason these might be needed is when manually
@@ -266,4 +330,24 @@ let Extensions_arsdk_direction = SwiftProtobuf.MessageExtension<SwiftProtobuf.Op
 let Extensions_map_key = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_MessageOptions>(
   _protobuf_fieldNumber: 65009,
   fieldName: "map_key"
+)
+
+let Extensions_field_support = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_FieldOptions>(
+  _protobuf_fieldNumber: 65010,
+  fieldName: "field_support"
+)
+
+let Extensions_triggered_by = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_MessageOptions>(
+  _protobuf_fieldNumber: 65011,
+  fieldName: "triggered_by"
+)
+
+let Extensions_field_known_issues = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_FieldOptions>(
+  _protobuf_fieldNumber: 65012,
+  fieldName: "field_known_issues"
+)
+
+let Extensions_deprecated_version = SwiftProtobuf.MessageExtension<SwiftProtobuf.OptionalExtensionField<SwiftProtobuf.ProtobufString>, SwiftProtobuf.Google_Protobuf_FileOptions>(
+  _protobuf_fieldNumber: 65013,
+  fieldName: "deprecated_version"
 )

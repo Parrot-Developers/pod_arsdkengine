@@ -462,6 +462,8 @@ class AnafiReturnHomePilotingItf: ActivablePilotingItfController {
             homeType = .pilot
         case .trackedTargetPosition:
             homeType = .followee
+        case .vehicle:
+            homeType = .vehicle
         }
         _ = sendCommand(ArsdkFeatureRth.setPreferredHomeTypeEncoder(type: homeType))
     }
@@ -671,6 +673,10 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
                 availabilityReason = .userRequested
             case .blocked:
                 availabilityReason = .blocked
+            case .vehicleNotFound:
+                availabilityReason = .vehicleNotFound
+            case .landingZoneNotFound:
+                availabilityReason = .landingZoneNotFound
             default:
                 availabilityReason = .none
             }
@@ -705,6 +711,9 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
             case .batteryTooHot:
                 returnHomePilotingItf.update(reason: .batteryTooHot)
                 notifyActive()
+            case .geofenceViolation:
+                returnHomePilotingItf.update(reason: .geofenceViolation)
+                notifyActive()
             case .finished,
                     .stopped,
                     .enabled,
@@ -715,7 +724,7 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
                 returnHomePilotingItf.update(reason: .motorDown)
             case .flightplan:
                 returnHomePilotingItf.update(reason: .flightplan)
-            case .blocked:
+            case .blocked, .vehicleNotFound, .landingZoneNotFound:
                 // ignore this event
                 break
             case .sdkCoreUnknown:
@@ -792,14 +801,23 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
 
     func onRthAutoTrigger(reason: ArsdkFeatureRthAutoTriggerReason, delay: UInt) {
         switch reason {
+        case .none:
+            autoTriggerDelay = nil
+            returnHomePilotingItf.update(reason: .none)
+        case .batteryCriticalSoon:
+            returnHomePilotingItf.update(reason: .powerLow)
+            autoTriggerDelay = TimeInterval(delay)
+        case .motorDown:
+            returnHomePilotingItf.update(reason: .motorDown)
+            autoTriggerDelay = TimeInterval(delay)
         case .sdkCoreUnknown:
             // don't change anything if value is unknown
             ULog.w(.tag, "Unknown ArsdkFeatureRthAutoTriggerReason, skipping this event.")
             return
-        case .none:
-            autoTriggerDelay = nil
         @unknown default:
-            autoTriggerDelay = TimeInterval(delay)
+            // don't change anything if value is unknown
+            ULog.w(.tag, "Unknown ArsdkFeatureRthAutoTriggerReason, skipping this event.")
+            return
         }
 
         returnHomePilotingItf.notifyUpdated()
@@ -818,6 +836,9 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
             settingDidChange(.preferredTarget(.customPosition))
         case .pilot:
             settingDidChange(.preferredTarget(.controllerPosition))
+        case .vehicle:
+            settingDidChange(.preferredTarget(.vehicle))
+
         case .sdkCoreUnknown:
             fallthrough
         @unknown default:
@@ -909,6 +930,8 @@ extension AnafiReturnHomePilotingItf: ArsdkFeatureRthCallback {
             returnHomePilotingItf.update(homeLocation: followeeLocation)
         case .customPosition:
             returnHomePilotingItf.update(homeLocation: customLocation)
+        case .vehicle:
+            returnHomePilotingItf.update(homeLocation: pilotLocation)
         @unknown default:
             // don't change anything if value is unknown
             ULog.w(.tag, "Unknown home type, skipping this event.")
@@ -1007,7 +1030,8 @@ extension ReturnHomeTarget: ArsdkMappableEnum {
         .trackedTargetPosition: .followee,
         .none: .none,
         .controllerPosition: .pilot,
-        .takeOffPosition: .takeoff
+        .takeOffPosition: .takeoff,
+        .vehicle: .vehicle,
         ])
 }
 
@@ -1018,7 +1042,8 @@ extension ReturnHomeTarget: StorableEnum {
         .controllerPosition: "controller",
         .trackedTargetPosition: "trackedTargetPosition",
         .customPosition: "customPosition",
-        .none: "none"])
+        .none: "none",
+        .vehicle: "vehicle"])
 }
 
 /// Extension to make ReturnHomeEndingBehavior storable

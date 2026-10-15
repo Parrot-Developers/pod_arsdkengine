@@ -43,11 +43,20 @@ struct Arsdk_Controllerprivacy_Command {
     set {id = .setLogMode(newValue)}
   }
 
+  var authorizePairing: Arsdk_Privacy_Command.AuthorizePairing {
+    get {
+      if case .authorizePairing(let v)? = id {return v}
+      return Arsdk_Privacy_Command.AuthorizePairing()
+    }
+    set {id = .authorizePairing(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_ID: Equatable {
     case getState(Arsdk_Privacy_Command.GetState)
     case setLogMode(Arsdk_Privacy_Command.SetLogMode)
+    case authorizePairing(Arsdk_Privacy_Command.AuthorizePairing)
 
   #if !swift(>=4.1)
     static func ==(lhs: Arsdk_Controllerprivacy_Command.OneOf_ID, rhs: Arsdk_Controllerprivacy_Command.OneOf_ID) -> Bool {
@@ -61,6 +70,10 @@ struct Arsdk_Controllerprivacy_Command {
       }()
       case (.setLogMode, .setLogMode): return {
         guard case .setLogMode(let l) = lhs, case .setLogMode(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.authorizePairing, .authorizePairing): return {
+        guard case .authorizePairing(let l) = lhs, case .authorizePairing(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -119,6 +132,7 @@ extension Arsdk_Controllerprivacy_Command: SwiftProtobuf.Message, SwiftProtobuf.
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     16: .standard(proto: "get_state"),
     17: .standard(proto: "set_log_mode"),
+    18: .standard(proto: "authorize_pairing"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -153,6 +167,19 @@ extension Arsdk_Controllerprivacy_Command: SwiftProtobuf.Message, SwiftProtobuf.
           self.id = .setLogMode(v)
         }
       }()
+      case 18: try {
+        var v: Arsdk_Privacy_Command.AuthorizePairing?
+        var hadOneofValue = false
+        if let current = self.id {
+          hadOneofValue = true
+          if case .authorizePairing(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.id = .authorizePairing(v)
+        }
+      }()
       default: break
       }
     }
@@ -171,6 +198,10 @@ extension Arsdk_Controllerprivacy_Command: SwiftProtobuf.Message, SwiftProtobuf.
     case .setLogMode?: try {
       guard case .setLogMode(let v)? = self.id else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case .authorizePairing?: try {
+      guard case .authorizePairing(let v)? = self.id else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
     }()
     case nil: break
     }

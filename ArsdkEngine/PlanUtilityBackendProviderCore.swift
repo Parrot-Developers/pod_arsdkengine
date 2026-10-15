@@ -224,6 +224,8 @@ class PlanUtilityBackendProviderCore: PlanUtility {
                     self.rthType = .pilot
                 case .trackedTargetPosition:
                     self.rthType = .followee
+                case .vehicle:
+                    self.rthType = .vehicle
                 }
             } else {
                 self.rthType = nil

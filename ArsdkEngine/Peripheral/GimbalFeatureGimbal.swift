@@ -263,6 +263,9 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
     private var capabilitiesReceived = false
     private var attitudeReceived = false
 
+    /// Whether relative bounds have been received from drone at connexion.
+    private var relativeBoundsReceived = false
+
     /// All settings that can be stored
     enum SettingKey: String, StoreKey {
         case supportedAxesKey = "supportedAxes"
@@ -360,6 +363,9 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
     }
 
     override func didConnect() {
+        if !relativeBoundsReceived {
+            gimbalMain.clearStabilization()
+        }
         storeNewPresets()
         applyPresets()
 
@@ -386,6 +392,7 @@ class GimbalFeatureGimbal: GimbalFeatureCalibratableGimbal {
         relativeAttitudeBounds = [:]
         capabilitiesReceived = false
         attitudeReceived = false
+        relativeBoundsReceived = false
 
         controlEncoderRegistration?.unregister()
         controlEncoderRegistration = nil
@@ -762,6 +769,7 @@ extension GimbalFeatureGimbal {
             }
 
             if gimbalId == self.gimbalId {
+                relativeBoundsReceived = true
                 // store the values as they might be used later (when axis stabilization changes)
                 relativeAttitudeBounds[.yaw] = Double(minYaw)..<Double(maxYaw)
                 relativeAttitudeBounds[.pitch] = Double(minPitch)..<Double(maxPitch)
@@ -860,10 +868,11 @@ extension GimbalFeatureGimbal {
                 absoluteAttitude[.yaw] = Double(yawAbsolute).roundedToDecimal(decimal)
                 absoluteAttitude[.pitch] = Double(pitchAbsolute).roundedToDecimal(decimal)
                 absoluteAttitude[.roll] = Double(rollAbsolute).roundedToDecimal(decimal)
+                // Most drones send NONE frame of reference instead of ABSOLUTE
                 let stabilizedAxes: [GimbalAxis: Bool] = [
-                    .yaw: (yawFrameOfReference == .absolute),
-                    .pitch: (pitchFrameOfReference == .absolute),
-                    .roll: (rollFrameOfReference == .absolute)
+                    .yaw: (yawFrameOfReference != .relative),
+                    .pitch: (pitchFrameOfReference != .relative),
+                    .roll: (rollFrameOfReference != .relative)
                 ]
 
                 var settingHasChanged = false

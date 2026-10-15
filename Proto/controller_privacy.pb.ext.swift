@@ -107,12 +107,14 @@ extension Arsdk_Controllerprivacy_Command.OneOf_ID {
         switch self {
         case .getState: return 16
         case .setLogMode: return 17
+        case .authorizePairing: return 18
         }
     }
 }
 extension Arsdk_Controllerprivacy_Command {
     static var getStateFieldNumber: Int32 { 16 }
     static var setLogModeFieldNumber: Int32 { 17 }
+    static var authorizePairingFieldNumber: Int32 { 18 }
 }
 extension Arsdk_Controllerprivacy_Event {
     static var stateFieldNumber: Int32 { 16 }

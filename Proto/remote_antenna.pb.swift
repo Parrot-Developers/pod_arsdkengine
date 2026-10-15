@@ -263,6 +263,42 @@ extension Arsdk_Remoteantenna_ProductVariant: CaseIterable {
 
 #endif  // swift(>=4.2)
 
+enum Arsdk_Remoteantenna_Feature: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case toggleable // = 0
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .toggleable
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .toggleable
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .toggleable: return 0
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Arsdk_Remoteantenna_Feature: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Arsdk_Remoteantenna_Feature] = [
+    .toggleable,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 /// This is the entry point to send messages to the device
 struct Arsdk_Remoteantenna_Command {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -740,9 +776,21 @@ struct Arsdk_Remoteantenna_GpsCoordinates {
 
   var longitude: Double = 0
 
+  /// EGM96 amsl altitude [meters]
+  var altitude: SwiftProtobuf.Google_Protobuf_DoubleValue {
+    get {return _altitude ?? SwiftProtobuf.Google_Protobuf_DoubleValue()}
+    set {_altitude = newValue}
+  }
+  /// Returns true if `altitude` has been explicitly set.
+  var hasAltitude: Bool {return self._altitude != nil}
+  /// Clears the value of `altitude`. Subsequent reads from it will return its default value.
+  mutating func clearAltitude() {self._altitude = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
+
+  fileprivate var _altitude: SwiftProtobuf.Google_Protobuf_DoubleValue? = nil
 }
 
 struct Arsdk_Remoteantenna_Capabilities {
@@ -751,6 +799,29 @@ struct Arsdk_Remoteantenna_Capabilities {
   // methods supported on all messages.
 
   var cloudAntenna: Bool = false
+
+  var supportedFeatures: Arsdk_Remoteantenna_SupportedFeatures {
+    get {return _supportedFeatures ?? Arsdk_Remoteantenna_SupportedFeatures()}
+    set {_supportedFeatures = newValue}
+  }
+  /// Returns true if `supportedFeatures` has been explicitly set.
+  var hasSupportedFeatures: Bool {return self._supportedFeatures != nil}
+  /// Clears the value of `supportedFeatures`. Subsequent reads from it will return its default value.
+  mutating func clearSupportedFeatures() {self._supportedFeatures = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _supportedFeatures: Arsdk_Remoteantenna_SupportedFeatures? = nil
+}
+
+struct Arsdk_Remoteantenna_SupportedFeatures {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var features: [Arsdk_Remoteantenna_Feature] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -889,6 +960,12 @@ extension Arsdk_Remoteantenna_ProductVariant: SwiftProtobuf._ProtoNameProviding 
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     0: .same(proto: "STANDARD"),
     1: .same(proto: "RANGER"),
+  ]
+}
+
+extension Arsdk_Remoteantenna_Feature: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "TOGGLEABLE"),
   ]
 }
 
@@ -1618,6 +1695,7 @@ extension Arsdk_Remoteantenna_GpsCoordinates: SwiftProtobuf.Message, SwiftProtob
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "latitude"),
     2: .same(proto: "longitude"),
+    3: .same(proto: "altitude"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1628,24 +1706,33 @@ extension Arsdk_Remoteantenna_GpsCoordinates: SwiftProtobuf.Message, SwiftProtob
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularDoubleField(value: &self.latitude) }()
       case 2: try { try decoder.decodeSingularDoubleField(value: &self.longitude) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._altitude) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.latitude != 0 {
       try visitor.visitSingularDoubleField(value: self.latitude, fieldNumber: 1)
     }
     if self.longitude != 0 {
       try visitor.visitSingularDoubleField(value: self.longitude, fieldNumber: 2)
     }
+    try { if let v = self._altitude {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Remoteantenna_GpsCoordinates, rhs: Arsdk_Remoteantenna_GpsCoordinates) -> Bool {
     if lhs.latitude != rhs.latitude {return false}
     if lhs.longitude != rhs.longitude {return false}
+    if lhs._altitude != rhs._altitude {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1655,6 +1742,7 @@ extension Arsdk_Remoteantenna_Capabilities: SwiftProtobuf.Message, SwiftProtobuf
   static let protoMessageName: String = _protobuf_package + ".Capabilities"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "cloud_antenna"),
+    2: .standard(proto: "supported_features"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1664,20 +1752,61 @@ extension Arsdk_Remoteantenna_Capabilities: SwiftProtobuf.Message, SwiftProtobuf
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBoolField(value: &self.cloudAntenna) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._supportedFeatures) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.cloudAntenna != false {
       try visitor.visitSingularBoolField(value: self.cloudAntenna, fieldNumber: 1)
     }
+    try { if let v = self._supportedFeatures {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Arsdk_Remoteantenna_Capabilities, rhs: Arsdk_Remoteantenna_Capabilities) -> Bool {
     if lhs.cloudAntenna != rhs.cloudAntenna {return false}
+    if lhs._supportedFeatures != rhs._supportedFeatures {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Arsdk_Remoteantenna_SupportedFeatures: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".SupportedFeatures"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "features"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedEnumField(value: &self.features) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.features.isEmpty {
+      try visitor.visitPackedEnumField(value: self.features, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Arsdk_Remoteantenna_SupportedFeatures, rhs: Arsdk_Remoteantenna_SupportedFeatures) -> Bool {
+    if lhs.features != rhs.features {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

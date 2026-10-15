@@ -64,10 +64,16 @@ class SkyControllerStreamSharingOverlay: DeviceComponentController {
                     self?.applyBatteryLevel()
                 }
             })
+
+        streamSharingManager?.setMuxContext(
+            muxCtxPtr: deviceController.backend?.getMuxContext()
+                .map { Int(bitPattern: $0) } ?? 0
+        )
     }
 
     override func didDisconnect() {
         streamSharingMonitor?.stop()
+        streamSharingManager?.setMuxContext(muxCtxPtr: 0)
         batteryLevel  = nil
     }
 

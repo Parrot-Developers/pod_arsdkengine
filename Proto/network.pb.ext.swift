@@ -109,6 +109,7 @@ extension Arsdk_Network_Command.OneOf_ID {
         case .setRoutingPolicy: return 17
         case .setCellularMaxBitrate: return 18
         case .setDirectConnection: return 19
+        case .setEthernetIpConfig: return 20
         }
     }
 }
@@ -124,11 +125,15 @@ extension Arsdk_Network_Command.SetCellularMaxBitrate {
 extension Arsdk_Network_Command.SetDirectConnection {
     static var modeFieldNumber: Int32 { 1 }
 }
+extension Arsdk_Network_Command.SetEthernetIpConfig {
+    static var configFieldNumber: Int32 { 1 }
+}
 extension Arsdk_Network_Command {
     static var getStateFieldNumber: Int32 { 16 }
     static var setRoutingPolicyFieldNumber: Int32 { 17 }
     static var setCellularMaxBitrateFieldNumber: Int32 { 18 }
     static var setDirectConnectionFieldNumber: Int32 { 19 }
+    static var setEthernetIpConfigFieldNumber: Int32 { 20 }
 }
 extension Arsdk_Network_Event.State {
     static var defaultCapabilitiesFieldNumber: Int32 { 1 }
@@ -137,6 +142,7 @@ extension Arsdk_Network_Event.State {
     static var linksStatusFieldNumber: Int32 { 4 }
     static var cellularMaxBitrateFieldNumber: Int32 { 5 }
     static var directConnectionModeFieldNumber: Int32 { 6 }
+    static var ethernetIpConfigFieldNumber: Int32 { 7 }
 }
 extension Arsdk_Network_Event {
     static var stateFieldNumber: Int32 { 19 }
@@ -165,4 +171,13 @@ extension Arsdk_Network_LinksStatus {
 }
 extension Arsdk_Network_CellularMaxBitrate {
     static var maxBitrateFieldNumber: Int32 { 1 }
+}
+extension Arsdk_Network_IpConfig {
+    static var automaticFieldNumber: Int32 { 1 }
+    static var staticFieldNumber: Int32 { 2 }
+}
+extension Arsdk_Network_StaticIpConfig {
+    static var addressFieldNumber: Int32 { 1 }
+    static var maskFieldNumber: Int32 { 2 }
+    static var gatewayFieldNumber: Int32 { 3 }
 }

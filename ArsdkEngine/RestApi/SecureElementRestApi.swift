@@ -75,7 +75,6 @@ class SecureElementRestApi {
     /// - Returns: the request
     func sign(challenge: String, with operation: SecureElementSignatureOperation,
               completion: @escaping (_ token: String?) -> Void) -> CancelableCore {
-
         let operationStr: String
         switch operation {
         case .associate:
